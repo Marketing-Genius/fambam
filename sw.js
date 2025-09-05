@@ -1,5 +1,5 @@
-// Breakfast Chooser v3.2 SW (offline; GitHub Pages compatible pathing)
-const CACHE = "breakfast-v3-2";
+// Breakfast Chooser v3.2.1 SW
+const CACHE = "breakfast-v3-2-1";
 const BASE = self.location.pathname.replace(/sw\.js$/, "");
 const ASSETS = [BASE, BASE + "index.html", BASE + "manifest.webmanifest", BASE + "icon-192.png", BASE + "icon-512.png"];
 
