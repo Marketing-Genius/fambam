@@ -111,11 +111,12 @@
     <section class="summary panel" id="summary"></section>
     <div class="footer">
       Works offline. Data stays on this device (local only).
-      <div class="version">v3.2.1</div>
+      <div class="version">v3.2.2</div>
     </div>
   </div>
 
-  <input type="file" id="file-picker" accept="image/*" capture="user" class="sr-only" />
+  <!-- Photo input: no forced capture so iOS shows Camera *and* Photo Library -->
+  <input type="file" id="file-picker" accept="image/*" class="sr-only" />
 
   <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
     <div class="modal">
@@ -185,12 +186,9 @@
     const $ = (s,e=document)=>e.querySelector(s); const $$=(s,e=document)=>[...e.querySelectorAll(s)];
     const dateInput = $('#theDate'); dateInput.value = todayStr();
 
-    // Robust init + auto-heal
     ensureSeed();
-
     fullRender();
 
-    // Storage helpers
     function id(){ return Math.random().toString(36).slice(2,10) }
     function load(k,f){ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? f }catch(_){ return f } }
     function save(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
@@ -212,22 +210,6 @@
       let act = load(LS_KEYS.active, null);
       if (!Array.isArray(act) || act.length===0){ act = menu.slice(0,4).map(m=>m.id); setActive(act); }
     }
-
-    // Long-press gear for factory reset
-    (function setupFactoryReset(){
-      const btn = document.getElementById('btnAdmin');
-      let t; btn.addEventListener('touchstart', ()=>{ t=setTimeout(factoryReset, 3000) }, {passive:true});
-      btn.addEventListener('touchend', ()=>{ clearTimeout(t) }, {passive:true});
-      btn.addEventListener('mousedown', ()=>{ t=setTimeout(factoryReset, 3000) });
-      btn.addEventListener('mouseup', ()=>{ clearTimeout(t) });
-      function factoryReset(){
-        if (!confirm('Factory reset? This clears kids, menu, and all daily picks.')) return;
-        localStorage.clear();
-        ensureSeed();
-        fullRender();
-        alert('Reset complete.');
-      }
-    })();
 
     function initials(name){ const p=(name||'').trim().split(/\s+/).filter(Boolean); return ((p[0]?p[0][0]:'?')+(p[1]?p[1][0]:'' )).toUpperCase() }
     function escapeHtml(s){
@@ -391,6 +373,9 @@
 
     function pickPhotoFor(kidId){
       const input = $('#file-picker');
+      // Ask whether to open camera or library
+      const useCamera = confirm('Use camera to take a new photo? (Cancel = choose from Photo Library/Files)');
+      if (useCamera) { input.setAttribute('capture', 'environment'); } else { input.removeAttribute('capture'); }
       input.onchange = (ev)=>{
         const file = ev.target.files?.[0];
         if (!file) return;
@@ -404,6 +389,7 @@
         };
         reader.readAsDataURL(file);
         input.value = '';
+        input.removeAttribute('capture');
       };
       input.click();
     }

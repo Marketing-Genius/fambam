@@ -1,5 +1,5 @@
-// Breakfast Chooser v3.2.1 SW
-const CACHE = "breakfast-v3-2-1";
+// Breakfast Chooser v3.2.2 SW
+const CACHE = "breakfast-v3-2-2";
 const BASE = self.location.pathname.replace(/sw\.js$/, "");
 const ASSETS = [BASE, BASE + "index.html", BASE + "manifest.webmanifest", BASE + "icon-192.png", BASE + "icon-512.png"];
 
