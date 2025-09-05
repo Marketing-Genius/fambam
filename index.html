@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Breakfast Chooser</title>
+
+  <!-- PWA bits -->
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <style>
+    :root{
+      --bg:#0f172a;
+      --panel:#111827;
+      --card:#1f2937;
+      --muted:#6b7280;
+      --text:#e5e7eb;
+      --accent:#22d3ee;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background:linear-gradient(180deg, #0b1026 0%, #0f172a 100%);
+      color:var(--text);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .app{
+      max-width: 1100px; margin: 0 auto; padding: 20px; display: grid; gap: 18px;
+      grid-template-rows: auto auto 1fr auto;
+    }
+    header{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;}
+    .title{font-weight:800; letter-spacing:.2px;}
+    .title .small{font-weight:600; font-size:.8rem; color:var(--muted)}
+    .panel{background:var(--panel); border:1px solid #111827; box-shadow: var(--shadow); border-radius: var(--radius); padding:14px;}
+
+    .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+    .date-wrap{display:flex; align-items:center; gap:8px}
+    input[type="date"], select, button{
+      font: inherit; color:var(--text); background:var(--card); border:1px solid #374151; border-radius:12px; padding:10px 14px;
+    }
+    input[type="date"]{padding:10px;}
+    button{cursor:pointer}
+    .btn-primary{background: linear-gradient(180deg,#22d3ee,#06b6d4); color:#001018; border:none; font-weight:700}
+    .btn-ghost{background:transparent; border:1px dashed #334155; color:var(--muted)}
+
+    .kids.panel{display:flex; gap:12px; align-items:center; overflow:auto;}
+    .kid{position:relative; display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--card); border:1px solid #1f2937; border-radius:14px; min-width: 210px; user-select:none;}
+    .kid[aria-selected="true"]{outline:2px solid var(--accent);}
+    .face{width:56px; height:56px; border-radius:50%; background:#0b1224; display:grid; place-items:center; font-size:28px; border:2px solid #334155; overflow:hidden}
+    .face img{width:100%; height:100%; object-fit:cover}
+    .kid-name{font-weight:800;}
+    .kid-age{font-size:.8rem; color:var(--muted)}
+    .kid .edit{position:absolute; right:8px; top:8px; font-size:11px; color:var(--muted)}
+    .kid .edit button{padding:6px 8px; border-radius:10px}
+    .kid .drag-hint{position:absolute; bottom:6px; right:8px; font-size:11px; opacity:.7}
+
+    .choices{display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:14px}
+    @media (min-width:900px){ .choices{grid-template-columns: repeat(4,minmax(0,1fr));} }
+    .choice{position:relative; background:var(--panel); border:1px solid #1f2937; border-radius:var(--radius); padding:14px; display:flex; flex-direction:column; gap:12px; min-height: 210px}
+    .choice.dragover{outline:2px dashed var(--accent)}
+    .food-head{display:flex; align-items:center; gap:10px}
+    .food-emoji{font-size:36px; filter: drop-shadow(0 6px 10px rgba(0,0,0,.35));}
+    .food-name{font-weight:900; letter-spacing:.3px}
+    .drop-here{margin-top:auto; font-size:.9rem; color:var(--muted)}
+    .avatars{display:flex; flex-wrap:wrap; gap:8px}
+    .avatar{position:relative; width:40px; height:40px; border-radius:50%; background:#0b1224; display:grid; place-items:center; font-size:20px; border:2px solid #334155; opacity:1; transition:opacity .2s}
+    .avatar.dim{opacity:.25; filter:grayscale(.8)}
+    .avatar img{width:100%; height:100%; object-fit:cover; border-radius:50%}
+
+    .summary.panel{display:grid; grid-template-columns: repeat(1,minmax(0,1fr)); gap:10px}
+    @media (min-width:760px){ .summary.panel{grid-template-columns: repeat(2,minmax(0,1fr));} }
+    .summary-item{display:flex; align-items:center; justify-content:space-between; background:var(--card); border:1px solid #1f2937; padding:10px 12px; border-radius:12px}
+
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:#0b1224; border:1px solid #334155; font-weight:700}
+    .pill .emoji{font-size:18px}
+
+    .footer{opacity:.7; font-size:.85rem; text-align:center}
+    .drag-ghost{position:fixed; pointer-events:none; z-index:9999; transform: translate(-50%, -50%);}
+    .sr-only{position:absolute; left:-9999px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="panel">
+      <div class="title">
+        <div style="font-size: 1.6rem">Breakfast Chooser</div>
+        <div class="small">Tap a child, then tap a food — or drag the face onto a food card.</div>
+      </div>
+      <div class="controls">
+        <div class="date-wrap">
+          <label for="theDate" class="sr-only">Date</label>
+          <input id="theDate" type="date" />
+        </div>
+        <button id="btnClear" class="btn-ghost" title="Clear choices for this date">Reset Day</button>
+        <button id="btnRandomize" class="btn-ghost" title="Let me pick for everyone">Randomize</button>
+        <button id="btnShare" class="btn-primary" title="Copy a summary">Copy Summary</button>
+      </div>
+    </header>
+
+    <section class="kids panel" id="kidsRow" aria-label="Kids"></section>
+    <section class="choices" id="choicesGrid" aria-label="Breakfast choices"></section>
+    <section class="summary panel" id="summary"></section>
+    <div class="footer">Works offline. Data stays on this device (local only).</div>
+  </div>
+
+  <!-- Hidden file inputs for avatar photos -->
+  <input type="file" id="file-Emilia" accept="image/*" class="sr-only" />
+  <input type="file" id="file-Hudson" accept="image/*" class="sr-only" />
+  <input type="file" id="file-Penelope" accept="image/*" class="sr-only" />
+  <input type="file" id="file-Jasper" accept="image/*" class="sr-only" />
+
+  <script>
+  ;(() => {
+    const KIDS = [
+      { id: 'Emilia',   name: 'Emilia',   age: 4, emoji: '🌸' },
+      { id: 'Hudson',   name: 'Hudson',   age: 7, emoji: '⚡️' },
+      { id: 'Penelope', name: 'Penelope', age: 8, emoji: '🦄' },
+      { id: 'Jasper',   name: 'Jasper',   age: 9, emoji: '🛸' },
+    ]
+
+    const CHOICES = [
+      { id: 'waffles',  name: 'Waffles w/ Syrup (Eggo)', emoji: '🧇' },
+      { id: 'poptart',  name: 'Pop‑Tart (various)',      emoji: '🍓' },
+      { id: 'cereal',   name: 'Cereal (various)',        emoji: '🥣' },
+      { id: 'bagel',    name: 'Bagel & Cream Cheese',    emoji: '🥯' },
+    ]
+
+    const $ = (sel, el=document) => el.querySelector(sel)
+    const $$ = (sel, el=document) => [...el.querySelectorAll(sel)]
+
+    // --- State & storage (per date) ---
+    const todayStr = () => new Date().toISOString().slice(0,10)
+    const keyFor = (date) => `breakfast-choices:${date}`
+    const avatarKey = (kidId) => `breakfast-avatar:${kidId}`
+    const loadDay = (date) => JSON.parse(localStorage.getItem(keyFor(date))||'{}')
+    const saveDay = (date, data) => localStorage.setItem(keyFor(date), JSON.stringify(data))
+
+    // --- UI State ---
+    let activeKid = null
+
+    // --- Init ---
+    const dateInput = $('#theDate')
+    dateInput.value = todayStr()
+
+    function kidPhotoSrc(kid){
+      const dataUrl = localStorage.getItem(avatarKey(kid.id))
+      return dataUrl || null
+    }
+
+    function renderKids(){
+      const row = $('#kidsRow')
+      row.innerHTML = ''
+      KIDS.forEach(kid => {
+        const kidEl = document.createElement('div')
+        kidEl.className = 'kid'
+        kidEl.setAttribute('data-kid', kid.id)
+        kidEl.setAttribute('draggable', 'true')
+        kidEl.setAttribute('role','button')
+        kidEl.setAttribute('aria-selected', activeKid===kid.id ? 'true':'false')
+        kidEl.innerHTML = `
+          <div class="face" aria-hidden="true">
+            ${kidPhotoSrc(kid) ? `<img alt="${kid.name}" src="${kidPhotoSrc(kid)}"/>` : `<span>${kid.emoji}</span>`}
+          </div>
+          <div>
+            <div class="kid-name">${kid.name}</div>
+            <div class="kid-age">Age ${kid.age}</div>
+          </div>
+          <div class="edit"><button data-edit="${kid.id}" title="Add/Change photo">Edit</button></div>
+          <div class="drag-hint">⋮⋮ drag</div>
+        `
+        row.appendChild(kidEl)
+      })
+    }
+
+    function renderChoices(){
+      const grid = $('#choicesGrid')
+      grid.innerHTML = ''
+      const date = dateInput.value
+      const day = loadDay(date)
+
+      CHOICES.forEach(choice => {
+        const card = document.createElement('div')
+        card.className = 'choice'
+        card.setAttribute('data-choice', choice.id)
+        card.innerHTML = `
+          <div class="food-head">
+            <div class="food-emoji" aria-hidden="true">${choice.emoji}</div>
+            <div>
+              <div class="food-name">${choice.name}</div>
+            </div>
+          </div>
+          <div class="avatars"></div>
+          <div class="drop-here">Drop a face here or tap to select</div>
+        `
+
+        const avatarsWrap = $('.avatars', card)
+
+        // Place avatars for all kids; gray out those not chosen for this card
+        KIDS.forEach(kid => {
+          const av = document.createElement('button')
+          av.className = 'avatar'
+          av.setAttribute('data-kid', kid.id)
+          av.setAttribute('title', `${kid.name}`)
+          const chosen = day[kid.id]
+          const dim = chosen && chosen !== choice.id
+          if (dim) av.classList.add('dim')
+          av.innerHTML = kidPhotoSrc(kid) ? `<img alt="${kid.name}">` : `<span>${kid.emoji}</span>`
+          if (kidPhotoSrc(kid)) $('img', av).src = kidPhotoSrc(kid)
+          avatarsWrap.appendChild(av)
+        })
+
+        grid.appendChild(card)
+      })
+    }
+
+    function renderSummary(){
+      const s = $('#summary')
+      s.innerHTML = ''
+      const date = dateInput.value
+      const day = loadDay(date)
+      KIDS.forEach(kid => {
+        const choiceId = day[kid.id]
+        const item = document.createElement('div')
+        item.className = 'summary-item'
+        const ch = CHOICES.find(c=>c.id===choiceId)
+        item.innerHTML = `
+          <div style="display:flex; align-items:center; gap:10px">
+            <div class="face" style="width:42px;height:42px">${kidPhotoSrc(kid) ? `<img alt="${kid.name}" src="${kidPhotoSrc(kid)}"/>` : `<span>${kid.emoji}</span>`}</div>
+            <div style="font-weight:800">${kid.name}</div>
+          </div>
+          ${ch ? `<div class="pill"><span class="emoji">${ch.emoji}</span> ${ch.name}</div>` : `<div class="pill" style="opacity:.6">Not chosen</div>`}
+        `
+        s.appendChild(item)
+      })
+    }
+
+    function fullRender(){
+      renderKids(); renderChoices(); renderSummary(); attachInteractions();
+    }
+
+    function attachInteractions(){
+      $$('#kidsRow .kid').forEach(k => {
+        k.addEventListener('click', (e)=>{
+          activeKid = k.dataset.kid
+          $$('#kidsRow .kid').forEach(el=>el.setAttribute('aria-selected','false'))
+          k.setAttribute('aria-selected','true')
+        })
+      })
+
+      $$('button[data-edit]').forEach(btn => {
+        btn.addEventListener('click', (e)=>{
+          e.stopPropagation()
+          const id = btn.dataset.edit
+          const input = document.getElementById(`file-${id}`)
+          input.onchange = async (ev)=>{
+            const file = ev.target.files[0]
+            if(!file) return
+            const reader = new FileReader()
+            reader.onload = ()=>{
+              localStorage.setItem(`breakfast-avatar:${id}`, reader.result)
+              fullRender()
+            }
+            reader.readAsDataURL(file)
+          }
+          input.click()
+        })
+      })
+
+      $$('#choicesGrid .choice').forEach(card => {
+        card.addEventListener('click', (e)=>{
+          if(!activeKid) return
+          assign(activeKid, card.dataset.choice)
+        })
+      })
+
+      $$('#choicesGrid .choice .avatar').forEach(av => {
+        av.addEventListener('click', (e)=>{
+          const kidId = av.dataset.kid
+          const ch = av.closest('.choice').dataset.choice
+          assign(kidId, ch)
+        })
+      })
+
+      enableDragDrop()
+    }
+
+    function assign(kidId, choiceId){
+      const date = dateInput.value
+      const day = loadDay(date)
+      day[kidId] = choiceId
+      saveDay(date, day)
+      activeKid = kidId
+      fullRender()
+    }
+
+    function enableDragDrop(){
+      let ghost = null
+
+      function makeGhost(fromEl){
+        ghost = fromEl.cloneNode(true)
+        ghost.classList.add('drag-ghost')
+        ghost.style.width = fromEl.offsetWidth + 'px'
+        ghost.style.height = fromEl.offsetHeight + 'px'
+        document.body.appendChild(ghost)
+      }
+
+      function moveGhost(e){
+        if(!ghost) return
+        const x = e.touches ? e.touches[0].clientX : e.clientX
+        const y = e.touches ? e.touches[0].clientY : e.clientY
+        ghost.style.left = x + 'px'
+        ghost.style.top = y + 'px'
+      }
+
+      function clearGhost(){ if(ghost){ ghost.remove(); ghost=null } }
+
+      $$('#kidsRow .kid').forEach(k => {
+        const start = (e)=>{
+          e.preventDefault()
+          activeKid = k.dataset.kid
+          $$('#kidsRow .kid').forEach(el=>el.setAttribute('aria-selected','false'))
+          k.setAttribute('aria-selected','true')
+          makeGhost($('.face', k))
+          moveGhost(e)
+        }
+        const move = (e)=>{ moveGhost(e) }
+        const end = (e)=>{ clearGhost() }
+
+        k.addEventListener('dragstart', (e)=>{
+          e.dataTransfer.setData('text/plain', k.dataset.kid)
+          makeGhost($('.face', k))
+        })
+        k.addEventListener('touchstart', start, {passive:false})
+        window.addEventListener('touchmove', move, {passive:false})
+        window.addEventListener('touchend', end)
+      })
+
+      $$('#choicesGrid .choice').forEach(card => {
+        card.addEventListener('dragover', e=>{ e.preventDefault(); card.classList.add('dragover') })
+        card.addEventListener('dragleave', ()=> card.classList.remove('dragover'))
+        card.addEventListener('drop', e=>{
+          e.preventDefault(); card.classList.remove('dragover')
+          const kidId = e.dataTransfer.getData('text/plain') || activeKid
+          if(kidId) assign(kidId, card.dataset.choice)
+          clearGhost()
+        })
+
+        card.addEventListener('touchmove', (e)=>{
+          const t = e.touches[0]
+          const rect = card.getBoundingClientRect()
+          const inside = t.clientX>rect.left && t.clientX<rect.right && t.clientY>rect.top && t.clientY<rect.bottom
+          card.classList.toggle('dragover', inside)
+        })
+        card.addEventListener('touchend', (e)=>{
+          card.classList.remove('dragover')
+          if(activeKid) assign(activeKid, card.dataset.choice)
+          clearGhost()
+        })
+      })
+    }
+
+    // Controls
+    document.getElementById('btnClear').addEventListener('click', ()=>{
+      const date = document.getElementById('theDate').value
+      localStorage.removeItem(`breakfast-choices:${date}`)
+      fullRender()
+    })
+
+    document.getElementById('btnRandomize').addEventListener('click', ()=>{
+      const date = document.getElementById('theDate').value
+      const day = {}
+      const CHOICES = ['waffles','poptart','cereal','bagel']
+      const pick = () => CHOICES[Math.floor(Math.random()*CHOICES.length)]
+      ;['Emilia','Hudson','Penelope','Jasper'].forEach(k => { day[k] = pick() })
+      localStorage.setItem(`breakfast-choices:${date}`, JSON.stringify(day))
+      fullRender()
+    })
+
+    document.getElementById('btnShare').addEventListener('click', async ()=>{
+      const date = document.getElementById('theDate').value
+      const day = JSON.parse(localStorage.getItem(`breakfast-choices:${date}`)||'{}')
+      const map = {
+        waffles: {emoji:'🧇',name:'Waffles w/ Syrup (Eggo)'},
+        poptart: {emoji:'🍓',name:'Pop‑Tart (various)'},
+        cereal:  {emoji:'🥣',name:'Cereal (various)'},
+        bagel:   {emoji:'🥯',name:'Bagel & Cream Cheese'}
+      }
+      const kids = ['Emilia','Hudson','Penelope','Jasper']
+      const lines = kids.map(n => {
+        const ch = map[day[n]]
+        return `${n}: ${ch ? `${ch.emoji} ${ch.name}` : '—'}`
+      })
+      const text = `Breakfast Picks for ${date}\n` + lines.join('\n')
+      try{
+        await navigator.clipboard.writeText(text)
+        alert('Summary copied to clipboard!')
+      }catch(err){
+        prompt('Copy the summary:', text)
+      }
+    })
+
+    // Service worker registration (relative path works on GitHub Pages subpath)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(()=>{})
+      })
+    }
+
+    document.getElementById('theDate').addEventListener('change', fullRender)
+    fullRender()
+  })()
+  </script>
+</body>
+</html>
