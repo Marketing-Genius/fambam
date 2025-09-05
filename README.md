@@ -1,1 +1,1 @@
-v2 UI: no avatars until selected; iOS label-based photo edit; offline PWA cache bump to v2.
+Breakfast Chooser v3: Admin modal; manage kids and menu (emoji + label); up to 10 stored, 4 active; no drag; offline PWA.

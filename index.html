@@ -10,20 +10,20 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
   <style>
-    :root{--bg:#0f172a;--panel:#111827;--card:#1f2937;--muted:#6b7280;--text:#e5e7eb;--accent:#22d3ee;--shadow:0 10px 30px rgba(0,0,0,.35);--radius:18px;}
+    :root{--panel:#111827;--card:#1f2937;--muted:#6b7280;--text:#e5e7eb;--accent:#22d3ee;--bg:#0f172a;--ok:#34d399;--warn:#fb7185;--shadow:0 10px 30px rgba(0,0,0,.35);--radius:18px;}
     html,body{height:100%;}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%);color:var(--text);-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji';background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%);color:var(--text);-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
     .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto;}
     header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;}
     .title{font-weight:800;letter-spacing:.2px;}
     .title .small{font-weight:600;font-size:.8rem;color:var(--muted)}
     .panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px;}
     .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    .date-wrap{display:flex;align-items:center;gap:8px}
-    input[type=date],button{font:inherit;color:var(--text);background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 14px;}
+    input[type=date],button,select,input[type=text]{font:inherit;color:var(--text);background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 14px;}
     input[type=date]{padding:10px;}button{cursor:pointer}
     .btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:700}
     .btn-ghost{background:transparent;border:1px dashed #334155;color:var(--muted)}
+    .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
     .kids.panel{display:flex;gap:12px;align-items:center;overflow:auto;}
     .kid{position:relative;display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border:1px solid #1f2937;border-radius:14px;min-width:210px;user-select:none;}
     .kid[aria-selected=true]{outline:2px solid var(--accent);}
@@ -31,13 +31,9 @@
     .face img{width:100%;height:100%;object-fit:cover}
     .kid-name{font-weight:800;}
     .kid-age{font-size:.8rem;color:var(--muted)}
-    .kid .edit{position:absolute;right:8px;top:8px;font-size:11px;color:var(--muted)}
-    .edit-label{padding:6px 8px;border-radius:10px;background:transparent;border:1px dashed #334155;color:var(--muted);cursor:pointer}
-    .kid .drag-hint{position:absolute;bottom:6px;right:8px;font-size:11px;opacity:.7}
     .choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
     @media (min-width:900px){.choices{grid-template-columns:repeat(4,minmax(0,1fr));}}
     .choice{position:relative;background:var(--panel);border:1px solid #1f2937;border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:12px;min-height:210px}
-    .choice.dragover{outline:2px dashed var(--accent)}
     .food-head{display:flex;align-items:center;gap:10px}
     .food-emoji{font-size:36px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35));}
     .food-name{font-weight:900;letter-spacing:.3px}
@@ -51,324 +47,162 @@
     .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#0b1224;border:1px solid #334155;font-weight:700}
     .pill .emoji{font-size:18px}
     .footer{opacity:.7;font-size:.85rem;text-align:center}
-    .drag-ghost{position:fixed;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);}
     .sr-only{position:absolute;left:-9999px}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px;}
+    .modal{width:min(860px,100%);background:var(--panel);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow);}
+    .modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937}
+    .modal .body{padding:14px 16px;display:grid;gap:16px;}
+    .modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer}
+    .tab[aria-selected=true]{outline:2px solid var(--accent)}
+    .grid{display:grid;gap:10px}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    @media (max-width:740px){.grid.cols-2{grid-template-columns:1fr;}}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .mini{font-size:.85rem;color:var(--muted)}
+    .list{display:grid;gap:8px}
+    .item{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid #1f2937;border-radius:12px;padding:10px}
+    .item .grow{flex:1}
+    .danger{color:#fecaca}
+    .hint{font-size:.85rem;color:var(--muted)}
+    .small{font-size:.9rem}
+    .icon-btn{padding:6px 10px;border-radius:10px;border:1px solid #334155;background:#0b1224;cursor:pointer}
   </style>
 </head>
 <body>
-  <div class="app">
-    <header class="panel">
-      <div class="title">
-        <div style="font-size: 1.6rem">Breakfast Chooser</div>
-        <div class="small">Tap a child, then tap a food — or drag the face onto a food card.</div>
+  <div class='app'>
+    <header class='panel'>
+      <div class='title'>
+        <div style='font-size: 1.6rem'>Breakfast Chooser</div>
+        <div class='small'>Tap a child, then tap a food card to choose.</div>
       </div>
-      <div class="controls">
-        <div class="date-wrap">
-          <label for="theDate" class="sr-only">Date</label>
-          <input id="theDate" type="date" />
+      <div class='controls'>
+        <div class='date-wrap'>
+          <label for='theDate' class='sr-only'>Date</label>
+          <input id='theDate' type='date' />
         </div>
-        <button id="btnClear" class="btn-ghost" title="Clear choices for this date">Reset Day</button>
-        <button id="btnRandomize" class="btn-ghost" title="Let me pick for everyone">Randomize</button>
-        <button id="btnShare" class="btn-primary" title="Copy a summary">Copy Summary</button>
+        <button id='btnClear' class='btn-ghost' title='Clear choices for this date'>Reset Day</button>
+        <button id='btnRandomize' class='btn-ghost' title='Let me pick for everyone'>Randomize</button>
+        <button id='btnShare' class='btn-primary' title='Copy a summary'>Copy Summary</button>
+        <button id='btnAdmin' class='icon-btn' title='Admin'>⚙️</button>
       </div>
     </header>
 
-    <section class="kids panel" id="kidsRow" aria-label="Kids"></section>
-    <section class="choices" id="choicesGrid" aria-label="Breakfast choices"></section>
-    <section class="summary panel" id="summary"></section>
-    <div class="footer">Works offline. Data stays on this device (local only).</div>
+    <section class='kids panel' id='kidsRow' aria-label='Kids'></section>
+    <section class='choices' id='choicesGrid' aria-label='Breakfast choices'></section>
+    <section class='summary panel' id='summary'></section>
+    <div class='footer'>Works offline. Data stays on this device (local only).</div>
   </div>
 
-  <input type="file" id="file-Emilia"   accept="image/*" capture="user" class="sr-only" />
-  <input type="file" id="file-Hudson"   accept="image/*" capture="user" class="sr-only" />
-  <input type="file" id="file-Penelope" accept="image/*" capture="user" class="sr-only" />
-  <input type="file" id="file-Jasper"   accept="image/*" capture="user" class="sr-only" />
+  <input type='file' id='file-picker' accept='image/*' capture='user' class='sr-only' />
+
+  <div class='modal-backdrop' id='adminModal' aria-hidden='true' role='dialog' aria-labelledby='adminTitle'>
+    <div class='modal'>
+      <header>
+        <div id='adminTitle' style='font-weight:800'>Admin</div>
+        <button id='adminClose' class='icon-btn'>✖</button>
+      </header>
+      <div class='body'>
+        <div class='tabs'>
+          <button class='tab' data-tab='kids' aria-selected='true'>Kids</button>
+          <button class='tab' data-tab='menu'>Menu Options</button>
+        </div>
+
+        <div class='tab-panel' data-panel='kids'>
+          <div class='list' id='kidsList'></div>
+          <div class='row'>
+            <input type='text' id='newKidName' placeholder='Add kid name'>
+            <button id='addKid' class='btn-primary'>Add Kid</button>
+            <div class='hint'>Tip: Add a photo after creating.</div>
+          </div>
+        </div>
+
+        <div class='tab-panel' data-panel='menu' style='display:none'>
+          <div class='grid cols-2'>
+            <div>
+              <div class='row'>
+                <select id='menuEmoji'></select>
+                <input type='text' id='menuLabel' placeholder='Menu item label (e.g., Oatmeal)'>
+                <button id='addMenu' class='btn-primary'>Add</button>
+              </div>
+              <div class='mini'>You can store up to 10 total menu items.</div>
+              <div class='list' id='menuList'></div>
+            </div>
+            <div>
+              <div class='row'><div style='font-weight:800'>Active Daily Choices (max 4)</div></div>
+              <div class='list' id='activeList'></div>
+              <div class='hint'>Only active choices appear on the main screen.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class='footer'>
+        <button id='adminSave' class='btn-primary'>Save</button>
+        <button id='adminCancel' class='btn-ghost'>Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <script>
   ;(() => {
-    const KIDS = [
-      { id: 'Emilia',   name: 'Emilia',   age: 4, emoji: '🌸' },
-      { id: 'Hudson',   name: 'Hudson',   age: 7, emoji: '⚡️' },
-      { id: 'Penelope', name: 'Penelope', age: 8, emoji: '🦄' },
-      { id: 'Jasper',   name: 'Jasper',   age: 9, emoji: '🛸' },
-    ]
+    const DEFAULT_KIDS = [{ id: id(), name: 'Emilia', photo: null },{ id: id(), name: 'Hudson', photo: null },{ id: id(), name: 'Penelope', photo: null },{ id: id(), name: 'Jasper', photo: null }];
+    const DEFAULT_MENU = [{ id: id(), emoji: '🧇', label: 'Waffles w/ Syrup (Eggo)' },{ id: id(), emoji: '🍓', label: 'Pop‑Tart (various)' },{ id: id(), emoji: '🥣', label: 'Cereal (various)' },{ id: id(), emoji: '🥯', label: 'Bagel & Cream Cheese' }];
+    const EMOJI_CHOICES = ['🧇','🍓','🥣','🥯','🍌','🍳','🥞','🧁','🍎','🧀','🥛','☕️','🍫','🍪','🥐','🥗','🍊','🍇','🍍','🌯'];
+    const LS_KEYS = { kids:'bc:kids', menu:'bc:menu:all', active:'bc:menu:active', day:(d)=>`bc:choices:${d}` };
+    let activeKid = null;
+    const $ = (s,e=document)=>e.querySelector(s); const $$=(s,e=document)=>[...e.querySelectorAll(s)];
+    const dateInput = $('#theDate'); dateInput.value = todayStr();
+    if (!localStorage.getItem(LS_KEYS.kids)) setKids(DEFAULT_KIDS);
+    if (!localStorage.getItem(LS_KEYS.menu)) setMenuAll(DEFAULT_MENU);
+    if (!localStorage.getItem(LS_KEYS.active)) setActive(getMenuAll().slice(0,4).map(m=>m.id));
+    fullRender();
 
-    const CHOICES = [
-      { id: 'waffles',  name: 'Waffles w/ Syrup (Eggo)', emoji: '🧇' },
-      { id: 'poptart',  name: 'Pop‑Tart (various)',      emoji: '🍓' },
-      { id: 'cereal',   name: 'Cereal (various)',        emoji: '🥣' },
-      { id: 'bagel',    name: 'Bagel & Cream Cheese',    emoji: '🥯' },
-    ]
+    // Storage helpers
+    function id(){ return Math.random().toString(36).slice(2,10) }
+    function load(k,f){ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? f }catch(_){ return f } }
+    function save(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
+    function todayStr(){ return new Date().toISOString().slice(0,10) }
+    function getKids(){ return load(LS_KEYS.kids, DEFAULT_KIDS) }
+    function setKids(a){ save(LS_KEYS.kids,a) }
+    function getMenuAll(){ return load(LS_KEYS.menu, DEFAULT_MENU) }
+    function setMenuAll(a){ save(LS_KEYS.menu,a) }
+    function getActive(){ let a=load(LS_KEYS.active,null); if(!a){ a=getMenuAll().slice(0,4).map(m=>m.id); setActive(a);} return a }
+    function setActive(ids){ save(LS_KEYS.active, ids.slice(0,4)) }
+    function getDay(d){ return load(LS_KEYS.day(d),{}) }
+    function setDay(d,o){ save(LS_KEYS.day(d),o) }
 
-    const $ = (sel, el=document) => el.querySelector(sel)
-    const $$ = (sel, el=document) => [...el.querySelectorAll(sel)]
+    function initials(name){ const p=(name||'').trim().split(/\s+/).filter(Boolean); return ((p[0]?p[0][0]:'?')+(p[1]?p[1][0]:'' )).toUpperCase() }
+    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
 
-    const todayStr = () => new Date().toISOString().slice(0,10)
-    const keyFor = (date) => `breakfast-choices:${date}`
-    const avatarKey = (kidId) => `breakfast-avatar:${kidId}`
-    const loadDay = (date) => JSON.parse(localStorage.getItem(keyFor(date))||'{}')
-    const saveDay = (date, data) => localStorage.setItem(keyFor(date), JSON.stringify(data))
+    function renderKids(){ const row=$('#kidsRow'); row.innerHTML=''; getKids().forEach(k=>{ const el=document.createElement('div'); el.className='kid'; el.dataset.kid=k.id; el.setAttribute('role','button'); el.setAttribute('aria-selected', activeKid===k.id?'true':'false'); el.innerHTML=`<div class='face'>${k.photo?`<img alt='${k.name}' src='${k.photo}'>`:`<span>${initials(k.name)}</span>`}</div><div><div class='kid-name'>${k.name}</div><div class='kid-age' style='visibility:hidden'>.</div></div>`; row.appendChild(el); }); }
+    function renderChoices(){ const grid=$('#choicesGrid'); grid.innerHTML=''; const date=dateInput.value; const picks=getDay(date); const all=getMenuAll(); const active=getActive(); const act=all.filter(m=>active.includes(m.id)).slice(0,4); const kids=getKids(); act.forEach(c=>{ const card=document.createElement('div'); card.className='choice'; card.dataset.choice=c.id; card.innerHTML=`<div class='food-head'><div class='food-emoji'>${c.emoji}</div><div><div class='food-name'>${c.label}</div></div></div><div class='avatars'></div><div class='empty-hint'>Tap to select</div>`; const avatars=$('.avatars',card); kids.forEach(k=>{ if(picks[k.id]===c.id){ const av=document.createElement('div'); av.className='avatar'; av.title=k.name; av.innerHTML=k.photo?`<img alt='${k.name}' src='${k.photo}'>`:`<span>${initials(k.name)}</span>`; avatars.appendChild(av);} }); if(avatars.children.length) $('.empty-hint',card).style.display='none'; grid.appendChild(card); }); }
+    function renderSummary(){ const s=$('#summary'); s.innerHTML=''; const date=dateInput.value; const picks=getDay(date); const kids=getKids(); const all=getMenuAll(); kids.forEach(k=>{ const ch=all.find(c=>c.id===picks[k.id]); const item=document.createElement('div'); item.className='summary-item'; item.innerHTML=`<div style='display:flex;align-items:center;gap:10px'><div class='face' style='width:42px;height:42px'>${k.photo?`<img alt='${k.name}' src='${k.photo}'>`:`<span>${initials(k.name)}</span>`}</div><div style='font-weight:800'>${k.name}</div></div>${ch?`<div class='pill'><span class='emoji'>${ch.emoji}</span> ${ch.label}</div>`:`<div class='pill' style='opacity:.6'>Not chosen</div>`}`; s.appendChild(item); }); }
+    function attachMainInteractions(){ $$('#kidsRow .kid').forEach(k=>{ k.addEventListener('click',()=>{ activeKid=k.dataset.kid; $$('#kidsRow .kid').forEach(el=>el.setAttribute('aria-selected','false')); k.setAttribute('aria-selected','true'); }); }); $$('#choicesGrid .choice').forEach(card=>{ card.addEventListener('click',()=>{ if(!activeKid) return; const date=dateInput.value; const picks=getDay(date); picks[activeKid]=card.dataset.choice; setDay(date,picks); fullRender(); }); }); }
+    function fullRender(){ renderKids(); renderChoices(); renderSummary(); attachMainInteractions(); }
 
-    let activeKid = null
+    // Admin modal
+    const modal=$('#adminModal'); $('#btnAdmin').addEventListener('click',openAdmin); $('#adminClose').addEventListener('click',closeAdmin); $('#adminCancel').addEventListener('click',closeAdmin); $('#adminSave').addEventListener('click',()=>closeAdmin());
+    $$('.tab').forEach(t=>t.addEventListener('click',()=>{ const tab=t.dataset.tab; $$('.tab').forEach(x=>x.setAttribute('aria-selected','false')); t.setAttribute('aria-selected','true'); $$('.tab-panel').forEach(p=>p.style.display=(p.dataset.panel===tab?'':'none')); }));
+    function openAdmin(){ buildAdminKids(); buildAdminMenu(); modal.style.display='flex'; modal.setAttribute('aria-hidden','false'); }
+    function closeAdmin(){ modal.style.display='none'; modal.setAttribute('aria-hidden','true'); }
 
-    const dateInput = $('#theDate')
-    dateInput.value = todayStr()
+    function buildAdminKids(){ const list=$('#kidsList'); list.innerHTML=''; const kids=getKids(); kids.forEach(k=>{ const row=document.createElement('div'); row.className='item'; row.dataset.kid=k.id; row.innerHTML=`<div class='face' style='width:44px;height:44px'>${k.photo?`<img alt='${k.name}' src='${k.photo}'>`:`<span>${initials(k.name)}</span>`}</div><input type='text' class='grow' value='${escapeHtml(k.name)}' placeholder='Name'><button class='icon-btn' data-photo>Change Photo</button><button class='btn-warn' data-remove>Remove</button>`; list.appendChild(row); }); $('#addKid').onclick=()=>{ const name=($('#newKidName').value||'').trim(); if(!name) return; const kids2=getKids(); kids2.push({id:id(),name,photo:null}); setKids(kids2); $('#newKidName').value=''; buildAdminKids(); fullRender(); }; $$('#kidsList .item').forEach(row=>{ const kidId=row.dataset.kid; $('input',row).addEventListener('input',e=>{ const ks=getKids(); const k=ks.find(x=>x.id===kidId); if(!k) return; k.name=e.target.value; setKids(ks); renderKids(); renderSummary(); }); $('[data-photo]',row).addEventListener('click',()=>pickPhotoFor(kidId)); $('[data-remove]',row).addEventListener('click',()=>{ const ks=getKids().filter(x=>x.id!==kidId); setKids(ks); const date=dateInput.value; const picks=getDay(date); delete picks[kidId]; setDay(date,picks); buildAdminKids(); fullRender(); }); }); }
+    function pickPhotoFor(kidId){ const input=$('#file-picker'); input.onchange=(ev)=>{ const f=ev.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ const ks=getKids(); const k=ks.find(x=>x.id===kidId); if(!k) return; k.photo=r.result; setKids(ks); buildAdminKids(); fullRender(); }; r.readAsDataURL(f); input.value=''; }; input.click(); }
 
-    function kidPhotoSrc(kid){
-      const dataUrl = localStorage.getItem(avatarKey(kid.id))
-      return dataUrl || null
-    }
+    function buildAdminMenu(){ const sel=$('#menuEmoji'); sel.innerHTML=''; EMOJI_CHOICES.forEach(e=>{ const o=document.createElement('option'); o.value=e; o.textContent=e; sel.appendChild(o); }); renderMenuList(); renderActiveList(); $('#addMenu').onclick=()=>{ const all=getMenuAll(); if(all.length>=10){ alert('Max 10 stored menu items reached.'); return; } const emoji=$('#menuEmoji').value||'🍽️'; const label=($('#menuLabel').value||'').trim(); if(!label){ alert('Enter a label for the menu item.'); return; } all.push({id:id(),emoji,label}); setMenuAll(all); $('#menuLabel').value=''; renderMenuList(); }; }
+    function renderMenuList(){ const wrap=$('#menuList'); wrap.innerHTML=''; const all=getMenuAll(); all.forEach(m=>{ const row=document.createElement('div'); row.className='item'; row.dataset.id=m.id; row.innerHTML=`<div style='font-size:24px'>${m.emoji}</div><input type='text' class='grow' value='${escapeHtml(m.label)}' placeholder='Label'><button class='btn-warn' data-remove>Remove</button>`; wrap.appendChild(row); }); $$('#menuList .item').forEach(row=>{ const idd=row.dataset.id; $('input',row).addEventListener('input',e=>{ const all=getMenuAll(); const it=all.find(x=>x.id===idd); if(!it) return; it.label=e.target.value; setMenuAll(all); fullRender(); }); $('[data-remove]',row).addEventListener('click',()=>{ let all=getMenuAll().filter(x=>x.id!==idd); setMenuAll(all); setActive(getActive().filter(x=>x!==idd)); const date=dateInput.value; const picks=getDay(date); for(const k in picks) if(picks[k]===idd) delete picks[k]; setDay(date,picks); renderMenuList(); renderActiveList(); fullRender(); }); }); }
+    function renderActiveList(){ const wrap=$('#activeList'); wrap.innerHTML=''; const all=getMenuAll(); const act=getActive(); all.forEach(m=>{ const checked=act.includes(m.id); const row=document.createElement('div'); row.className='item'; row.dataset.id=m.id; row.innerHTML=`<div style='font-size:24px'>${m.emoji}</div><div class='grow small'>${m.label}</div><label class='row small'><input type='checkbox' ${checked?'checked':''}> Active</label>`; wrap.appendChild(row); }); $$('#activeList .item input[type=checkbox]').forEach(cb=>{ cb.addEventListener('change',e=>{ const idd=e.target.closest('.item').dataset.id; let act=getActive(); if(e.target.checked){ if(act.length>=4){ e.target.checked=false; alert('You can only have up to 4 active choices.'); return; } act=[...new Set(act.concat(idd))]; } else { act=act.filter(x=>x!==idd); } setActive(act); fullRender(); }); }); }
 
-    function wireFileInputs() {
-      KIDS.forEach(({id}) => {
-        const input = document.getElementById(`file-${id}`);
-        if (!input._wired) {
-          input.addEventListener('change', (ev) => {
-            const file = ev.target.files?.[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-              localStorage.setItem(avatarKey(id), reader.result);
-              fullRender();
-            };
-            reader.readAsDataURL(file);
-          });
-          input._wired = true;
-        }
-      });
-    }
+    // top controls
+    $('#btnClear').addEventListener('click',()=>{ const d=dateInput.value; localStorage.removeItem(LS_KEYS.day(d)); fullRender(); });
+    $('#btnRandomize').addEventListener('click',()=>{ const d=dateInput.value; const kids=getKids(); const act=getActive(); const picks={}; kids.forEach(k=>{ picks[k.id]=act[Math.floor(Math.random()*act.length)] }); setDay(d,picks); fullRender(); });
+    $('#btnShare').addEventListener('click',async()=>{ const d=dateInput.value; const kids=getKids(); const picks=getDay(d); const all=getMenuAll(); const lines=kids.map(k=>{ const ch=all.find(c=>c.id===picks[k.id]); return `${k.name}: ${ch?`${ch.emoji} ${ch.label}`:'—'}`; }); const text=`Breakfast Picks for ${d}
+`+lines.join('
+'); try{ await navigator.clipboard.writeText(text); alert('Summary copied to clipboard!') }catch(_){ prompt('Copy the summary:', text) } });
 
-    function renderKids(){
-      const row = $('#kidsRow')
-      row.innerHTML = ''
-      KIDS.forEach(kid => {
-        const kidEl = document.createElement('div')
-        kidEl.className = 'kid'
-        kidEl.setAttribute('data-kid', kid.id)
-        kidEl.setAttribute('draggable', 'true')
-        kidEl.setAttribute('role','button')
-        kidEl.setAttribute('aria-selected', activeKid===kid.id ? 'true':'false')
-        kidEl.innerHTML = `
-          <div class="face" aria-hidden="true">
-            ${kidPhotoSrc(kid) ? `<img alt="${kid.name}" src="${kidPhotoSrc(kid)}"/>` : `<span>${kid.emoji}</span>`}
-          </div>
-          <div>
-            <div class="kid-name">${kid.name}</div>
-            <div class="kid-age">Age ${kid.age}</div>
-          </div>
-          <div class="edit">
-            <label for="file-${kid.id}" class="edit-label" title="Add/Change photo">Edit</label>
-          </div>
-          <div class="drag-hint">⋮⋮ drag</div>
-        `
-        row.appendChild(kidEl)
-      })
-    }
-
-    function renderChoices(){
-      const grid = $('#choicesGrid')
-      grid.innerHTML = ''
-      const date = dateInput.value
-      const day = loadDay(date)
-
-      CHOICES.forEach(choice => {
-        const card = document.createElement('div')
-        card.className = 'choice'
-        card.setAttribute('data-choice', choice.id)
-        card.innerHTML = `
-          <div class="food-head">
-            <div class="food-emoji" aria-hidden="true">${choice.emoji}</div>
-            <div><div class="food-name">${choice.name}</div></div>
-          </div>
-          <div class="avatars"></div>
-          <div class="empty-hint">Tap to select, or drag a face here</div>
-        `
-
-        const avatarsWrap = $('.avatars', card)
-
-        // Only show avatars for kids who selected THIS choice
-        KIDS.forEach(kid => {
-          const chosen = day[kid.id]
-          if (chosen === choice.id) {
-            const av = document.createElement('div')
-            av.className = 'avatar'
-            av.setAttribute('data-kid', kid.id)
-            av.setAttribute('title', `${kid.name}`)
-            av.innerHTML = kidPhotoSrc(kid) ? `<img alt="${kid.name}">` : `<span>${kid.emoji}</span>`
-            if (kidPhotoSrc(kid)) $('img', av).src = kidPhotoSrc(kid)
-            avatarsWrap.appendChild(av)
-          }
-        })
-
-        if (avatarsWrap.children.length > 0) {
-          $('.empty-hint', card).style.display = 'none'
-        }
-
-        grid.appendChild(card)
-      })
-    }
-
-    function renderSummary(){
-      const s = $('#summary')
-      s.innerHTML = ''
-      const date = dateInput.value
-      const day = loadDay(date)
-      KIDS.forEach(kid => {
-        const choiceId = day[kid.id]
-        const item = document.createElement('div')
-        item.className = 'summary-item'
-        const ch = CHOICES.find(c=>c.id===choiceId)
-        item.innerHTML = `
-          <div style="display:flex; align-items:center; gap:10px">
-            <div class="face" style="width:42px;height:42px">${kidPhotoSrc(kid) ? `<img alt="${kid.name}" src="${kidPhotoSrc(kid)}"/>` : `<span>${kid.emoji}</span>`}</div>
-            <div style="font-weight:800">${kid.name}</div>
-          </div>
-          ${ch ? `<div class="pill"><span class="emoji">${ch.emoji}</span> ${ch.name}</div>` : `<div class="pill" style="opacity:.6">Not chosen</div>`}
-        `
-        s.appendChild(item)
-      })
-    }
-
-    function fullRender(){
-      renderKids(); renderChoices(); renderSummary(); attachInteractions(); wireFileInputs();
-    }
-
-    function attachInteractions(){
-      $$('#kidsRow .kid').forEach(k => {
-        k.addEventListener('click', (e)=>{
-          activeKid = k.dataset.kid
-          $$('#kidsRow .kid').forEach(el=>el.setAttribute('aria-selected','false'))
-          k.setAttribute('aria-selected','true')
-        })
-      })
-
-      $$('#choicesGrid .choice').forEach(card => {
-        card.addEventListener('click', (e)=>{
-          if(!activeKid) return
-          assign(activeKid, card.dataset.choice)
-        })
-      })
-
-      enableDragDrop()
-    }
-
-    function assign(kidId, choiceId){
-      const date = dateInput.value
-      const day = loadDay(date)
-      day[kidId] = choiceId
-      saveDay(date, day)
-      activeKid = kidId
-      fullRender()
-    }
-
-    function enableDragDrop(){
-      let ghost = null
-
-      function makeGhost(fromEl){
-        ghost = fromEl.cloneNode(true)
-        ghost.classList.add('drag-ghost')
-        ghost.style.width = fromEl.offsetWidth + 'px'
-        ghost.style.height = fromEl.offsetHeight + 'px'
-        document.body.appendChild(ghost)
-      }
-
-      function moveGhost(e){
-        if(!ghost) return
-        const x = e.touches ? e.touches[0].clientX : e.clientX
-        const y = e.touches ? e.touches[0].clientY : e.clientY
-        ghost.style.left = x + 'px'
-        ghost.style.top = y + 'px'
-      }
-
-      function clearGhost(){ if(ghost){ ghost.remove(); ghost=null } }
-
-      $$('#kidsRow .kid').forEach(k => {
-        const start = (e)=>{
-          e.preventDefault()
-          activeKid = k.dataset.kid
-          $$('#kidsRow .kid').forEach(el=>el.setAttribute('aria-selected','false'))
-          k.setAttribute('aria-selected','true')
-          makeGhost($('.face', k))
-          moveGhost(e)
-        }
-        const move = (e)=>{ moveGhost(e) }
-        const end = (e)=>{ clearGhost() }
-
-        k.addEventListener('dragstart', (e)=>{
-          e.dataTransfer.setData('text/plain', k.dataset.kid)
-          makeGhost($('.face', k))
-        })
-        k.addEventListener('touchstart', start, {passive:false})
-        window.addEventListener('touchmove', move, {passive:false})
-        window.addEventListener('touchend', end)
-      })
-
-      $$('#choicesGrid .choice').forEach(card => {
-        card.addEventListener('dragover', e=>{ e.preventDefault(); card.classList.add('dragover') })
-        card.addEventListener('dragleave', ()=> card.classList.remove('dragover'))
-        card.addEventListener('drop', e=>{
-          e.preventDefault(); card.classList.remove('dragover')
-          const kidId = e.dataTransfer.getData('text/plain') || activeKid
-          if(kidId) assign(kidId, card.dataset.choice)
-          clearGhost()
-        })
-
-        card.addEventListener('touchmove', (e)=>{
-          const t = e.touches[0]
-          const rect = card.getBoundingClientRect()
-          const inside = t.clientX>rect.left && t.clientX<rect.right && t.clientY>rect.top && t.clientY<rect.bottom
-          card.classList.toggle('dragover', inside)
-        })
-        card.addEventListener('touchend', (e)=>{
-          card.classList.remove('dragover')
-          if(activeKid) assign(activeKid, card.dataset.choice)
-          clearGhost()
-        })
-      })
-    }
-
-    document.getElementById('btnClear').addEventListener('click', ()=>{
-      const date = document.getElementById('theDate').value
-      localStorage.removeItem(keyFor(date))
-      fullRender()
-    })
-
-    document.getElementById('btnRandomize').addEventListener('click', ()=>{
-      const date = document.getElementById('theDate').value
-      const day = {}
-      const ids = CHOICES.map(c=>c.id)
-      const pick = () => ids[Math.floor(Math.random()*ids.length)]
-      KIDS.forEach(k => { day[k.id] = pick() })
-      saveDay(date, day)
-      fullRender()
-    })
-
-    document.getElementById('btnShare').addEventListener('click', async ()=>{
-      const date = document.getElementById('theDate').value
-      const day = loadDay(date)
-      const lines = KIDS.map(k => {
-        const ch = CHOICES.find(c => c.id === day[k.id])
-        return `${k.name}: ${ch ? `${ch.emoji} ${ch.name}` : '—'}`
-      })
-      const text = `Breakfast Picks for ${date}\n` + lines.join('\n')
-      try{
-        await navigator.clipboard.writeText(text)
-        alert('Summary copied to clipboard!')
-      }catch(err){
-        prompt('Copy the summary:', text)
-      }
-    })
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(()=>{})
-      })
-    }
-
-    dateInput.addEventListener('change', fullRender)
-    wireFileInputs()
-    fullRender()
-  })()
+    if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}) }) }
+    dateInput.addEventListener('change', fullRender);
+  })();
   </script>
 </body>
 </html>
