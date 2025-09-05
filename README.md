@@ -1,1 +1,1 @@
-Breakfast Chooser v3: Admin modal; manage kids and menu (emoji + label); up to 10 stored, 4 active; no drag; offline PWA.
+Breakfast Chooser v3.1: Fix escapeHtml syntax; bump SW cache to v3-1.
