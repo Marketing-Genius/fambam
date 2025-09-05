@@ -1,1 +1,1 @@
-Breakfast Chooser v3.1: Fix escapeHtml syntax; bump SW cache to v3-1.
+Breakfast Chooser v3.2: Complete HTML/JS; fixed escapeHtml; SW cache v3-2; visible version tag.
