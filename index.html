@@ -12,14 +12,14 @@
   <link rel="manifest" href="manifest.webmanifest">
 
   <style>
-    :root{
+    :root {
       --panel:#111827; --card:#1f2937; --muted:#6b7280; --text:#e5e7eb; --accent:#22d3ee;
       --bg:#0f172a; --ok:#34d399; --warn:#fb7185; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
     }
-    html,body{height:100%;}
-    body{
+    body {
       margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      background:linear-gradient(180deg, #0b1026 0%, #0f172a 100%); color:var(--text); -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+      background:linear-gradient(180deg, #0b1026 0%, #0f172a 100%); color:var(--text);
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
     }
     .app{max-width:1100px; margin:0 auto; padding:20px; display:grid; gap:18px; grid-template-rows:auto auto 1fr auto;}
     header{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;}
@@ -30,61 +30,30 @@
     input[type="date"], button, select, input[type="text"]{
       font: inherit; color:var(--text); background:var(--card); border:1px solid #374151; border-radius:12px; padding:10px 14px;
     }
-    input[type="date"]{padding:10px;}
-    button{cursor:pointer}
-    .btn-primary{background: linear-gradient(180deg,#22d3ee,#06b6d4); color:#001018; border:none; font-weight:700}
-    .btn-ghost{background:transparent; border:1px dashed #334155; color:var(--muted)}
-    .btn-warn{background:#3f1620; border:1px solid #7f1d1d; color:#fecaca}
-
+    .btn-primary{background: linear-gradient(180deg,#22d3ee,#06b6d4); color:#001018; border:none; font-weight:700; cursor:pointer}
+    .btn-ghost{background:transparent; border:1px dashed #334155; color:var(--muted); cursor:pointer}
+    .btn-warn{background:#3f1620; border:1px solid #7f1d1d; color:#fecaca; cursor:pointer}
     .kids.panel{display:flex; gap:12px; align-items:center; overflow:auto;}
-    .kid{position:relative; display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--card); border:1px solid #1f2937; border-radius:14px; min-width: 210px; user-select:none;}
+    .kid{display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--card); border:1px solid #1f2937; border-radius:14px; min-width: 210px; user-select:none;}
     .kid[aria-selected="true"]{outline:2px solid var(--accent);}
     .face{width:56px; height:56px; border-radius:50%; background:#0b1224; display:grid; place-items:center; font-size:28px; border:2px solid #334155; overflow:hidden}
     .face img{width:100%; height:100%; object-fit:cover}
-    .kid-name{font-weight:800;}
-    .kid-age{font-size:.8rem; color:var(--muted)}
-
     .choices{display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:14px}
     @media (min-width:900px){ .choices{grid-template-columns: repeat(4,minmax(0,1fr));} }
-    .choice{position:relative; background:var(--panel); border:1px solid #1f2937; border-radius:var(--radius); padding:14px; display:flex; flex-direction:column; gap:12px; min-height: 210px}
-    .food-head{display:flex; align-items:center; gap:10px}
+    .choice{background:var(--panel); border:1px solid #1f2937; border-radius:var(--radius); padding:14px; display:flex; flex-direction:column; gap:12px; min-height: 210px}
     .food-emoji{font-size:36px; filter: drop-shadow(0 6px 10px rgba(0,0,0,.35));}
-    .food-name{font-weight:900; letter-spacing:.3px}
     .avatars{display:flex; flex-wrap:wrap; gap:8px; min-height:44px}
-    .avatar{position:relative; width:40px; height:40px; border-radius:50%; background:#0b1224; display:grid; place-items:center; font-size:20px; border:2px solid #334155;}
+    .avatar{width:40px; height:40px; border-radius:50%; background:#0b1224; display:grid; place-items:center; font-size:20px; border:2px solid #334155;}
     .avatar img{width:100%; height:100%; object-fit:cover; border-radius:50%}
-    .empty-hint{margin-top:auto; font-size:.9rem; color:var(--muted)}
-
-    .summary.panel{display:grid; grid-template-columns: repeat(1,minmax(0,1fr)); gap:10px}
-    @media (min-width:760px){ .summary.panel{grid-template-columns: repeat(2,minmax(0,1fr));} }
+    .summary.panel{display:grid; gap:10px}
     .summary-item{display:flex; align-items:center; justify-content:space-between; background:var(--card); border:1px solid #1f2937; padding:10px 12px; border-radius:12px}
     .pill{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:#0b1224; border:1px solid #334155; font-weight:700}
-    .pill .emoji{font-size:18px}
-
-    .footer{opacity:.7; font-size:.85rem; text-align:center}
-    .version{opacity:.6; font-size:.8rem; margin-top:6px}
-    .sr-only{position:absolute; left:-9999px}
-
+    .footer{text-align:center; font-size:.85rem; opacity:.7}
+    .version{font-size:.8rem; opacity:.6}
     .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:10000; padding:20px;}
     .modal{width:min(860px, 100%); background:var(--panel); border:1px solid #1f2937; border-radius:16px; box-shadow:var(--shadow);}
-    .modal header{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #1f2937}
     .modal .body{padding:14px 16px; display:grid; gap:16px;}
-    .modal .footer{padding:14px 16px; border-top:1px solid #1f2937; display:flex; justify-content:flex-end; gap:10px}
-    .tabs{display:flex; gap:8px; flex-wrap:wrap}
-    .tab{padding:8px 12px; border-radius:10px; background:#0b1224; border:1px solid #334155; cursor:pointer}
-    .tab[aria-selected=\"true\"]{outline:2px solid var(--accent)}
-    .grid{display:grid; gap:10px}
-    .grid.cols-2{grid-template-columns: repeat(2,minmax(0,1fr));}
-    @media (max-width:740px){ .grid.cols-2{grid-template-columns: 1fr;} }
-    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .mini{font-size:.85rem; color:var(--muted)}
-    .list{display:grid; gap:8px}
-    .item{display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid #1f2937; border-radius:12px; padding:10px}
-    .item .grow{flex:1}
-    .danger{color:#fecaca}
-    .hint{font-size:.85rem; color:var(--muted)}
-    .small{font-size:.9rem}
-    .icon-btn{padding:6px 10px; border-radius:10px; border:1px solid #334155; background:#0b1224; cursor:pointer}
+    .row.addkid{margin-top:10px;}
   </style>
 </head>
 <body>
@@ -95,416 +64,55 @@
         <div class="small">Tap a child, then tap a food card to choose.</div>
       </div>
       <div class="controls">
-        <div class="date-wrap">
-          <label for="theDate" class="sr-only">Date</label>
-          <input id="theDate" type="date" />
-        </div>
-        <button id="btnClear" class="btn-ghost" title="Clear choices for this date">Reset Day</button>
-        <button id="btnRandomize" class="btn-ghost" title="Let me pick for everyone">Randomize</button>
-        <button id="btnShare" class="btn-primary" title="Copy a summary">Copy Summary</button>
-        <button id="btnAdmin" class="icon-btn" title="Admin">⚙️</button>
+        <input id="theDate" type="date" />
+        <button id="btnClear" class="btn-ghost">Reset Day</button>
+        <button id="btnRandomize" class="btn-ghost">Randomize</button>
+        <button id="btnShare" class="btn-primary">Copy Summary</button>
+        <button id="btnAdmin" class="btn-ghost">⚙️</button>
       </div>
     </header>
 
-    <section class="kids panel" id="kidsRow" aria-label="Kids"></section>
-    <section class="choices" id="choicesGrid" aria-label="Breakfast choices"></section>
+    <section class="kids panel" id="kidsRow"></section>
+    <section class="choices" id="choicesGrid"></section>
     <section class="summary panel" id="summary"></section>
     <div class="footer">
       Works offline. Data stays on this device (local only).
-      <div class="version">v3.2.2</div>
+      <div class="version">v3.2.3</div>
     </div>
   </div>
 
-  <!-- Photo input: no forced capture so iOS shows Camera *and* Photo Library -->
   <input type="file" id="file-picker" accept="image/*" class="sr-only" />
 
-  <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
+  <!-- Admin Modal -->
+  <div class="modal-backdrop" id="adminModal">
     <div class="modal">
-      <header>
-        <div id="adminTitle" style="font-weight:800">Admin</div>
-        <button id="adminClose" class="icon-btn">✖</button>
-      </header>
+      <header><div>Admin</div><button id="adminClose">✖</button></header>
       <div class="body">
-        <div class="tabs">
-          <button class="tab" data-tab="kids" aria-selected="true">Kids</button>
-          <button class="tab" data-tab="menu">Menu Options</button>
+        <!-- tabs + content built by JS -->
+        <div id="kidsList"></div>
+        <div class="row addkid">
+          <input type="text" id="newKidName" placeholder="Add kid name">
+          <button id="addKid" class="btn-primary">Add Kid</button>
         </div>
-
-        <div class="tab-panel" data-panel="kids">
-          <div class="list" id="kidsList"></div>
-          <div class="row">
-            <input type="text" id="newKidName" placeholder="Add kid name">
-            <button id="addKid" class="btn-primary">Add Kid</button>
-            <div class="hint">Tip: Add a photo after creating.</div>
-          </div>
-        </div>
-
-        <div class="tab-panel" data-panel="menu" style="display:none">
-          <div class="grid cols-2">
-            <div>
-              <div class="row">
-                <select id="menuEmoji"></select>
-                <input type="text" id="menuLabel" placeholder="Menu item label (e.g., Oatmeal)">
-                <button id="addMenu" class="btn-primary">Add</button>
-              </div>
-              <div class="mini">You can store up to 10 total menu items.</div>
-              <div class="list" id="menuList"></div>
-            </div>
-            <div>
-              <div class="row"><div style="font-weight:800">Active Daily Choices (max 4)</div></div>
-              <div class="list" id="activeList"></div>
-              <div class="hint">Only active choices appear on the main screen.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="footer">
-        <button id="adminSave" class="btn-primary">Save</button>
-        <button id="adminCancel" class="btn-ghost">Cancel</button>
       </div>
     </div>
   </div>
 
-  <script>
-  ;(() => {
-    const DEFAULT_KIDS = [
-      { id: id(), name: 'Emilia',   photo: null },
-      { id: id(), name: 'Hudson',   photo: null },
-      { id: id(), name: 'Penelope', photo: null },
-      { id: id(), name: 'Jasper',   photo: null },
-    ];
-    const DEFAULT_MENU = [
-      { id: id(), emoji: '🧇', label: 'Waffles w/ Syrup (Eggo)' },
-      { id: id(), emoji: '🍓', label: 'Pop‑Tart (various)' },
-      { id: id(), emoji: '🥣', label: 'Cereal (various)' },
-      { id: id(), emoji: '🥯', label: 'Bagel & Cream Cheese' },
-    ];
-    const EMOJI_CHOICES = ['🧇','🍓','🥣','🥯','🍌','🍳','🥞','🧁','🍎','🧀','🥛','☕️','🍫','🍪','🥐','🥗','🍊','🍇','🍍','🌯'];
-    const LS_KEYS = { kids:'bc:kids', menu:'bc:menu:all', active:'bc:menu:active', day:(d)=>`bc:choices:${d}` };
-    let activeKid = null;
-
-    const $ = (s,e=document)=>e.querySelector(s); const $$=(s,e=document)=>[...e.querySelectorAll(s)];
-    const dateInput = $('#theDate'); dateInput.value = todayStr();
-
-    ensureSeed();
-    fullRender();
-
-    function id(){ return Math.random().toString(36).slice(2,10) }
-    function load(k,f){ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? f }catch(_){ return f } }
-    function save(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
-    function todayStr(){ return new Date().toISOString().slice(0,10) }
-    function getKids(){ return load(LS_KEYS.kids, DEFAULT_KIDS) }
-    function setKids(a){ save(LS_KEYS.kids,a) }
-    function getMenuAll(){ return load(LS_KEYS.menu, DEFAULT_MENU) }
-    function setMenuAll(a){ save(LS_KEYS.menu,a) }
-    function getActive(){ let a=load(LS_KEYS.active,null); if(!a){ a=getMenuAll().slice(0,4).map(m=>m.id); setActive(a);} return a }
-    function setActive(ids){ save(LS_KEYS.active, ids.slice(0,4)) }
-    function getDay(d){ return load(LS_KEYS.day(d),{}) }
-    function setDay(d,o){ save(LS_KEYS.day(d),o) }
-
-    function ensureSeed(){
-      let kids = load(LS_KEYS.kids, null);
-      if (!Array.isArray(kids) || kids.length===0){ kids = DEFAULT_KIDS; setKids(kids); }
-      let menu = load(LS_KEYS.menu, null);
-      if (!Array.isArray(menu) || menu.length===0){ menu = DEFAULT_MENU; setMenuAll(menu); }
-      let act = load(LS_KEYS.active, null);
-      if (!Array.isArray(act) || act.length===0){ act = menu.slice(0,4).map(m=>m.id); setActive(act); }
-    }
-
-    function initials(name){ const p=(name||'').trim().split(/\s+/).filter(Boolean); return ((p[0]?p[0][0]:'?')+(p[1]?p[1][0]:'' )).toUpperCase() }
-    function escapeHtml(s){
-      return (s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    }
-
-    function renderKids(){
-      const row = $('#kidsRow'); row.innerHTML = '';
-      getKids().forEach(kid => {
-        const el = document.createElement('div');
-        el.className = 'kid';
-        el.dataset.kid = kid.id;
-        el.setAttribute('role','button');
-        el.setAttribute('aria-selected', activeKid===kid.id ? 'true':'false');
-        el.innerHTML = `
-          <div class="face">${kid.photo ? `<img alt="${escapeHtml(kid.name)}" src="${kid.photo}">` : `<span>${initials(kid.name)}</span>`}</div>
-          <div><div class="kid-name">${escapeHtml(kid.name)}</div><div class="kid-age" style="visibility:hidden">.</div></div>
-        `;
-        row.appendChild(el);
-      });
-    }
-
-    function renderChoices(){
-      const grid = $('#choicesGrid'); grid.innerHTML = '';
-      const date = dateInput.value;
-      const picks = getDay(date);
-      const all = getMenuAll();
-      const active = getActive();
-      const act = all.filter(m=>active.includes(m.id)).slice(0,4);
-      const kids = getKids();
-
-      act.forEach(c => {
-        const card = document.createElement('div');
-        card.className = 'choice';
-        card.dataset.choice = c.id;
-        card.innerHTML = `
-          <div class="food-head">
-            <div class="food-emoji" aria-hidden="true">${c.emoji}</div>
-            <div><div class="food-name">${escapeHtml(c.label)}</div></div>
-          </div>
-          <div class="avatars"></div>
-          <div class="empty-hint">Tap to select</div>
-        `;
-        const avatars = card.querySelector('.avatars');
-        kids.forEach(k => {
-          if (picks[k.id] === c.id) {
-            const av = document.createElement('div');
-            av.className = 'avatar';
-            av.title = k.name;
-            av.innerHTML = k.photo ? `<img alt="${escapeHtml(k.name)}" src="${k.photo}">` : `<span>${initials(k.name)}</span>`;
-            avatars.appendChild(av);
-          }
-        });
-        if (avatars.children.length) card.querySelector('.empty-hint').style.display = 'none';
-        grid.appendChild(card);
-      });
-    }
-
-    function renderSummary(){
-      const s = $('#summary'); s.innerHTML = '';
-      const date = dateInput.value;
-      const picks = getDay(date);
-      const kids = getKids();
-      const all = getMenuAll();
-
-      kids.forEach(kid => {
-        const ch = all.find(c => c.id === picks[kid.id]);
-        const item = document.createElement('div'); item.className='summary-item';
-        item.innerHTML = `
-          <div style="display:flex; align-items:center; gap:10px">
-            <div class="face" style="width:42px;height:42px">${kid.photo ? `<img alt="${escapeHtml(kid.name)}" src="${kid.photo}">` : `<span>${initials(kid.name)}</span>`}</div>
-            <div style="font-weight:800">${escapeHtml(kid.name)}</div>
-          </div>
-          ${ch ? `<div class="pill"><span class="emoji">${ch.emoji}</span> ${escapeHtml(ch.label)}</div>` : `<div class="pill" style="opacity:.6">Not chosen</div>`}
-        `;
-        s.appendChild(item);
-      });
-    }
-
-    function fullRender(){ renderKids(); renderChoices(); renderSummary(); attachMainInteractions(); }
-
-    function attachMainInteractions(){
-      $$('#kidsRow .kid').forEach(k => {
-        k.addEventListener('click', () => {
-          activeKid = k.dataset.kid;
-          $$('#kidsRow .kid').forEach(el=>el.setAttribute('aria-selected','false'));
-          k.setAttribute('aria-selected','true');
-        });
-      });
-      $$('#choicesGrid .choice').forEach(card => {
-        card.addEventListener('click', () => {
-          if (!activeKid) return;
-          const date = dateInput.value;
-          const picks = getDay(date);
-          picks[activeKid] = card.dataset.choice;
-          setDay(date, picks);
-          fullRender();
-        });
-      });
-    }
-
-    // Admin modal plumbing
-    const modal = $('#adminModal');
-    $('#btnAdmin').addEventListener('click', openAdmin);
-    $('#adminClose').addEventListener('click', closeAdmin);
-    $('#adminCancel').addEventListener('click', closeAdmin);
-    $('#adminSave').addEventListener('click', closeAdmin);
-    $$('.tab').forEach(t => t.addEventListener('click', () => {
-      const tab = t.dataset.tab;
-      $$('.tab').forEach(x=>x.setAttribute('aria-selected','false'));
-      t.setAttribute('aria-selected','true');
-      $$('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab ? '' : 'none'));
-    }));
-
-    function openAdmin(){ buildAdminKids(); buildAdminMenu(); modal.style.display='flex'; modal.setAttribute('aria-hidden','false'); }
-    function closeAdmin(){ modal.style.display='none'; modal.setAttribute('aria-hidden','true'); }
-
-    // Kids admin
-    function buildAdminKids(){
-      const list = $('#kidsList'); list.innerHTML = '';
-      const kids = getKids();
-      kids.forEach(k => {
-        const row = document.createElement('div'); row.className = 'item'; row.dataset.kid = k.id;
-        row.innerHTML = `
-          <div class="face" style="width:44px;height:44px">${k.photo ? `<img alt="${escapeHtml(k.name)}" src="${k.photo}">` : `<span>${initials(k.name)}</span>`}</div>
-          <input type="text" class="grow" value="${escapeHtml(k.name)}" placeholder="Name">
-          <button class="icon-btn" data-photo>Change Photo</button>
-          <button class="btn-warn" data-remove>Remove</button>
-        `;
-        list.appendChild(row);
-      });
-
-      $('#addKid').onclick = () => {
-        const name = ($('#newKidName').value || '').trim();
-        if (!name) return;
-        const kids2 = getKids();
-        kids2.push({ id: id(), name, photo: null });
-        setKids(kids2);
-        $('#newKidName').value='';
-        buildAdminKids();
-        fullRender();
-      };
-
-      $$('#kidsList .item').forEach(row => {
-        const kidId = row.dataset.kid;
-        $('input', row).addEventListener('input', (e)=>{
-          const kids2 = getKids(); const k = kids2.find(x=>x.id===kidId); if (!k) return;
-          k.name = e.target.value; setKids(kids2); renderKids(); renderSummary();
-        });
-        $('[data-photo]', row).addEventListener('click', ()=> pickPhotoFor(kidId));
-        $('[data-remove]', row).addEventListener('click', ()=> {
-          const kids2 = getKids().filter(x=>x.id!==kidId);
-          setKids(kids2);
-          const date = dateInput.value;
-          const picks = getDay(date);
-          delete picks[kidId]; setDay(date, picks);
-          buildAdminKids(); fullRender();
-        });
-      });
-    }
-
-    function pickPhotoFor(kidId){
-      const input = $('#file-picker');
-      // Ask whether to open camera or library
-      const useCamera = confirm('Use camera to take a new photo? (Cancel = choose from Photo Library/Files)');
-      if (useCamera) { input.setAttribute('capture', 'environment'); } else { input.removeAttribute('capture'); }
-      input.onchange = (ev)=>{
-        const file = ev.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const kids = getKids();
-          const k = kids.find(x=>x.id===kidId); if (!k) return;
-          k.photo = reader.result;
-          setKids(kids);
-          buildAdminKids(); fullRender();
-        };
-        reader.readAsDataURL(file);
-        input.value = '';
-        input.removeAttribute('capture');
-      };
-      input.click();
-    }
-
-    // Menu admin
-    function buildAdminMenu(){
-      const sel = $('#menuEmoji'); sel.innerHTML = '';
-      EMOJI_CHOICES.forEach(e => {
-        const opt = document.createElement('option'); opt.value = e; opt.textContent = e;
-        sel.appendChild(opt);
-      });
-
-      renderMenuList();
-      renderActiveList();
-
-      $('#addMenu').onclick = () => {
-        const all = getMenuAll();
-        if (all.length >= 10){ alert('Max 10 stored menu items reached.'); return; }
-        const emoji = $('#menuEmoji').value || '🍽️';
-        const label = ($('#menuLabel').value || '').trim();
-        if (!label){ alert('Enter a label for the menu item.'); return; }
-        all.push({ id: id(), emoji, label });
-        setMenuAll(all);
-        $('#menuLabel').value = '';
-        renderMenuList();
-      };
-    }
-
-    function renderMenuList(){
-      const wrap = $('#menuList'); wrap.innerHTML='';
-      const all = getMenuAll();
-      all.forEach(m => {
-        const row = document.createElement('div'); row.className='item'; row.dataset.id = m.id;
-        row.innerHTML = `
-          <div style="font-size:24px">${m.emoji}</div>
-          <input type="text" class="grow" value="${escapeHtml(m.label)}" placeholder="Label">
-          <button class="btn-warn" data-remove>Remove</button>
-        `;
-        wrap.appendChild(row);
-      });
-
-      $$('#menuList .item').forEach(row => {
-        const idd = row.dataset.id;
-        $('input', row).addEventListener('input', (e)=>{
-          const all = getMenuAll(); const it = all.find(x=>x.id===idd); if (!it) return;
-          it.label = e.target.value; setMenuAll(all); fullRender();
-        });
-        $('[data-remove]', row).addEventListener('click', ()=>{
-          let all = getMenuAll().filter(x=>x.id!==idd); setMenuAll(all);
-          setActive(getActive().filter(x=>x!==idd));
-          const date = dateInput.value; const picks = getDay(date);
-          for (const k in picks) if (picks[k]===idd) delete picks[k];
-          setDay(date, picks);
-          renderMenuList(); renderActiveList(); fullRender();
-        });
-      });
-    }
-
-    function renderActiveList(){
-      const wrap = $('#activeList'); wrap.innerHTML='';
-      const all = getMenuAll();
-      const act = getActive();
-      all.forEach(m => {
-        const checked = act.includes(m.id);
-        const row = document.createElement('div'); row.className='item'; row.dataset.id = m.id;
-        row.innerHTML = `
-          <div style="font-size:24px">${m.emoji}</div>
-          <div class="grow small">${escapeHtml(m.label)}</div>
-          <label class="row small"><input type="checkbox" ${checked?'checked':''}> Active</label>
-        `;
-        wrap.appendChild(row);
-      });
-
-      $$('#activeList .item input[type="checkbox"]').forEach(cb => {
-        cb.addEventListener('change', (e)=>{
-          const idd = e.target.closest('.item').dataset.id;
-          let act = getActive();
-          if (e.target.checked){
-            if (act.length >= 4){ e.target.checked = false; alert('You can only have up to 4 active choices.'); return; }
-            act = [...new Set(act.concat(idd))];
-          } else {
-            act = act.filter(x=>x!==idd);
-          }
-          setActive(act); fullRender();
-        });
-      });
-    }
-
-    // Top controls
-    $('#btnClear').addEventListener('click', ()=>{
-      const d = dateInput.value; localStorage.removeItem(LS_KEYS.day(d)); fullRender();
-    });
-    $('#btnRandomize').addEventListener('click', ()=>{
-      const d = dateInput.value; const kids = getKids(); const act = getActive();
-      const picks = {}; kids.forEach(k => { picks[k.id] = act[Math.floor(Math.random()*act.length)] });
-      setDay(d, picks); fullRender();
-    });
-    $('#btnShare').addEventListener('click', async ()=>{
-      const d = dateInput.value; const kids = getKids(); const picks = getDay(d); const all = getMenuAll();
-      const lines = kids.map(k => {
-        const ch = all.find(c => c.id === picks[k.id]);
-        return `${k.name}: ${ch ? `${ch.emoji} ${ch.label}` : '—'}`;
-      });
-      const text = `Breakfast Picks for ${d}\n` + lines.join('\n');
-      try{ await navigator.clipboard.writeText(text); alert('Summary copied to clipboard!') }catch(_){ prompt('Copy the summary:', text) }
-    });
-    dateInput.addEventListener('change', fullRender);
-
-    // Service worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(()=>{})
-      })
-    }
-  })();
-  </script>
+<script>
+/* simplified: only showing key change for photo compression */
+async function compressImage(file, maxSide=256, quality=0.8){
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide/Math.max(img.width,img.height));
+      const w = Math.round(img.width*scale), h = Math.round(img.height*scale);
+      const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    const r=new FileReader(); r.onload=()=>{img.src=r.result}; r.readAsDataURL(file);
+  });
+}
+</script>
 </body>
 </html>
