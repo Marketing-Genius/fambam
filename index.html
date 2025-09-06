@@ -106,7 +106,7 @@ button{cursor:pointer}
 
     <div class="footer">
       Works offline. Data stays on this device (local only).
-      <div class="version">v3.2.3</div>
+      <div class="version">v3.2.4</div>
     </div>
   </div>
 
@@ -162,262 +162,296 @@ button{cursor:pointer}
   </div>
 
 <script>
-;(() => {
-  const DEFAULT_KIDS = [
-    { id: uid(), name: 'Emilia',   photo: null },
-    { id: uid(), name: 'Hudson',   photo: null },
-    { id: uid(), name: 'Penelope', photo: null },
-    { id: uid(), name: 'Jasper',   photo: null },
-  ];
-  const DEFAULT_MENU = [
-    { id: uid(), emoji: '🧇', label: 'Waffles w/ Syrup (Eggo)' },
-    { id: uid(), emoji: '🍓', label: 'Pop-Tart (various)' },
-    { id: uid(), emoji: '🥣', label: 'Cereal (various)' },
-    { id: uid(), emoji: '🥯', label: 'Bagel & Cream Cheese' },
-  ];
-  const EMOJI_CHOICES = ['🧇','🍓','🥣','🥯','🍌','🍳','🥞','🧁','🍎','🧀','🥛','☕️','🍫','🍪','🥐','🥗','🍊','🍇','🍍','🌯'];
-  const LS = { kids:'bc:kids', menu:'bc:menu:all', active:'bc:menu:active', day:(d)=>`bc:choices:${d}` };
+// ---- Utilities & storage ----
+const $  = (s,e=document)=>e.querySelector(s);
+const $$ = (s,e=document)=>[...e.querySelectorAll(s)];
+const LS = { kids:'bc:kids', menu:'bc:menu:all', active:'bc:menu:active', day:d=>`bc:choices:${d}` };
 
-  const $ = (s,e=document)=>e.querySelector(s);
-  const $$ = (s,e=document)=>[...e.querySelectorAll(s)];
+function uid(){ return Math.random().toString(36).slice(2,10) }
+function load(k,f){ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? f }catch(_){ return f } }
+function save(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
+function today(){ return new Date().toISOString().slice(0,10) }
+function initials(n){ const p=(n||'').trim().split(/\s+/).filter(Boolean); return ((p[0]?p[0][0]:'?')+(p[1]?p[1][0]:'' )).toUpperCase() }
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
 
-  const dateInput = $('#theDate');
-  dateInput.value = today();
+// ---- Defaults & seed ----
+const DEFAULT_KIDS = [
+  { id: uid(), name: 'Emilia',   photo: null },
+  { id: uid(), name: 'Hudson',   photo: null },
+  { id: uid(), name: 'Penelope', photo: null },
+  { id: uid(), name: 'Jasper',   photo: null },
+];
+const DEFAULT_MENU = [
+  { id: uid(), emoji: '🧇', label: 'Waffles w/ Syrup (Eggo)' },
+  { id: uid(), emoji: '🍓', label: 'Pop-Tart (various)' },
+  { id: uid(), emoji: '🥣', label: 'Cereal (various)' },
+  { id: uid(), emoji: '🥯', label: 'Bagel & Cream Cheese' },
+];
+const EMOJI_CHOICES = ['🧇','🍓','🥣','🥯','🍌','🍳','🥞','🧁','🍎','🧀','🥛','☕️','🍫','🍪','🥐','🥗','🍊','🍇','🍍','🌯'];
 
-  // Seed + heal empties
-  function ensureSeed() {
-    let kids = load(LS.kids, null); if (!Array.isArray(kids) || kids.length===0) { kids = DEFAULT_KIDS; save(LS.kids, kids); }
-    let menu = load(LS.menu, null); if (!Array.isArray(menu) || menu.length===0) { menu = DEFAULT_MENU; save(LS.menu, menu); }
-    let act  = load(LS.active, null); if (!Array.isArray(act)  || act.length===0) { act = menu.slice(0,4).map(m=>m.id); save(LS.active, act); }
-  }
-  ensureSeed();
+function ensureSeed(){
+  let kids = load(LS.kids, null); if (!Array.isArray(kids) || kids.length===0){ kids = DEFAULT_KIDS; save(LS.kids, kids); }
+  let menu = load(LS.menu, null); if (!Array.isArray(menu) || menu.length===0){ menu = DEFAULT_MENU; save(LS.menu, menu); }
+  let act  = load(LS.active, null); if (!Array.isArray(act) || act.length===0){ act = menu.slice(0,4).map(m=>m.id); save(LS.active, act); }
+}
 
-  let activeKid = null;
-  renderAll();
-  attachTopControls();
+// ---- Accessors ----
+function getKids(){ return load(LS.kids, DEFAULT_KIDS) }
+function setKids(a){ save(LS.kids,a) }
+function getAllMenu(){ return load(LS.menu, DEFAULT_MENU) }
+function setAllMenu(a){ save(LS.menu,a) }
+function getActive(){ let a=load(LS.active,null); if(!a){ a=getAllMenu().slice(0,4).map(m=>m.id); setActive(a);} return a }
+function setActive(ids){ save(LS.active, ids.slice(0,4)) }
+function getDay(d){ return load(LS.day(d),{}) }
+function setDay(d,o){ save(LS.day(d),o) }
 
-  function uid(){ return Math.random().toString(36).slice(2,10) }
-  function load(k,f){ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? f }catch(_){ return f } }
-  function save(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
-  function today(){ return new Date().toISOString().slice(0,10) }
-  function getKids(){ return load(LS.kids, DEFAULT_KIDS) }
-  function setKids(a){ save(LS.kids,a) }
-  function getAllMenu(){ return load(LS.menu, DEFAULT_MENU) }
-  function setAllMenu(a){ save(LS.menu,a) }
-  function getActive(){ let a=load(LS.active,null); if(!a){ a=getAllMenu().slice(0,4).map(m=>m.id); setActive(a);} return a }
-  function setActive(ids){ save(LS.active, ids.slice(0,4)) }
-  function getDay(d){ return load(LS.day(d),{}) }
-  function setDay(d,o){ save(LS.day(d),o) }
-  function initials(n){ const p=(n||'').trim().split(/\s+/).filter(Boolean); return ((p[0]?p[0][0]:'?')+(p[1]?p[1][0]:'' )).toUpperCase() }
-  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
+// ---- Rendering ----
+let activeKid = null;
 
-  function renderKids(){
-    const row = $('#kidsRow'); row.innerHTML='';
-    getKids().forEach(k => {
-      const el = document.createElement('div');
-      el.className='kid'; el.dataset.kid=k.id; el.setAttribute('role','button');
-      el.setAttribute('aria-selected', activeKid===k.id ? 'true':'false');
-      el.innerHTML = `
-        <div class="face">${k.photo?`<img alt="${escapeHtml(k.name)}" src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div>
-        <div><div style="font-weight:800">${escapeHtml(k.name)}</div><div style="color:var(--muted); font-size:.8rem; visibility:hidden">.</div></div>`;
-      row.appendChild(el);
-    });
-  }
+function renderKids(){
+  const row = $('#kidsRow'); if (!row) return;
+  row.innerHTML='';
+  getKids().forEach(k => {
+    const el = document.createElement('div');
+    el.className='kid'; el.dataset.kid=k.id; el.setAttribute('role','button');
+    el.setAttribute('aria-selected', activeKid===k.id ? 'true':'false');
+    el.innerHTML = `
+      <div class="face">${k.photo?`<img alt="${escapeHtml(k.name)}" src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div>
+      <div><div style="font-weight:800">${escapeHtml(k.name)}</div><div style="color:var(--muted); font-size:.8rem; visibility:hidden">.</div></div>`;
+    row.appendChild(el);
+  });
+}
 
-  function renderChoices(){
-    const grid = $('#choicesGrid'); grid.innerHTML='';
-    const date = dateInput.value; const picks = getDay(date);
-    const all = getAllMenu(); const actIds = getActive();
-    const act = all.filter(m=>actIds.includes(m.id)).slice(0,4);
-    const kids = getKids();
-    act.forEach(c=>{
-      const card = document.createElement('div'); card.className='choice'; card.dataset.choice=c.id;
-      card.innerHTML = `
-        <div class="food-head"><div class="food-emoji">${c.emoji}</div><div class="food-name" style="font-weight:900">${escapeHtml(c.label)}</div></div>
-        <div class="avatars"></div>
-        <div class="empty-hint">Tap to select</div>`;
-      const wrap = card.querySelector('.avatars');
-      kids.forEach(k=>{
-        if (picks[k.id]===c.id){
-          const a=document.createElement('div'); a.className='avatar'; a.title=k.name;
-          a.innerHTML = k.photo?`<img alt="${escapeHtml(k.name)}" src="${k.photo}">`:`<span>${initials(k.name)}</span>`;
-          wrap.appendChild(a);
-        }
-      });
-      if (wrap.children.length) card.querySelector('.empty-hint').style.display='none';
-      grid.appendChild(card);
-    });
-  }
-
-  function renderSummary(){
-    const s = $('#summary'); s.innerHTML='';
-    const date = dateInput.value; const picks = getDay(date);
-    const kids = getKids(); const all = getAllMenu();
+function renderChoices(){
+  const grid = $('#choicesGrid'); if (!grid) return;
+  grid.innerHTML='';
+  const date = $('#theDate').value; const picks = getDay(date);
+  const all = getAllMenu(); const actIds = getActive();
+  const act = all.filter(m=>actIds.includes(m.id)).slice(0,4);
+  const kids = getKids();
+  act.forEach(c=>{
+    const card = document.createElement('div'); card.className='choice'; card.dataset.choice=c.id;
+    card.innerHTML = `
+      <div class="food-head"><div class="food-emoji">${c.emoji}</div><div class="food-name" style="font-weight:900">${escapeHtml(c.label)}</div></div>
+      <div class="avatars"></div>
+      <div class="empty-hint">Tap to select</div>`;
+    const wrap = card.querySelector('.avatars');
     kids.forEach(k=>{
-      const ch = all.find(c=>c.id===picks[k.id]);
-      const item = document.createElement('div'); item.className='summary-item';
-      item.innerHTML = `
-        <div style="display:flex; align-items:center; gap:10px">
-          <div class="face" style="width:42px;height:42px">${k.photo?`<img alt="${escapeHtml(k.name)}" src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div>
-          <div style="font-weight:800">${escapeHtml(k.name)}</div>
-        </div>
-        ${ch?`<div class="pill"><span class="emoji">${ch.emoji}</span> ${escapeHtml(ch.label)}</div>`:`<div class="pill" style="opacity:.6">Not chosen</div>`}
-      `;
-      s.appendChild(item);
+      if (picks[k.id]===c.id){
+        const a=document.createElement('div'); a.className='avatar'; a.title=k.name;
+        a.innerHTML = k.photo?`<img alt="${escapeHtml(k.name)}" src="${k.photo}">`:`<span>${initials(k.name)}</span>`;
+        wrap.appendChild(a);
+      }
     });
-  }
+    if (wrap.children.length) card.querySelector('.empty-hint').style.display='none';
+    grid.appendChild(card);
+  });
+}
 
-  function renderAll(){ renderKids(); renderChoices(); renderSummary(); attachMainInteractions(); }
+function renderSummary(){
+  const s = $('#summary'); if (!s) return;
+  s.innerHTML='';
+  const date = $('#theDate').value; const picks = getDay(date);
+  const kids = getKids(); const all = getAllMenu();
+  kids.forEach(k=>{
+    const ch = all.find(c=>c.id===picks[k.id]);
+    const item = document.createElement('div'); item.className='summary-item';
+    item.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px">
+        <div class="face" style="width:42px;height:42px">${k.photo?`<img alt="${escapeHtml(k.name)}" src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div>
+        <div style="font-weight:800">${escapeHtml(k.name)}</div>
+      </div>
+      ${ch?`<div class="pill"><span class="emoji">${ch.emoji}</span> ${escapeHtml(ch.label)}</div>`:`<div class="pill" style="opacity:.6">Not chosen</div>`}
+    `;
+    s.appendChild(item);
+  });
+}
 
-  function attachMainInteractions(){
-    $$('#kidsRow .kid').forEach(k=>{
-      k.onclick = () => {
-        activeKid = k.dataset.kid;
-        $$('#kidsRow .kid').forEach(el=>el.setAttribute('aria-selected','false'));
-        k.setAttribute('aria-selected','true');
-      };
-    });
-    $$('#choicesGrid .choice').forEach(c=>{
-      c.onclick = () => {
-        if (!activeKid) return;
-        const date = dateInput.value; const picks = getDay(date);
-        picks[activeKid] = c.dataset.choice; setDay(date,picks); renderAll();
-      };
-    });
-  }
+function renderAll(){
+  renderKids(); renderChoices(); renderSummary(); attachMainInteractions();
+}
 
-  // --- Admin modal + photo picker ---
-  const modal = $('#adminModal');
-  $('#btnAdmin').onclick = openAdmin;
-  $('#adminClose').onclick = closeAdmin;
-  $('#adminCancel').onclick = closeAdmin;
-  $('#adminSave').onclick = closeAdmin;
-  $$('.tab').forEach(t=>t.onclick = ()=>{
-    const tab = t.dataset.tab;
-    $$('.tab').forEach(x=>x.setAttribute('aria-selected','false')); t.setAttribute('aria-selected','true');
-    $$('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab?'':'none'));
+// ---- Photo compression ----
+function compress(file, maxSide=256, quality=0.8){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1, maxSide/Math.max(img.width,img.height));
+      const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
+  });
+}
+
+// ---- Admin builders ----
+function buildAdminKids(){
+  const list = $('#kidsList'); if (!list) return;
+  list.innerHTML='';
+  const kids = getKids();
+  kids.forEach(k=>{
+    const row = document.createElement('div'); row.className='item'; row.dataset.kid=k.id;
+    row.innerHTML = `
+      <div class="face" style="width:44px;height:44px">${k.photo?`<img alt="${escapeHtml(k.name)}" src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div>
+      <input type="text" class="grow" value="${escapeHtml(k.name)}" placeholder="Name">
+      <button class="icon-btn" data-photo>Change Photo</button>
+      <button class="btn-warn" data-remove>Remove</button>`;
+    list.appendChild(row);
   });
 
-  function openAdmin(){ buildAdminKids(); buildAdminMenu(); modal.style.display='flex'; modal.setAttribute('aria-hidden','false'); }
-  function closeAdmin(){ modal.style.display='none'; modal.setAttribute('aria-hidden','true'); }
-
-  function buildAdminKids(){
-    const list = $('#kidsList'); list.innerHTML='';
-    const kids = getKids();
-    kids.forEach(k=>{
-      const row = document.createElement('div'); row.className='item'; row.dataset.kid=k.id;
-      row.innerHTML = `
-        <div class="face" style="width:44px;height:44px">${k.photo?`<img alt="${escapeHtml(k.name)}" src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div>
-        <input type="text" class="grow" value="${escapeHtml(k.name)}" placeholder="Name">
-        <button class="icon-btn" data-photo>Change Photo</button>
-        <button class="btn-warn" data-remove>Remove</button>`;
-      list.appendChild(row);
-    });
-
-    $('#addKid').onclick = ()=>{
-      const name = ($('#newKidName').value||'').trim(); if(!name) return;
-      const kids2 = getKids(); kids2.push({id:uid(), name, photo:null}); setKids(kids2);
-      $('#newKidName').value=''; buildAdminKids(); renderAll();
-    };
-
-    $$('#kidsList .item').forEach(r=>{
-      const id = r.dataset.kid;
-      $('input',r).oninput = (e)=>{ const kids2=getKids(); const k=kids2.find(x=>x.id===id); if(!k) return; k.name=e.target.value; setKids(kids2); renderKids(); renderSummary(); };
-      $('[data-photo]',r).onclick = ()=> pickPhotoFor(id);
-      $('[data-remove]',r).onclick = ()=>{
-        setKids(getKids().filter(x=>x.id!==id));
-        const d=dateInput.value, picks=getDay(d); delete picks[id]; setDay(d,picks);
-        buildAdminKids(); renderAll();
-      };
-    });
-  }
-
-  function buildAdminMenu(){
-    const sel = $('#menuEmoji'); sel.innerHTML=''; EMOJI_CHOICES.forEach(e=>{ const o=document.createElement('option'); o.value=e; o.textContent=e; sel.appendChild(o); });
-    renderMenuList(); renderActiveList();
-    $('#addMenu').onclick = ()=>{
-      const all=getAllMenu(); if(all.length>=10){alert('Max 10 stored menu items reached.'); return;}
-      const emoji=$('#menuEmoji').value||'🍽️'; const label=($('#menuLabel').value||'').trim(); if(!label){alert('Enter a label.'); return;}
-      all.push({id:uid(), emoji, label}); setAllMenu(all); $('#menuLabel').value=''; renderMenuList();
-    };
-  }
-
-  function renderMenuList(){
-    const wrap=$('#menuList'); wrap.innerHTML=''; const all=getAllMenu();
-    all.forEach(m=>{
-      const row=document.createElement('div'); row.className='item'; row.dataset.id=m.id;
-      row.innerHTML=`<div style="font-size:24px">${m.emoji}</div><input type="text" class="grow" value="${escapeHtml(m.label)}"><button class="btn-warn" data-remove>Remove</button>`;
-      wrap.appendChild(row);
-    });
-    $$('#menuList .item').forEach(row=>{
-      const id=row.dataset.id;
-      $('input',row).oninput=(e)=>{ const all=getAllMenu(); const it=all.find(x=>x.id===id); if(!it) return; it.label=e.target.value; setAllMenu(all); renderAll(); };
-      $('[data-remove]',row).onclick=()=>{
-        setAllMenu(getAllMenu().filter(x=>x.id!==id));
-        setActive(getActive().filter(x=>x!==id));
-        const d=dateInput.value, picks=getDay(d); for(const k in picks) if(picks[k]===id) delete picks[k]; setDay(d,picks);
-        renderMenuList(); renderActiveList(); renderAll();
-      };
-    });
-  }
-
-  function renderActiveList(){
-    const wrap=$('#activeList'); wrap.innerHTML=''; const all=getAllMenu(); const act=getActive();
-    all.forEach(m=>{
-      const row=document.createElement('div'); row.className='item'; row.dataset.id=m.id;
-      row.innerHTML = `<div style="font-size:24px">${m.emoji}</div><div class="grow small">${escapeHtml(m.label)}</div><label class="row small"><input type="checkbox" ${act.includes(m.id)?'checked':''}> Active</label>`;
-      wrap.appendChild(row);
-    });
-    $$('#activeList .item input[type="checkbox"]').forEach(cb=>{
-      cb.onchange = (e)=>{
-        const id=e.target.closest('.item').dataset.id; let a=getActive();
-        if(e.target.checked){ if(a.length>=4){ e.target.checked=false; alert('You can only have up to 4 active choices.'); return; } a=[...new Set(a.concat(id))]; }
-        else { a=a.filter(x=>x!==id); }
-        setActive(a); renderAll();
-      };
-    });
-  }
-
-  // --- Photo handling: compress then save (prevents quota issues) ---
-  function pickPhotoFor(kidId){
-    const input = $('#file-picker');
-    const useCamera = confirm('Use camera to take a new photo? (Cancel = choose from Photo Library/Files)');
-    if (useCamera) input.setAttribute('capture','environment'); else input.removeAttribute('capture');
-    input.onchange = async (ev)=>{
-      const file = ev.target.files && ev.target.files[0]; if(!file) return;
-      const dataUrl = await compress(file, 256, 0.8);  // <= key fix
-      try{
-        const kids=getKids(); const k=kids.find(x=>x.id===kidId); if(!k) return;
-        k.photo = dataUrl; setKids(kids); buildAdminKids(); renderAll();
-      }catch(_){ alert('Could not save photo (storage may be full). Try a smaller image or remove a photo first.'); }
-      input.value=''; input.removeAttribute('capture');
-    };
-    input.click();
-  }
-  function compress(file, maxSide=256, quality=0.8){
-    return new Promise(resolve=>{
-      const img=new Image();
-      img.onload=()=>{
-        const scale=Math.min(1, maxSide/Math.max(img.width,img.height));
-        const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
-        const c=document.createElement('canvas'); c.width=w; c.height=h;
-        c.getContext('2d').drawImage(img,0,0,w,h);
-        resolve(c.toDataURL('image/jpeg', quality));
-      };
-      const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
-    });
-  }
-
-  // --- Top controls ---
-  $('#btnClear').onclick = ()=>{ const d=dateInput.value; localStorage.removeItem(LS.day(d)); renderAll(); };
-  $('#btnRandomize').onclick = ()=>{ const d=dateInput.value; const kids=getKids(); const act=getActive(); const picks={}; kids.forEach(k=>picks[k.id]=act[Math.floor(Math.random()*act.length)]); setDay(d,picks); renderAll(); };
-  $('#btnShare').onclick = async ()=>{
-    const d=dateInput.value; const kids=getKids(); const picks=getDay(d); const all=getAllMenu();
-    const lines = kids.map(k=>{const ch=all.find(c=>c.id===picks[k.id]); return `${k.name}: ${ch?`${ch.emoji} ${ch.label}`:'—'}`;});
-    const text = `Breakfast Picks for ${d}\n`+lines.join('\n');
-    try{ await navigator.clipboard.writeText(text); alert('Summary copied to clipboard!'); }catch(_){ prompt('Copy the summary:', text); }
+  const addBtn = $('#addKid'); if (addBtn) addBtn.onclick = ()=>{
+    const name = ($('#newKidName')?.value||'').trim(); if(!name) return;
+    const kids2 = getKids(); kids2.push({id:uid(), name, photo:null}); setKids(kids2);
+    if ($('#newKidName')) $('#newKidName').value='';
+    buildAdminKids(); renderAll();
   };
-  dateInput.onchange = renderAll;
+
+  $$('#kidsList .item').forEach(r=>{
+    const id = r.dataset.kid;
+    $('input',r).oninput = (e)=>{ const kids2=getKids(); const k=kids2.find(x=>x.id===id); if(!k) return; k.name=e.target.value; setKids(kids2); renderKids(); renderSummary(); };
+    $('[data-photo]',r).onclick = ()=> pickPhotoFor(id);
+    $('[data-remove]',r).onclick = ()=>{
+      setKids(getKids().filter(x=>x.id!==id));
+      const d=$('#theDate').value, picks=getDay(d); delete picks[id]; setDay(d,picks);
+      buildAdminKids(); renderAll();
+    };
+  });
+}
+
+function buildAdminMenu(){
+  const sel = $('#menuEmoji'), label=$('#menuLabel'), addBtn=$('#addMenu'), listWrap=$('#menuList'), activeWrap=$('#activeList');
+  if (!sel || !label || !addBtn || !listWrap || !activeWrap) return;
+
+  sel.innerHTML=''; EMOJI_CHOICES.forEach(e=>{ const o=document.createElement('option'); o.value=e; o.textContent=e; sel.appendChild(o); });
+
+  renderMenuList(); renderActiveList();
+
+  addBtn.onclick = () => {
+    const all=getAllMenu(); if(all.length>=10){alert('Max 10 stored menu items reached.'); return;}
+    const emoji=sel.value||'🍽️'; const text=(label.value||'').trim(); if(!text){alert('Enter a label.'); return;}
+    all.push({id:uid(), emoji, label:text}); setAllMenu(all); label.value=''; renderMenuList();
+  };
+}
+
+function renderMenuList(){
+  const wrap=$('#menuList'); if (!wrap) return; wrap.innerHTML='';
+  const all=getAllMenu();
+  all.forEach(m=>{
+    const row=document.createElement('div'); row.className='item'; row.dataset.id=m.id;
+    row.innerHTML=`<div style="font-size:24px">${m.emoji}</div><input type="text" class="grow" value="${escapeHtml(m.label)}"><button class="btn-warn" data-remove>Remove</button>`;
+    wrap.appendChild(row);
+  });
+  $$('#menuList .item').forEach(row=>{
+    const id=row.dataset.id;
+    $('input',row).oninput=(e)=>{ const all=getAllMenu(); const it=all.find(x=>x.id===id); if(!it) return; it.label=e.target.value; setAllMenu(all); renderAll(); };
+    $('[data-remove]',row).onclick=()=>{
+      setAllMenu(getAllMenu().filter(x=>x.id!==id));
+      setActive(getActive().filter(x=>x!==id));
+      const d=$('#theDate').value, picks=getDay(d); for(const k in picks) if(picks[k]===id) delete picks[k]; setDay(d,picks);
+      renderMenuList(); renderActiveList(); renderAll();
+    };
+  });
+}
+
+function renderActiveList(){
+  const wrap=$('#activeList'); if (!wrap) return; wrap.innerHTML='';
+  const all=getAllMenu(); const act=getActive();
+  all.forEach(m=>{
+    const row=document.createElement('div'); row.className='item'; row.dataset.id=m.id;
+    row.innerHTML = `<div style="font-size:24px">${m.emoji}</div><div class="grow small">${escapeHtml(m.label)}</div><label class="row small"><input type="checkbox" ${act.includes(m.id)?'checked':''}> Active</label>`;
+    wrap.appendChild(row);
+  });
+  $$('#activeList .item input[type="checkbox"]').forEach(cb=>{
+    cb.onchange = (e)=>{
+      const id=e.target.closest('.item').dataset.id; let a=getActive();
+      if(e.target.checked){ if(a.length>=4){ e.target.checked=false; alert('You can only have up to 4 active choices.'); return; } a=[...new Set(a.concat(id))]; }
+      else { a=a.filter(x=>x!==id); }
+      setActive(a); renderAll();
+    };
+  });
+}
+
+// ---- Photo picker ----
+function pickPhotoFor(kidId){
+  const input = $('#file-picker'); if (!input) return;
+  const useCamera = confirm('Use camera to take a new photo? (Cancel = choose from Photo Library/Files)');
+  if (useCamera) input.setAttribute('capture','environment'); else input.removeAttribute('capture');
+  input.onchange = async (ev)=>{
+    const file = ev.target.files && ev.target.files[0]; if(!file) return;
+    const dataUrl = await compress(file, 256, 0.8);
+    try{
+      const kids=getKids(); const k=kids.find(x=>x.id===kidId); if(!k) return;
+      k.photo = dataUrl; setKids(kids); buildAdminKids(); renderAll();
+    }catch(_){ alert('Could not save photo (storage may be full). Try a smaller image or remove a photo first.'); }
+    input.value=''; input.removeAttribute('capture');
+  };
+  input.click();
+}
+
+// ---- Main interactions ----
+function attachMainInteractions(){
+  $$('#kidsRow .kid').forEach(k=>{
+    k.onclick = () => {
+      activeKid = k.dataset.kid;
+      $$('#kidsRow .kid').forEach(el=>el.setAttribute('aria-selected','false'));
+      k.setAttribute('aria-selected','true');
+    };
+  });
+  $$('#choicesGrid .choice').forEach(c=>{
+    c.onclick = () => {
+      if (!activeKid) return;
+      const date = $('#theDate').value; const picks = getDay(date);
+      picks[activeKid] = c.dataset.choice; setDay(date,picks); renderAll();
+    };
+  });
+}
+
+// ---- Top controls + modal wiring ----
+function bindTopControls(){
+  const d = $('#theDate'); if (d) d.value = today();
+  $('#btnClear')?.addEventListener('click', ()=>{ const t=$('#theDate').value; localStorage.removeItem(LS.day(t)); renderAll(); });
+  $('#btnRandomize')?.addEventListener('click', ()=>{
+    const t=$('#theDate').value; const kids=getKids(); const act=getActive(); const picks={};
+    kids.forEach(k=>{ picks[k.id] = act[Math.floor(Math.random()*act.length)] });
+    setDay(t, picks); renderAll();
+  });
+  $('#btnShare')?.addEventListener('click', async ()=>{
+    const t=$('#theDate').value; const kids=getKids(); const picks=getDay(t); const all=getAllMenu();
+    const lines = kids.map(k=>{ const ch=all.find(c=>c.id===picks[k.id]); return `${k.name}: ${ch?`${ch.emoji} ${ch.label}`:'—'}`; });
+    const txt = `Breakfast Picks for ${t}\n`+lines.join('\n');
+    try{ await navigator.clipboard.writeText(txt); alert('Summary copied to clipboard!'); }catch(_){ prompt('Copy the summary:', txt); }
+  });
+
+  $('#btnAdmin')?.addEventListener('click', openAdmin);
+  $('#adminClose')?.addEventListener('click', closeAdmin);
+  $('#adminCancel')?.addEventListener('click', closeAdmin);
+  $('#adminSave')?.addEventListener('click', closeAdmin);
+
+  $$('.tab').forEach(t=>t.addEventListener('click', ()=>{
+    const tab = t.dataset.tab;
+    $$('.tab').forEach(x=>x.setAttribute('aria-selected','false')); t.setAttribute('aria-selected','true');
+    $$('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab ? '' : 'none'));
+  }));
+}
+
+function openAdmin(){
+  const modal = $('#adminModal'); if (!modal) return;
+  modal.style.display='flex'; modal.setAttribute('aria-hidden','false');
+  try{ buildAdminKids(); }catch(e){ console.warn('buildAdminKids failed', e); }
+  try{ buildAdminMenu(); }catch(e){ console.warn('buildAdminMenu failed', e); }
+}
+function closeAdmin(){
+  const modal = $('#adminModal'); if (!modal) return;
+  modal.style.display='none'; modal.setAttribute('aria-hidden','true');
+}
+
+// ---- Boot ----
+(function init(){
+  ensureSeed();
+  bindTopControls();
+  renderAll();
 
   // Service worker
   if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
