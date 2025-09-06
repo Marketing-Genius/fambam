@@ -1,5 +1,5 @@
-// Breakfast Chooser v3.2.3 SW
-const CACHE = "breakfast-v3-2-3";
+// Breakfast Chooser v3.2.4 SW
+const CACHE = "breakfast-v3-2-4";
 const ASSETS = ["./","./index.html","./manifest.webmanifest","./icon-192.png","./icon-512.png"];
 
 self.addEventListener("install", e => {
