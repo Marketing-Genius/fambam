@@ -12,16 +12,46 @@
 <link rel="manifest" href="manifest.webmanifest">
 
 <style>
-:root{--panel:#111827;--card:#1f2937;--muted:#94a3b8;--text:#e5e7eb;--accent:#22d3ee;--bg:#0f172a;--shadow:0 10px 30px rgba(0,0,0,.35);--radius:18px}
+:root{
+  --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
+  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+  --wallpaper:url('');                       /* set at runtime */
+  --wallpaper-shift: 40%;                    /* move focus up (40% from top) */
+}
 html,body{height:100%}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%);color:var(--text)}
+body{
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+  color:var(--text); background:#0f172a; overflow-x:hidden;
+}
+
+/* Wallpaper layer */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background-image: var(--wallpaper);
+  background-size: cover; background-repeat:no-repeat;
+  /* Bias the crop upward so faces stay visible above bottom tiles */
+  background-position: center var(--wallpaper-shift);
+  transform: translateZ(0);
+}
+/* Bottom gradient overlay for readability */
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background: linear-gradient(180deg, rgba(15,23,42,0) 55%, rgba(15,23,42,.75) 80%, rgba(15,23,42,.95) 100%);
+  pointer-events:none;
+}
+
 .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto 1fr auto}
 
-/* Header + menu */
-header{display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid #0b1224;border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+/* Header (translucent) */
+header{
+  display:flex;justify-content:space-between;align-items:center;
+  background:rgba(17,24,39,.5); border:1px solid rgba(11,18,36,.3);
+  border-radius:var(--radius); box-shadow:var(--shadow); padding:16px;
+  backdrop-filter: blur(8px);
+}
 .title{font-weight:800;font-size:1.4rem}
 .menu-wrap{position:relative}
-.hamburger{font:inherit;cursor:pointer;background:#0b1224;color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:10px 12px}
+.hamburger{font:inherit;cursor:pointer;background:rgba(11,18,36,.6);color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:10px 12px}
 .menu-dropdown{position:absolute;right:0;top:110%;min-width:260px;z-index:1000;background:#111827;border:1px solid #1f2937;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:6px;display:none}
 .menu-dropdown.open{display:block}
 .menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
@@ -30,15 +60,15 @@ header{display:flex;justify-content:space-between;align-items:center;background:
 /* Tiles */
 .grid{display:grid;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(min-width:900px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.tile{display:flex;flex-direction:column;gap:10px;align-items:flex-start;background:var(--card);border:1px solid #1f2937;border-radius:16px;padding:16px;text-decoration:none;color:var(--text);box-shadow:var(--shadow)}
+.tile{display:flex;flex-direction:column;gap:10px;align-items:flex-start;background:rgba(31,41,55,.85);border:1px solid rgba(31,41,55,.9);border-radius:16px;padding:16px;text-decoration:none;color:var(--text);box-shadow:var(--shadow);backdrop-filter: blur(4px)}
 .tile .emoji{font-size:36px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .tile .label{font-weight:800}
 .tile.disabled{opacity:.5;pointer-events:none}
 
-/* Modal + form UI */
+/* Modal + form UI (Admin & PIN) */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
-.modal{width:min(900px,100%);background:var(--panel);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
+.modal{width:min(900px,100%);background:rgba(17,24,39,.98);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
 .modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937}
 .modal .body{padding:14px 16px;display:grid;gap:18px}
 .modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
@@ -56,8 +86,9 @@ header{display:flex;justify-content:space-between;align-items:center;background:
 .btn-lg{padding:12px 16px;border-radius:14px;font-weight:800}
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 .toggle{display:inline-flex;align-items:center;gap:8px}
-footer{opacity:.7;text-align:center;font-size:.9rem}
-.version{opacity:.6;font-size:.8rem}
+
+footer{opacity:.85;text-align:center;font-size:.9rem;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.version{opacity:.7;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -68,6 +99,8 @@ footer{opacity:.7;text-align:center;font-size:.9rem}
         <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
         <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
           <button class="menu-item" data-action="admin" role="menuitem">Admin Settings</button>
+          <button class="menu-item" data-action="wallpaper" role="menuitem">Edit Wallpaper</button>
+          <button class="menu-item" data-action="clearwp" role="menuitem">Clear Wallpaper</button>
           <button class="menu-item" data-action="about" role="menuitem">About</button>
         </div>
       </div>
@@ -83,7 +116,7 @@ footer{opacity:.7;text-align:center;font-size:.9rem}
       <a class="tile" href="./chores.html">
         <div class="emoji">🧹</div>
         <div class="label">Chores</div>
-        <div class="hint">Tap to open</div>
+        <div class="hint">Weekly rotation</div>
       </a>
 
       <a class="tile" href="./dinner.html">
@@ -101,12 +134,13 @@ footer{opacity:.7;text-align:center;font-size:.9rem}
 
     <footer>
       Works offline. Data stays on this device (local only).
-      <div class="version">Hub v0.4 (PIN modal + spacing)</div>
+      <div class="version">Hub v0.5 (Wallpaper)</div>
     </footer>
   </div>
 
-  <!-- Hidden file picker (used for avatar changes) -->
+  <!-- Hidden pickers -->
   <input type="file" id="file-picker" accept="image/*" class="sr-only"/>
+  <input type="file" id="wallpaper-picker" accept="image/*" class="sr-only"/>
 
   <!-- Admin Modal -->
   <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
@@ -149,7 +183,7 @@ footer{opacity:.7;text-align:center;font-size:.9rem}
     </div>
   </div>
 
-  <!-- PIN Modal (numeric + autofocus) -->
+  <!-- PIN Modal -->
   <div id="pinModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="pinTitle">
     <div class="modal" style="max-width:420px">
       <header>
@@ -168,7 +202,7 @@ footer{opacity:.7;text-align:center;font-size:.9rem}
 <!-- Family Store -->
 <script src="family.js?v=3.3.6"></script>
 <script>
-// Fallback Family shim if family.js failed to load (SW cache, etc.)
+// Fallback Family shim if family.js failed
 if (!window.Family) {
   console.warn('family.js not loaded — using fallback Family shim.');
   (function(){
@@ -209,6 +243,47 @@ if (!window.Family) {
 })();
 </script>
 
+<!-- Wallpaper utilities -->
+<script>
+const WP_KEY = 'hub:wallpaper:dataurl';
+
+// Apply wallpaper var on load
+(function applyWallpaper(){
+  const data = localStorage.getItem(WP_KEY);
+  if (data) document.documentElement.style.setProperty('--wallpaper', `url("${data}")`);
+})();
+
+function pickWallpaper(){
+  const input = document.getElementById('wallpaper-picker');
+  input.onchange = async (ev)=>{
+    const file = ev.target.files && ev.target.files[0]; if(!file) return;
+    const dataUrl = await compressImage(file, /*maxSide*/ 2400, /*quality*/ 0.85);
+    localStorage.setItem(WP_KEY, dataUrl);
+    document.documentElement.style.setProperty('--wallpaper', `url("${dataUrl}")`);
+    input.value='';
+  };
+  input.click();
+}
+function clearWallpaper(){
+  localStorage.removeItem(WP_KEY);
+  document.documentElement.style.setProperty('--wallpaper', `url('')`);
+}
+// Simple client resize for performance
+function compressImage(file, maxSide=2400, quality=.85){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1, maxSide/Math.max(img.width,img.height));
+      const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
+  });
+}
+</script>
+
 <!-- Menu + PIN gate -->
 <script>
 (function menu(){
@@ -228,8 +303,12 @@ if (!window.Family) {
       const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
       if (hasPin) requestPinUI(openAdmin);
       else openAdmin();
+    } else if (action === 'wallpaper') {
+      pickWallpaper();
+    } else if (action === 'clearwp') {
+      clearWallpaper();
     } else if (action === 'about') {
-      alert('Family Hub — single-device PWA.');
+      alert('Family Hub — single-device PWA.\nWallpaper is stored locally on this iPad.');
     }
   });
 })();
@@ -260,7 +339,7 @@ function requestPinUI(onSuccess){
   open();
 }
 
-// Open Admin if navigated with #admin (used by Breakfast gear)
+// Open Admin via #admin (from Breakfast gear)
 window.addEventListener('load', ()=>{
   if (location.hash === '#admin') {
     const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
@@ -389,7 +468,7 @@ function compress(file, maxSide=256, quality=0.8){
   });
 }
 
-// Register SW
+// Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
