@@ -12,16 +12,23 @@
 <link rel="manifest" href="manifest.webmanifest">
 
 <style>
-:root{--panel:#111827;--card:#1f2937;--muted:#6b7280;--text:#e5e7eb;--accent:#22d3ee;--bg:#0f172a;--shadow:0 10px 30px rgba(0,0,0,.35);--radius:18px}
+:root{
+  --panel:#111827; --card:#1f2937; --muted:#6b7280; --text:#e5e7eb; --accent:#22d3ee;
+  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px
+}
 html,body{height:100%}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%);color:var(--text);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+body{
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%); color:var(--text);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
 .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
 .panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
 header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .title{font-weight:800;letter-spacing:.2px}
 .title .small{font-weight:600;font-size:.8rem;color:var(--muted)}
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-input[type="date"],button{font:inherit;color:var(--text);background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 14px}
+input[type="date"],button,select{font:inherit;color:var(--text);background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 14px}
 button{cursor:pointer}
 .btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:700}
 .btn-ghost{background:transparent;border:1px dashed #334155;color:var(--muted)}
@@ -29,11 +36,13 @@ button{cursor:pointer}
 .btn-back{display:inline-block;text-decoration:none;font-weight:800;background:#0b1224;color:#e5e7eb;border:1px solid #334155;padding:10px 12px;border-radius:12px}
 .btn-back:active{transform:translateY(1px)}
 .btn-icon{display:inline-grid;place-items:center;width:44px;height:44px;padding:0;border-radius:12px}
+
 .kids.panel{display:flex;gap:12px;align-items:center;overflow:auto}
 .kid{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border:1px solid #1f2937;border-radius:14px;min-width:210px;user-select:none}
 .kid[aria-selected="true"]{outline:2px solid var(--accent)}
 .face{width:56px;height:56px;border-radius:50%;background:#0b1224;display:grid;place-items:center;font-size:28px;border:2px solid #334155;overflow:hidden}
 .face img{width:100%;height:100%;object-fit:cover}
+
 .choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 @media(min-width:900px){.choices{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .choice{background:var(--panel);border:1px solid #1f2937;border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:12px;min-height:210px}
@@ -43,15 +52,31 @@ button{cursor:pointer}
 .avatar{width:40px;height:40px;border-radius:50%;background:#0b1224;display:grid;place-items:center;font-size:20px;border:2px solid #334155}
 .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .empty-hint{margin-top:auto;font-size:.9rem;color:var(--muted)}
+
 .summary.panel{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:10px}
 @media(min-width:760px){.summary.panel{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .summary-item{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid #1f2937;padding:10px 12px;border-radius:12px}
 .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#0b1224;border:1px solid #334155;font-weight:700}
 .pill .emoji{font-size:18px}
+
 .footer{text-align:center;opacity:.7;font-size:.85rem}
 .version{opacity:.6;font-size:.8rem;margin-top:6px}
-/* hide hidden file input */
+
+/* Modal (Menu manager) */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.modal{width:min(900px,100%);background:var(--panel);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
+.modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937}
+.modal .body{padding:14px 16px;display:grid;gap:14px}
+.modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
+.list{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:74px 1fr auto auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
+.item .emoji{font-size:26px;display:flex;gap:8px;align-items:center}
+.item .emoji select{min-width:60px}
+.item .grow{width:100%}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1224;border:1px solid #334155}
+.badge[aria-selected="true"]{outline:2px solid var(--accent)}
+.help{opacity:.8}
 </style>
 </head>
 <body>
@@ -65,9 +90,19 @@ button{cursor:pointer}
         <label class="sr-only" for="theDate">Date</label>
         <input id="theDate" type="date"/>
         <a href="./index.html" class="btn-back" title="Back to Home">← Home</a>
+
         <button id="btnClear" class="btn-ghost">Reset</button>
-        <button id="btnRandomize" class="btn-ghost">Random</button>
+
+        <!-- NEW: Menu manager -->
+        <button id="btnMenuMgr" class="btn-primary">Menu</button>
+
+        <!-- Random now icon-only -->
+        <button id="btnRandomize" class="icon-btn" title="Randomize">🎲</button>
+
+        <!-- Copy summary icon-only -->
         <button id="btnShare" class="btn-primary btn-icon" title="Copy Summary" aria-label="Copy Summary">📋</button>
+
+        <!-- Admin routes to Home Admin -->
         <button id="btnAdmin" class="icon-btn" title="Admin">⚙️</button>
       </div>
     </header>
@@ -78,51 +113,60 @@ button{cursor:pointer}
 
     <div class="footer">
       Works offline. Data stays on this device (local only).
-      <div class="version">Breakfast v3.3.1</div>
+      <div class="version">Breakfast v3.4 (Menu Manager)</div>
     </div>
   </div>
 
+  <!-- Hidden file (kept for possible future use) -->
   <input type="file" id="file-picker" accept="image/*" class="sr-only"/>
 
+  <!-- Menu Manager Modal -->
+  <div class="modal-backdrop" id="menuModal" aria-hidden="true" role="dialog" aria-labelledby="menuTitle">
+    <div class="modal">
+      <header>
+        <div id="menuTitle" style="font-weight:800">Breakfast Menu</div>
+        <button id="menuClose" class="icon-btn">✖</button>
+      </header>
+
+      <div class="body">
+        <div class="help">Choose up to <b>4</b> active items. You can keep up to <b>10</b> saved items.</div>
+
+        <div class="list" id="menuList"></div>
+
+        <!-- Add new -->
+        <div class="item">
+          <div class="emoji">
+            <label class="sr-only" for="newEmoji">Emoji</label>
+            <select id="newEmoji">
+              <option>🧇</option><option>🥣</option><option>🥯</option><option>🍓</option>
+              <option>🍳</option><option>🥚</option><option>🥞</option><option>🍌</option>
+              <option>🍎</option><option>🥛</option><option>🧃</option><option>🥐</option>
+            </select>
+          </div>
+          <input id="newLabel" class="grow" placeholder="Add item (e.g., Oatmeal)"/>
+          <button id="addItem" class="btn-primary">Add</button>
+          <span></span>
+        </div>
+
+        <!-- Active picker -->
+        <div id="activeWrap" class="list" style="grid-template-columns:repeat(2,minmax(0,1fr))"></div>
+      </div>
+
+      <div class="footer">
+        <button id="menuSave" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
 <!-- Family Store -->
-<script src="family.js?v=3.3.8"></script>
+<script src="family.js?v=3.3.6"></script>
 <script>
-// If family.js failed to load (cache or network), create a minimal shim
-if (!window.Family) {
-  console.warn('family.js not loaded — using fallback Family shim.');
-  (function(){
-    const K={pin:'hub:family:pin', parents:'hub:family:parents', kids:'hub:family:kids'};
-    const uid=()=>Math.random().toString(36).slice(2,10);
-    const load=(k,f)=>{ try{const v=JSON.parse(localStorage.getItem(k)); return v ?? f;}catch{ return f; } };
-    const save=(k,v)=>localStorage.setItem(k, JSON.stringify(v));
+// ROUTE: gear to Home Admin
+document.addEventListener('DOMContentLoaded',()=>{
+  const gear=document.getElementById('btnAdmin');
+  if(gear) gear.onclick=()=>{ location.href='./index.html#admin'; };
+});
 
-    window.Family = {
-      // PIN
-      setPin(pin){ save(K.pin, pin || null); },
-      verifyPin(pin){ const real = load(K.pin, null); return real ? String(real)===String(pin) : true; },
-
-      // Parents
-      getParents(){ return load(K.parents, []); },
-      upsertParent(p){ const arr=this.getParents(); const i=arr.findIndex(x=>x.id===p.id);
-        if(i>=0) arr[i]={...arr[i],...p}; else arr.push({...p,id:p.id||uid()}); save(K.parents,arr); },
-      removeParent(id){ save(K.parents, this.getParents().filter(p=>p.id!==id)); },
-
-      // Kids
-      getKids(){ return load(K.kids, []); },
-      getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false); },
-      upsertKid(k){ const arr=this.getKids(); const i=arr.findIndex(x=>x.id===k.id);
-        if(i>=0) arr[i]={...arr[i],...k}; else arr.push({...k,id:k.id||uid(),enabled:true}); save(K.kids,arr); },
-      removeKid(id){ save(K.kids, this.getKids().filter(k=>k.id!==id)); },
-      setKidEnabled(id,en){ const arr=this.getKids(); const k=arr.find(x=>x.id===id); if(k){ k.enabled=!!en; save(K.kids,arr); } },
-
-      onChange(){ return ()=>{}; } // no-op
-    };
-  })();
-}
-</script>
-
-
-<script>
 // ---------- Utils ----------
 const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
 const LS={ menu:'bc:menu:all', active:'bc:menu:active', day:d=>`bc:choices:${d}` };
@@ -146,19 +190,20 @@ function ensureSeed(){
 
 // ---------- Accessors ----------
 function getAllMenu(){return load(LS.menu,DEFAULT_MENU)}
+function setAllMenu(arr){save(LS.menu,arr.slice(0,10))}
 function getActive(){return load(LS.active,[])}
+function setActive(a){save(LS.active,a.slice(0,4))}
 function setDay(d,o){save(LS.day(d),o)}
 function getDay(d){return load(LS.day(d),{})}
 
-// Safe kids accessor (works even if Family.js failed)
-function getKidsSafe(){
+// Only Family store (no phantom kids)
+function getKids(){
   try{
-    if (window.Family && typeof Family.getActiveKids === 'function') {
-      const k = Family.getActiveKids();
-      if (Array.isArray(k)) return k; // even if empty
+    if(window.Family && typeof Family.getActiveKids==='function'){
+      const k=Family.getActiveKids(); if(Array.isArray(k)) return k;
     }
-  }catch(e){ console.warn('Family store unavailable', e); }
-  return []; // no phantom kids
+  }catch(e){ console.warn('Family store unavailable',e); }
+  return [];
 }
 
 // ---------- Rendering ----------
@@ -166,7 +211,15 @@ let activeKid=null;
 
 function renderKids(){
   const row=$('#kidsRow'); row.innerHTML='';
-  getKidsSafe().forEach(k=>{
+  const kids=getKids();
+  if(!kids.length){
+    const notice=document.createElement('div');
+    notice.className='panel';
+    notice.textContent='No kids yet. Tap ⚙️ on the top bar (Home) to add them in Admin.';
+    row.parentElement.insertBefore(notice,row);
+    return;
+  }
+  kids.forEach(k=>{
     const el=document.createElement('div');
     el.className='kid'; el.dataset.kid=k.id;
     el.setAttribute('aria-selected',activeKid===k.id?'true':'false');
@@ -177,12 +230,12 @@ function renderKids(){
 function renderChoices(){
   const grid=$('#choicesGrid'); grid.innerHTML='';
   const date=$('#theDate').value; const picks=getDay(date);
-  const all=getAllMenu(); const actIds=load(LS.active,[]);
+  const all=getAllMenu(); const actIds=getActive();
   all.filter(m=>actIds.includes(m.id)).forEach(c=>{
     const card=document.createElement('div'); card.className='choice'; card.dataset.choice=c.id;
     card.innerHTML=`<div class="food-head"><div class="food-emoji">${c.emoji}</div><div class="food-name">${c.label}</div></div><div class="avatars"></div><div class="empty-hint">Tap to select</div>`;
     const wrap=card.querySelector('.avatars');
-    getKidsSafe().forEach(k=>{
+    getKids().forEach(k=>{
       if(picks[k.id]===c.id){
         wrap.innerHTML+=`<div class="avatar">${k.photo?`<img src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div>`;
       }
@@ -194,7 +247,7 @@ function renderChoices(){
 function renderSummary(){
   const s=$('#summary'); s.innerHTML='';
   const date=$('#theDate').value; const picks=getDay(date); const all=getAllMenu();
-  getKidsSafe().forEach(k=>{
+  getKids().forEach(k=>{
     const ch=all.find(c=>c.id===picks[k.id]);
     s.innerHTML+=`<div class="summary-item"><div style="display:flex;align-items:center;gap:10px"><div class="face" style="width:42px;height:42px">${k.photo?`<img src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div><div>${k.name}</div></div>${ch?`<div class="pill"><span class="emoji">${ch.emoji}</span> ${ch.label}</div>`:`<div class="pill" style="opacity:.6">Not chosen</div>`}</div>`;
   });
@@ -214,26 +267,122 @@ function attachInteractions(){
 // ---------- Controls ----------
 function bindControls(){
   $('#theDate').value=today();
-  // Show a nudge if no kids exist
-if (!getKidsSafe().length) {
-  const hint = document.createElement('div');
-  hint.style.cssText = 'text-align:center; opacity:.8; padding:8px;';
-  hint.textContent = 'No kids yet. Tap the ⚙️ and add kids in Admin.';
-  document.querySelector('.app').insertBefore(hint, document.querySelector('#kidsRow').parentElement);
+  $('#btnClear').onclick=()=>{localStorage.removeItem(LS.day($('#theDate').value)); renderAll();}
+  $('#btnRandomize').onclick=()=>{const d=$('#theDate').value;const picks={};const act=getActive();const kids=getKids();if(!kids.length||!act.length)return;kids.forEach(k=>{picks[k.id]=act[Math.floor(Math.random()*act.length)]});setDay(d,picks);renderAll();}
+  $('#btnShare').onclick=async()=>{const d=$('#theDate').value;const picks=getDay(d);const all=getAllMenu();const lines=getKids().map(k=>{const ch=all.find(c=>c.id===picks[k.id]);return `${k.name}: ${ch?`${ch.emoji} ${ch.label}`:'—'}`});const txt=`Breakfast ${d}\n`+lines.join('\n');try{await navigator.clipboard.writeText(txt);alert('Copied!');}catch{prompt('Copy manually:',txt)}}
+
+  // Menu manager open
+  $('#btnMenuMgr').onclick=openMenuModal;
 }
 
-  $('#btnClear').onclick=()=>{localStorage.removeItem(LS.day($('#theDate').value)); renderAll();}
-  $('#btnRandomize').onclick=()=>{const d=$('#theDate').value;const picks={};const act=getActive();getKidsSafe().forEach(k=>{picks[k.id]=act[Math.floor(Math.random()*act.length)]});setDay(d,picks);renderAll();}
-  $('#btnShare').onclick=async()=>{const d=$('#theDate').value;const picks=getDay(d);const all=getAllMenu();const lines=getKidsSafe().map(k=>{const ch=all.find(c=>c.id===picks[k.id]);return `${k.name}: ${ch?`${ch.emoji} ${ch.label}`:'—'}`});const txt=`Breakfast ${d}\n`+lines.join('\n');try{await navigator.clipboard.writeText(txt);alert('Copied!');}catch{prompt('Copy manually:',txt)}}
+// ---------- Menu Manager ----------
+const menuModal=$('#menuModal');
+$('#menuClose').onclick=closeMenuModal;
+$('#menuSave').onclick=saveMenuModal;
+$('#addItem').onclick=addMenuItem;
+
+function openMenuModal(){
+  buildMenuList();
+  buildActivePicker();
+  menuModal.style.display='flex';
+  menuModal.setAttribute('aria-hidden','false');
 }
+function closeMenuModal(){
+  menuModal.style.display='none';
+  menuModal.setAttribute('aria-hidden','true');
+}
+
+function buildMenuList(){
+  const list=$('#menuList'); list.innerHTML='';
+  const items=getAllMenu();
+  items.forEach(it=>{
+    const row=document.createElement('div'); row.className='item'; row.dataset.id=it.id;
+    row.innerHTML=`
+      <div class="emoji">
+        <select class="selEmoji">
+          ${emojiOptions(it.emoji)}
+        </select>
+      </div>
+      <input class="grow lbl" value="${escapeHtml(it.label)}" />
+      <button class="btn-ghost" data-remove>Remove</button>
+      <span></span>
+    `;
+    list.appendChild(row);
+  });
+
+  // wire edits
+  list.querySelectorAll('.item').forEach(row=>{
+    const id=row.dataset.id;
+    row.querySelector('.lbl').oninput=(e)=> {
+      const arr=getAllMenu(); const i=arr.findIndex(x=>x.id===id); if(i>=0){arr[i].label=e.target.value; setAllMenu(arr); buildActivePicker();}
+    };
+    row.querySelector('.selEmoji').onchange=(e)=>{
+      const arr=getAllMenu(); const i=arr.findIndex(x=>x.id===id); if(i>=0){arr[i].emoji=e.target.value; setAllMenu(arr); buildActivePicker();}
+    };
+    row.querySelector('[data-remove]').onclick=()=>{
+      const arr=getAllMenu().filter(x=>x.id!==id);
+      setAllMenu(arr);
+      // also drop from active if there
+      setActive(getActive().filter(x=>x!==id));
+      buildMenuList(); buildActivePicker(); renderAll();
+    };
+  });
+}
+
+function addMenuItem(){
+  const emoji=$('#newEmoji').value || '🍽️';
+  const label=($('#newLabel').value||'').trim();
+  if(!label) return;
+  const arr=getAllMenu();
+  if(arr.length>=10){ alert('You can keep up to 10 items. Remove one first.'); return; }
+  arr.push({id:uid(), emoji, label});
+  setAllMenu(arr);
+  $('#newLabel').value='';
+  buildMenuList(); buildActivePicker();
+}
+
+function buildActivePicker(){
+  const wrap=$('#activeWrap'); wrap.innerHTML='';
+  const items=getAllMenu(); const active=getActive();
+  const count=active.length;
+  items.forEach(it=>{
+    const on=active.includes(it.id);
+    const el=document.createElement('div');
+    el.className='badge'; el.setAttribute('aria-selected', on?'true':'false');
+    el.innerHTML=`<span class="emoji">${it.emoji}</span> ${escapeHtml(it.label)} <input type="checkbox" ${on?'checked':''} style="margin-left:auto">`;
+    const chk=el.querySelector('input');
+    chk.onchange=()=>{
+      let cur=getActive();
+      if(chk.checked){
+        if(cur.length>=4){ chk.checked=false; alert('Choose at most 4 active items.'); return; }
+        cur=[...cur, it.id];
+      }else{
+        cur=cur.filter(x=>x!==it.id);
+      }
+      setActive(cur);
+      buildActivePicker();
+      renderAll();
+    };
+    wrap.appendChild(el);
+  });
+}
+
+function saveMenuModal(){
+  // already saved as-you-go; just close and re-render main UI
+  closeMenuModal();
+  renderAll();
+}
+
+function emojiOptions(selected){
+  const opts=['🧇','🥣','🥯','🍓','🍳','🥚','🥞','🍌','🍎','🥛','🧃','🥐','🧁','🫐','🍇'];
+  return opts.map(e=>`<option ${e===selected?'selected':''}>${e}</option>`).join('');
+}
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
 
 // ---------- Boot ----------
 ensureSeed();
 bindControls();
-  // Route Breakfast gear to Home Admin
-document.getElementById('btnAdmin').onclick = () => {
-  location.href = './index.html#admin';
-};
 renderAll();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
