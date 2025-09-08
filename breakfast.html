@@ -85,7 +85,7 @@ button{cursor:pointer}
   <input type="file" id="file-picker" accept="image/*" class="sr-only"/>
 
 <!-- Family Store -->
-<script src="family.js?v=3.3.6"></script>
+<script src="family.js?v=3.3.8"></script>
 <script>
 // If family.js failed to load (cache or network), create a minimal shim
 if (!window.Family) {
@@ -153,18 +153,12 @@ function getDay(d){return load(LS.day(d),{})}
 // Safe kids accessor (works even if Family.js failed)
 function getKidsSafe(){
   try{
-    if (window.Family && typeof Family.getActiveKids==='function') {
-      const k=Family.getActiveKids();
-      if (Array.isArray(k) && k.length) return k;
+    if (window.Family && typeof Family.getActiveKids === 'function') {
+      const k = Family.getActiveKids();
+      if (Array.isArray(k)) return k; // even if empty
     }
-  }catch(e){ console.warn('Family store unavailable, using fallback', e); }
-  // Fallback seed (names only)
-  return [
-    {id:'k1',name:'Emilia',photo:null},
-    {id:'k2',name:'Hudson',photo:null},
-    {id:'k3',name:'Penelope',photo:null},
-    {id:'k4',name:'Jasper',photo:null},
-  ];
+  }catch(e){ console.warn('Family store unavailable', e); }
+  return []; // no phantom kids
 }
 
 // ---------- Rendering ----------
@@ -220,6 +214,14 @@ function attachInteractions(){
 // ---------- Controls ----------
 function bindControls(){
   $('#theDate').value=today();
+  // Show a nudge if no kids exist
+if (!getKidsSafe().length) {
+  const hint = document.createElement('div');
+  hint.style.cssText = 'text-align:center; opacity:.8; padding:8px;';
+  hint.textContent = 'No kids yet. Tap the ⚙️ and add kids in Admin.';
+  document.querySelector('.app').insertBefore(hint, document.querySelector('#kidsRow').parentElement);
+}
+
   $('#btnClear').onclick=()=>{localStorage.removeItem(LS.day($('#theDate').value)); renderAll();}
   $('#btnRandomize').onclick=()=>{const d=$('#theDate').value;const picks={};const act=getActive();getKidsSafe().forEach(k=>{picks[k.id]=act[Math.floor(Math.random()*act.length)]});setDay(d,picks);renderAll();}
   $('#btnShare').onclick=async()=>{const d=$('#theDate').value;const picks=getDay(d);const all=getAllMenu();const lines=getKidsSafe().map(k=>{const ch=all.find(c=>c.id===picks[k.id]);return `${k.name}: ${ch?`${ch.emoji} ${ch.label}`:'—'}`});const txt=`Breakfast ${d}\n`+lines.join('\n');try{await navigator.clipboard.writeText(txt);alert('Copied!');}catch{prompt('Copy manually:',txt)}}
@@ -228,6 +230,10 @@ function bindControls(){
 // ---------- Boot ----------
 ensureSeed();
 bindControls();
+  // Route Breakfast gear to Home Admin
+document.getElementById('btnAdmin').onclick = () => {
+  location.href = './index.html#admin';
+};
 renderAll();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
