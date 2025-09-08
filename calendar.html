@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Family Calendar (Coming Soon)</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#0f172a;color:#e5e7eb}
+.wrap{max-width:900px;margin:0 auto;padding:20px}
+.card{background:#111827;border:1px solid #0b1224;border-radius:16px;padding:16px}
+a.btn{display:inline-block;margin-bottom:12px;text-decoration:none;color:#0e1726;background:#22d3ee;padding:8px 12px;border-radius:10px;font-weight:800}
+.hint{opacity:.75}
+</style></head><body>
+<div class="wrap">
+  <a class="btn" href="./index.html">← Home</a>
+  <div class="card">
+    <h1>Family Calendar</h1>
+    <p class="hint">We’ll add quick-add events and weekly view here.</p>
+  </div>
+</div>
+<script>if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+</body></html>
