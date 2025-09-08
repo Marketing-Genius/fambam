@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Family Hub</title>
+
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<style>
+:root{--panel:#111827;--card:#1f2937;--muted:#94a3b8;--text:#e5e7eb;--accent:#22d3ee;--bg:#0f172a;--shadow:0 10px 30px rgba(0,0,0,.35);--radius:18px}
+html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%);color:var(--text)}
+.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto 1fr auto}
+header{display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid #0b1224;border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+.title{font-weight:800;font-size:1.4rem}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:900px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.tile{display:flex;flex-direction:column;gap:10px;align-items:flex-start;background:var(--card);border:1px solid #1f2937;border-radius:16px;padding:16px;text-decoration:none;color:var(--text);box-shadow:var(--shadow)}
+.tile .emoji{font-size:36px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
+.tile .label{font-weight:800}
+.tile.disabled{opacity:.5;pointer-events:none}
+footer{opacity:.7;text-align:center;font-size:.9rem}
+.version{opacity:.6;font-size:.8rem}
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">Family Hub</div>
+    </header>
+
+    <main class="grid" aria-label="App sections">
+      <a class="tile" href="./breakfast.html">
+        <div class="emoji">🍽️</div>
+        <div class="label">Breakfast Chooser</div>
+        <div class="hint">Tap to open</div>
+      </a>
+
+      <a class="tile" href="./chores.html">
+        <div class="emoji">🧹</div>
+        <div class="label">Chores</div>
+        <div class="hint">Coming next</div>
+      </a>
+
+      <a class="tile" href="./dinner.html">
+        <div class="emoji">🍝</div>
+        <div class="label">Dinner Planner</div>
+        <div class="hint">Weekly plan (view only for kids)</div>
+      </a>
+
+      <a class="tile" href="./calendar.html">
+        <div class="emoji">📅</div>
+        <div class="label">Family Calendar</div>
+        <div class="hint">Events & activities</div>
+      </a>
+    </main>
+
+    <footer>
+      Works offline. Data stays on this device (local only).
+      <div class="version">Hub v0.1 • Breakfast v3.2.4</div>
+    </footer>
+  </div>
+
+<script>
+// Register the same SW so Home works offline too
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
