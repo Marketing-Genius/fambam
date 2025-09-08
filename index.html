@@ -128,4 +128,197 @@ footer{opacity:.7;text-align:center;font-size:.9rem}
             <button id="addParent" class="btn-primary">Add Parent</button>
           </div>
           <div class="row">
-            <input id="pinInput" class="btn" placeholder="Set Admin PIN (optional)" inputmode=
+            <input id="pinInput" class="btn" placeholder="Set Admin PIN (optional)" inputmode="numeric" />
+            <button id="savePin" class="btn">Save PIN</button>
+          </div>
+        </section>
+
+        <!-- Kids -->
+        <section class="tab-panel" data-panel="kids" style="display:none">
+          <div class="list" id="kidsList"></div>
+          <div class="row">
+            <input id="newKidName" class="btn" placeholder="Add kid name" />
+            <button id="addKid" class="btn-primary">Add Kid</button>
+          </div>
+        </section>
+      </div>
+      <div class="footer">
+        <button id="adminSave" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+<!-- Family Store -->
+<script src="family.js"></script>
+
+<!-- Seed the PIN once to 4321 -->
+<script>
+(function seedPinOnce(){
+  const FLAG = 'hub:pinSeeded';
+  if (!localStorage.getItem(FLAG)) {
+    Family.setPin('4321');
+    localStorage.setItem(FLAG, '1');
+    console.log('Admin PIN seeded to 4321');
+  }
+})();
+</script>
+
+<script>
+/* ---------- Menu + Admin PIN gate ---------- */
+(function menu(){
+  const btn = document.getElementById('btnMenu');
+  const dd  = document.getElementById('menuDropdown');
+  const openDD = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
+  const closeDD= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
+
+  btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?closeDD():openDD(); });
+  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) closeDD(); });
+
+  dd?.addEventListener('click', (e)=>{
+    const el = e.target.closest('.menu-item'); if (!el) return;
+    const action = el.dataset.action;
+    closeDD(); // close dropdown first
+    if (action === 'admin') { requestPinThen(openAdmin); }
+    else if (action === 'about') { alert('Family Hub — single-device PWA.'); }
+  });
+
+  function requestPinThen(onOk){
+    const pin = prompt('Enter Admin PIN (numbers only):', '');
+    if (pin == null) return;
+    if (!/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
+    if (Family.verifyPin(pin)) onOk(); else alert('Incorrect PIN.');
+  }
+})();
+</script>
+
+<script>
+/* ---------- Admin Modal + UI ---------- */
+const modal = document.getElementById('adminModal');
+document.getElementById('adminClose')?.addEventListener('click', closeAdmin);
+document.getElementById('adminSave')?.addEventListener('click', closeAdmin);
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    const tab = t.dataset.tab;
+    document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected','false'));
+    t.setAttribute('aria-selected','true');
+    document.querySelectorAll('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab?'':'none'));
+  });
+});
+
+function openAdmin(){
+  buildParents();
+  buildKids();
+  const pinInput = document.getElementById('pinInput');
+  if (pinInput) pinInput.placeholder = 'PIN set (tap to change)';
+  modal.style.display='flex'; modal.setAttribute('aria-hidden','false');
+}
+function closeAdmin(){
+  modal.style.display='none'; modal.setAttribute('aria-hidden','true');
+}
+
+/* ---------- Parents UI ---------- */
+function buildParents(){
+  const list = document.getElementById('parentsList'); list.innerHTML='';
+  Family.getParents().forEach(p=>{
+    const row = document.createElement('div'); row.className='item'; row.dataset.id=p.id;
+    row.innerHTML = `
+      <div class="face">${p.photo?`<img src="${p.photo}" alt="${escapeHtml(p.name)}">`:`<span>${initials(p.name)}</span>`}</div>
+      <input class="grow btn" value="${escapeHtml(p.name)}" />
+      <button class="btn" data-photo>Change Photo</button>
+      <button class="btn-warn" data-remove>Remove</button>`;
+    list.appendChild(row);
+  });
+
+  document.getElementById('addParent').onclick = ()=>{
+    const name = (document.getElementById('newParentName').value||'').trim(); if(!name) return;
+    Family.upsertParent({ name }); document.getElementById('newParentName').value=''; buildParents();
+  };
+  document.getElementById('savePin').onclick = ()=>{
+    const pin = (document.getElementById('pinInput').value||'').trim() || null;
+    if (pin && !/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
+    Family.setPin(pin); alert(pin ? 'PIN saved.' : 'PIN cleared.');
+  };
+
+  list.querySelectorAll('.item').forEach(row=>{
+    const id = row.dataset.id;
+    row.querySelector('input').oninput = (e)=> Family.upsertParent({ id, name:e.target.value });
+    row.querySelector('[data-photo]').onclick = ()=> pickPhoto('parent', id);
+    row.querySelector('[data-remove]').onclick = ()=>{ Family.removeParent(id); buildParents(); };
+  });
+}
+
+/* ---------- Kids UI ---------- */
+function buildKids(){
+  const list = document.getElementById('kidsList'); list.innerHTML='';
+  Family.getKids().forEach(k=>{
+    const row = document.createElement('div'); row.className='item'; row.dataset.id=k.id;
+    row.innerHTML = `
+      <div class="face">${k.photo?`<img src="${k.photo}" alt="${escapeHtml(k.name)}">`:`<span>${initials(k.name)}</span>`}</div>
+      <input class="grow btn" value="${escapeHtml(k.name)}" />
+      <label class="toggle"><input type="checkbox" ${k.enabled!==false?'checked':''}/> Enabled</label>
+      <button class="btn" data-photo>Change Photo</button>
+      <button class="btn-warn" data-remove>Remove</button>`;
+    list.appendChild(row);
+  });
+
+  document.getElementById('addKid').onclick = ()=>{
+    const name = (document.getElementById('newKidName').value||'').trim(); if(!name) return;
+    Family.upsertKid({ name }); document.getElementById('newKidName').value=''; buildKids();
+  };
+
+  list.querySelectorAll('.item').forEach(row=>{
+    const id = row.dataset.id;
+    row.querySelector('input').oninput = (e)=> Family.upsertKid({ id, name:e.target.value });
+    row.querySelector('input[type="checkbox"]').onchange = (e)=> Family.setKidEnabled(id, e.target.checked);
+    row.querySelector('[data-photo]').onclick = ()=> pickPhoto('kid', id);
+    row.querySelector('[data-remove]').onclick = ()=>{ Family.removeKid(id); buildKids(); };
+  });
+}
+
+/* ---------- Shared helpers ---------- */
+function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
+
+function pickPhoto(kind, id){
+  const input = document.getElementById('file-picker');
+  const useCamera = confirm('Use camera to take a new photo? (Cancel = choose from Photo Library/Files)');
+  if (useCamera) input.setAttribute('capture','environment'); else input.removeAttribute('capture');
+
+  input.onchange = async (ev)=>{
+    const file = ev.target.files && ev.target.files[0]; if(!file) return;
+    const dataUrl = await compress(file, 256, 0.8);
+    try{
+      if (kind==='kid') Family.upsertKid({ id, photo:dataUrl });
+      else Family.upsertParent({ id, photo:dataUrl });
+      if (kind==='kid') buildKids(); else buildParents();
+    }catch(_){
+      alert('Could not save photo (storage may be full). Try a smaller image or remove a photo first.');
+    }
+    input.value=''; input.removeAttribute('capture');
+  };
+  input.click();
+}
+
+// on-device image compression
+function compress(file, maxSide=256, quality=0.8){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1, maxSide/Math.max(img.width,img.height));
+      const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
+  });
+}
+
+// Service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
