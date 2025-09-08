@@ -210,23 +210,32 @@ function getKids(){
 let activeKid=null;
 
 function renderKids(){
-  const row=$('#kidsRow'); row.innerHTML='';
-  const kids=getKids();
-  if(!kids.length){
-    const notice=document.createElement('div');
-    notice.className='panel';
-    notice.textContent='No kids yet. Tap ⚙️ on the top bar (Home) to add them in Admin.';
-    row.parentElement.insertBefore(notice,row);
+  const row = $('#kidsRow');
+  row.innerHTML = '';
+  // remove any previous notice
+  const oldNotice = document.getElementById('kidsNotice');
+  if (oldNotice) oldNotice.remove();
+
+  const kids = getKids();
+  if (!kids.length) {
+    const notice = document.createElement('div');
+    notice.id = 'kidsNotice';
+    notice.className = 'panel';
+    notice.textContent = 'No kids yet. Tap ⚙️ on the Home page to add them in Admin.';
+    row.parentElement.insertBefore(notice, row);
     return;
   }
-  kids.forEach(k=>{
-    const el=document.createElement('div');
-    el.className='kid'; el.dataset.kid=k.id;
-    el.setAttribute('aria-selected',activeKid===k.id?'true':'false');
-    el.innerHTML=`<div class="face">${k.photo?`<img src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div><div><div style="font-weight:800">${k.name}</div></div>`;
+
+  kids.forEach(k => {
+    const el = document.createElement('div');
+    el.className = 'kid'; el.dataset.kid = k.id;
+    el.setAttribute('aria-selected', activeKid === k.id ? 'true' : 'false');
+    el.innerHTML = `<div class="face">${k.photo?`<img src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div>
+                    <div><div style="font-weight:800">${k.name}</div></div>`;
     row.appendChild(el);
   });
 }
+
 function renderChoices(){
   const grid=$('#choicesGrid'); grid.innerHTML='';
   const date=$('#theDate').value; const picks=getDay(date);
@@ -384,6 +393,9 @@ function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'
 ensureSeed();
 bindControls();
 renderAll();
+  // Re-render whenever Family store changes (e.g., kids added in Admin)
+try { Family.onChange && Family.onChange(renderAll); } catch (_) {}
+
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
