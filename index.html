@@ -26,14 +26,40 @@ header{display:flex;justify-content:space-between;align-items:center;background:
 .tile.disabled{opacity:.5;pointer-events:none}
 footer{opacity:.7;text-align:center;font-size:.9rem}
 .version{opacity:.6;font-size:.8rem}
+  /* Home: hamburger menu */
+.menu-wrap{ position:relative; }
+.hamburger{
+  font:inherit; cursor:pointer; background:#0b1224; color:#e5e7eb;
+  border:1px solid #334155; border-radius:12px; padding:10px 12px;
+}
+.menu-dropdown{
+  position:absolute; right:0; top:110%; min-width:220px; z-index:1000;
+  background:#111827; border:1px solid #1f2937; border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35); padding:6px; display:none;
+}
+.menu-dropdown.open{ display:block; }
+.menu-item{
+  width:100%; text-align:left; padding:10px 12px; border:none; background:transparent;
+  color:#e5e7eb; border-radius:10px; cursor:pointer;
+}
+.menu-item:hover{ background:#0b1224; }
+
 </style>
 </head>
 <body>
   <div class="app">
-    <header>
-      <div class="title">Family Hub</div>
-    </header>
+<header>
+  <div class="title">Family Hub</div>
 
+  <!-- Hamburger -->
+  <div class="menu-wrap">
+    <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
+    <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
+      <button class="menu-item" data-action="settings" role="menuitem">Admin Settings (coming soon)</button>
+      <button class="menu-item" data-action="about" role="menuitem">About</button>
+    </div>
+  </div>
+</header>
     <main class="grid" aria-label="App sections">
       <a class="tile" href="./breakfast.html">
         <div class="emoji">🍽️</div>
@@ -72,5 +98,35 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
 </script>
+  <script>
+(function(){
+  const btn = document.getElementById('btnMenu');
+  const dd  = document.getElementById('menuDropdown');
+
+  function closeMenu(){ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); }
+  function openMenu(){ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); }
+
+  btn?.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if (dd.classList.contains('open')) closeMenu(); else openMenu();
+  });
+
+  document.addEventListener('click', (e)=>{
+    if (!dd.contains(e.target) && e.target !== btn) closeMenu();
+  });
+
+  dd?.addEventListener('click', (e)=>{
+    const el = e.target.closest('.menu-item'); if (!el) return;
+    const action = el.dataset.action;
+    if (action === 'settings') {
+      alert('Admin Settings are coming soon to the Home page.');
+    } else if (action === 'about') {
+      alert('Family Hub — single-device PWA. Breakfast v3.2.4; Hub v0.1.');
+    }
+    closeMenu();
+  });
+})();
+</script>
+
 </body>
 </html>
