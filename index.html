@@ -151,23 +151,51 @@ footer{opacity:.7;text-align:center;font-size:.9rem}
 
 <script src="family.js"></script>
 <script>
-/* ---------- Menu ---------- */
+// One-time seed: set Admin PIN = 4321 if no PIN has ever been set on this device.
+(function seedPinOnce(){
+  const FLAG = 'hub:pinSeeded';
+  if (!localStorage.getItem(FLAG)) {
+    Family.setPin('4321');
+    localStorage.setItem(FLAG, '1');
+    console.log('Admin PIN seeded to 4321');
+  }
+})();
+</script>
+
+<script>
+/* ---------- Menu + Admin PIN gate ---------- */
 (function menu(){
   const btn = document.getElementById('btnMenu');
   const dd  = document.getElementById('menuDropdown');
-  const open = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
-  const close= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
+  const openDD = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
+  const closeDD= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
 
-  btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?close():open(); });
-  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) close(); });
+  btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?closeDD():openDD(); });
+  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) closeDD(); });
 
-  dd?.addEventListener('click', (e)=>{
+  dd?.addEventListener('click', async (e)=>{
     const el = e.target.closest('.menu-item'); if (!el) return;
-    if (el.dataset.action === 'admin') openAdmin();
-    if (el.dataset.action === 'about') alert('Family Hub — single-device PWA.\nBreakfast ready • Chores/Dinner/Calendar placeholders.');
-    close();
+    const action = el.dataset.action;
+    closeDD(); // close dropdown first
+
+    if (action === 'admin') {
+      requestPinThen(openAdmin);
+    } else if (action === 'about') {
+      alert('Family Hub — single-device PWA.\nBreakfast ready • Chores/Dinner/Calendar placeholders.');
+    }
   });
+
+  async function requestPinThen(onOk){
+    // If Family has no PIN, verifyPin() returns true — but we seeded one already.
+    const pin = prompt('Enter Admin PIN (numbers only):', '');
+    if (pin == null) return;
+    if (!/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
+    if (Family.verifyPin(pin)) { onOk(); }
+    else { alert('Incorrect PIN.'); }
+  }
 })();
+</script>
+
 
 /* ---------- Admin Modal ---------- */
 const modal = document.getElementById('adminModal');
