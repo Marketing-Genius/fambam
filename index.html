@@ -16,50 +16,62 @@
 html,body{height:100%}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%);color:var(--text)}
 .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto 1fr auto}
+
+/* Header + menu */
 header{display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid #0b1224;border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
 .title{font-weight:800;font-size:1.4rem}
+.menu-wrap{position:relative}
+.hamburger{font:inherit;cursor:pointer;background:#0b1224;color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:10px 12px}
+.menu-dropdown{position:absolute;right:0;top:110%;min-width:260px;z-index:1000;background:#111827;border:1px solid #1f2937;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:6px;display:none}
+.menu-dropdown.open{display:block}
+.menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
+.menu-item:hover{background:#0b1224}
+
+/* Tiles */
 .grid{display:grid;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(min-width:900px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .tile{display:flex;flex-direction:column;gap:10px;align-items:flex-start;background:var(--card);border:1px solid #1f2937;border-radius:16px;padding:16px;text-decoration:none;color:var(--text);box-shadow:var(--shadow)}
 .tile .emoji{font-size:36px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .tile .label{font-weight:800}
 .tile.disabled{opacity:.5;pointer-events:none}
+
+/* Modal */
+.sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.modal{width:min(900px,100%);background:var(--panel);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
+.modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937}
+.modal .body{padding:14px 16px;display:grid;gap:16px}
+.modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer}
+.tab[aria-selected="true"]{outline:2px solid var(--accent)}
+.list{display:grid;gap:8px}
+.item{display:flex;align-items:center;gap:10px;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
+.item .grow{flex:1}
+.face{width:48px;height:48px;border-radius:50%;background:#0b1224;display:grid;place-items:center;font-size:22px;border:2px solid #334155;overflow:hidden}
+.face img{width:100%;height:100%;object-fit:cover}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;color:#e5e7eb;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
+.btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
+.toggle{display:inline-flex;align-items:center;gap:8px}
 footer{opacity:.7;text-align:center;font-size:.9rem}
 .version{opacity:.6;font-size:.8rem}
-  /* Home: hamburger menu */
-.menu-wrap{ position:relative; }
-.hamburger{
-  font:inherit; cursor:pointer; background:#0b1224; color:#e5e7eb;
-  border:1px solid #334155; border-radius:12px; padding:10px 12px;
-}
-.menu-dropdown{
-  position:absolute; right:0; top:110%; min-width:220px; z-index:1000;
-  background:#111827; border:1px solid #1f2937; border-radius:12px;
-  box-shadow:0 10px 30px rgba(0,0,0,.35); padding:6px; display:none;
-}
-.menu-dropdown.open{ display:block; }
-.menu-item{
-  width:100%; text-align:left; padding:10px 12px; border:none; background:transparent;
-  color:#e5e7eb; border-radius:10px; cursor:pointer;
-}
-.menu-item:hover{ background:#0b1224; }
-
 </style>
 </head>
 <body>
   <div class="app">
-<header>
-  <div class="title">Family Hub</div>
+    <header>
+      <div class="title">Family Hub</div>
+      <div class="menu-wrap">
+        <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
+        <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
+          <button class="menu-item" data-action="admin" role="menuitem">Admin Settings</button>
+          <button class="menu-item" data-action="about" role="menuitem">About</button>
+        </div>
+      </div>
+    </header>
 
-  <!-- Hamburger -->
-  <div class="menu-wrap">
-    <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
-    <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
-      <button class="menu-item" data-action="settings" role="menuitem">Admin Settings (coming soon)</button>
-      <button class="menu-item" data-action="about" role="menuitem">About</button>
-    </div>
-  </div>
-</header>
     <main class="grid" aria-label="App sections">
       <a class="tile" href="./breakfast.html">
         <div class="emoji">🍽️</div>
@@ -76,7 +88,7 @@ footer{opacity:.7;text-align:center;font-size:.9rem}
       <a class="tile" href="./dinner.html">
         <div class="emoji">🍝</div>
         <div class="label">Dinner Planner</div>
-        <div class="hint">Weekly plan (view only for kids)</div>
+        <div class="hint">Weekly plan</div>
       </a>
 
       <a class="tile" href="./calendar.html">
@@ -88,45 +100,199 @@ footer{opacity:.7;text-align:center;font-size:.9rem}
 
     <footer>
       Works offline. Data stays on this device (local only).
-      <div class="version">Hub v0.1 • Breakfast v3.2.4</div>
+      <div class="version">Hub v0.2 (Admin modal)</div>
     </footer>
   </div>
 
+  <!-- Hidden file picker (used for avatar changes) -->
+  <input type="file" id="file-picker" accept="image/*" class="sr-only"/>
+
+  <!-- Admin Modal -->
+  <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
+    <div class="modal">
+      <header>
+        <div id="adminTitle" style="font-weight:800">Admin Settings</div>
+        <button id="adminClose" class="btn">✖</button>
+      </header>
+      <div class="body">
+        <div class="tabs">
+          <button class="tab" data-tab="parents" aria-selected="true">Parents</button>
+          <button class="tab" data-tab="kids">Kids</button>
+        </div>
+
+        <!-- Parents -->
+        <section class="tab-panel" data-panel="parents">
+          <div class="list" id="parentsList"></div>
+          <div class="row">
+            <input id="newParentName" class="btn" placeholder="Add parent name" />
+            <button id="addParent" class="btn-primary">Add Parent</button>
+          </div>
+          <div class="row">
+            <input id="pinInput" class="btn" placeholder="Set Admin PIN (optional)" inputmode="numeric" />
+            <button id="savePin" class="btn">Save PIN</button>
+          </div>
+          <div class="row" style="opacity:.8"><small>Tip: PIN protects Admin on shared devices.</small></div>
+        </section>
+
+        <!-- Kids -->
+        <section class="tab-panel" data-panel="kids" style="display:none">
+          <div class="list" id="kidsList"></div>
+          <div class="row">
+            <input id="newKidName" class="btn" placeholder="Add kid name" />
+            <button id="addKid" class="btn-primary">Add Kid</button>
+          </div>
+        </section>
+      </div>
+      <div class="footer">
+        <button id="adminSave" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+<script src="family.js"></script>
 <script>
-// Register the same SW so Home works offline too
+/* ---------- Menu ---------- */
+(function menu(){
+  const btn = document.getElementById('btnMenu');
+  const dd  = document.getElementById('menuDropdown');
+  const open = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
+  const close= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
+
+  btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?close():open(); });
+  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) close(); });
+
+  dd?.addEventListener('click', (e)=>{
+    const el = e.target.closest('.menu-item'); if (!el) return;
+    if (el.dataset.action === 'admin') openAdmin();
+    if (el.dataset.action === 'about') alert('Family Hub — single-device PWA.\nBreakfast ready • Chores/Dinner/Calendar placeholders.');
+    close();
+  });
+})();
+
+/* ---------- Admin Modal ---------- */
+const modal = document.getElementById('adminModal');
+document.getElementById('adminClose')?.addEventListener('click', closeAdmin);
+document.getElementById('adminSave')?.addEventListener('click', closeAdmin);
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    const tab = t.dataset.tab;
+    document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected','false'));
+    t.setAttribute('aria-selected','true');
+    document.querySelectorAll('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab?'':'none'));
+  });
+});
+
+function openAdmin(){
+  buildParents();
+  buildKids();
+  modal.style.display='flex'; modal.setAttribute('aria-hidden','false');
+}
+function closeAdmin(){
+  modal.style.display='none'; modal.setAttribute('aria-hidden','true');
+}
+
+/* ---------- Parents UI ---------- */
+function buildParents(){
+  const list = document.getElementById('parentsList'); list.innerHTML='';
+  Family.getParents().forEach(p=>{
+    const row = document.createElement('div'); row.className='item'; row.dataset.id=p.id;
+    row.innerHTML = `
+      <div class="face">${p.photo?`<img src="${p.photo}" alt="${escapeHtml(p.name)}">`:`<span>${initials(p.name)}</span>`}</div>
+      <input class="grow btn" value="${escapeHtml(p.name)}" />
+      <button class="btn" data-photo>Change Photo</button>
+      <button class="btn-warn" data-remove>Remove</button>`;
+    list.appendChild(row);
+  });
+
+  document.getElementById('addParent').onclick = ()=>{
+    const name = (document.getElementById('newParentName').value||'').trim(); if(!name) return;
+    Family.upsertParent({ name }); document.getElementById('newParentName').value=''; buildParents();
+  };
+  document.getElementById('savePin').onclick = ()=>{
+    const pin = (document.getElementById('pinInput').value||'').trim() || null;
+    Family.setPin(pin); alert(pin ? 'PIN saved.' : 'PIN cleared.');
+  };
+
+  list.querySelectorAll('.item').forEach(row=>{
+    const id = row.dataset.id;
+    row.querySelector('input').oninput = (e)=> Family.upsertParent({ id, name:e.target.value });
+    row.querySelector('[data-photo]').onclick = ()=> pickPhoto('parent', id);
+    row.querySelector('[data-remove]').onclick = ()=>{ Family.removeParent(id); buildParents(); };
+  });
+}
+
+/* ---------- Kids UI ---------- */
+function buildKids(){
+  const list = document.getElementById('kidsList'); list.innerHTML='';
+  Family.getKids().forEach(k=>{
+    const row = document.createElement('div'); row.className='item'; row.dataset.id=k.id;
+    row.innerHTML = `
+      <div class="face">${k.photo?`<img src="${k.photo}" alt="${escapeHtml(k.name)}">`:`<span>${initials(k.name)}</span>`}</div>
+      <input class="grow btn" value="${escapeHtml(k.name)}" />
+      <label class="toggle"><input type="checkbox" ${k.enabled!==false?'checked':''}/> Enabled</label>
+      <button class="btn" data-photo>Change Photo</button>
+      <button class="btn-warn" data-remove>Remove</button>`;
+    list.appendChild(row);
+  });
+
+  document.getElementById('addKid').onclick = ()=>{
+    const name = (document.getElementById('newKidName').value||'').trim(); if(!name) return;
+    Family.upsertKid({ name }); document.getElementById('newKidName').value=''; buildKids();
+  };
+
+  list.querySelectorAll('.item').forEach(row=>{
+    const id = row.dataset.id;
+    row.querySelector('input').oninput = (e)=> Family.upsertKid({ id, name:e.target.value });
+    row.querySelector('input[type="checkbox"]').onchange = (e)=> Family.setKidEnabled(id, e.target.checked);
+    row.querySelector('[data-photo]').onclick = ()=> pickPhoto('kid', id);
+    row.querySelector('[data-remove]').onclick = ()=>{ Family.removeKid(id); buildKids(); };
+  });
+}
+
+/* ---------- Shared helpers ---------- */
+function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
+
+function pickPhoto(kind, id){
+  const input = document.getElementById('file-picker');
+  const useCamera = confirm('Use camera to take a new photo? (Cancel = choose from Photo Library/Files)');
+  if (useCamera) input.setAttribute('capture','environment'); else input.removeAttribute('capture');
+
+  input.onchange = async (ev)=>{
+    const file = ev.target.files && ev.target.files[0]; if(!file) return;
+    const dataUrl = await compress(file, 256, 0.8);
+    try{
+      if (kind==='kid') Family.upsertKid({ id, photo:dataUrl });
+      else Family.upsertParent({ id, photo:dataUrl });
+      if (kind==='kid') buildKids(); else buildParents();
+    }catch(_){
+      alert('Could not save photo (storage may be full). Try a smaller image or remove a photo first.');
+    }
+    input.value=''; input.removeAttribute('capture');
+  };
+  input.click();
+}
+
+// on-device image compression
+function compress(file, maxSide=256, quality=0.8){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1, maxSide/Math.max(img.width,img.height));
+      const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
+  });
+}
+
+// Service worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
 </script>
-  <script>
-(function(){
-  const btn = document.getElementById('btnMenu');
-  const dd  = document.getElementById('menuDropdown');
-
-  function closeMenu(){ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); }
-  function openMenu(){ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); }
-
-  btn?.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    if (dd.classList.contains('open')) closeMenu(); else openMenu();
-  });
-
-  document.addEventListener('click', (e)=>{
-    if (!dd.contains(e.target) && e.target !== btn) closeMenu();
-  });
-
-  dd?.addEventListener('click', (e)=>{
-    const el = e.target.closest('.menu-item'); if (!el) return;
-    const action = el.dataset.action;
-    if (action === 'settings') {
-      alert('Admin Settings are coming soon to the Home page.');
-    } else if (action === 'about') {
-      alert('Family Hub — single-device PWA. Breakfast v3.2.4; Hub v0.1.');
-    }
-    closeMenu();
-  });
-})();
-</script>
-
 </body>
 </html>
