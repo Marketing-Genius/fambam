@@ -1,21 +1,494 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Chores (Coming Soon)</title>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Chores</title>
+
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
+
 <style>
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#0f172a;color:#e5e7eb}
-.wrap{max-width:900px;margin:0 auto;padding:20px}
-.card{background:#111827;border:1px solid #0b1224;border-radius:16px;padding:16px}
-a.btn{display:inline-block;margin-bottom:12px;text-decoration:none;color:#0e1726;background:#22d3ee;padding:8px 12px;border-radius:10px;font-weight:800}
-.hint{opacity:.75}
-</style></head><body>
-<div class="wrap">
-  <a class="btn" href="./index.html">← Home</a>
-  <div class="card">
-    <h1>Chores</h1>
-    <p class="hint">We’ll build templates, assignments, and a “Today” checklist here next.</p>
+:root{
+  --panel:#111827; --card:#1f2937; --muted:#6b7280; --text:#e5e7eb; --accent:#22d3ee;
+  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px
+}
+html,body{height:100%}
+body{
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%); color:var(--text);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
+.panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.title{font-weight:800;letter-spacing:.2px}
+.title .small{font-weight:600;font-size:.85rem;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+input[type="week"],button,select{font:inherit;color:var(--text);background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 14px}
+button{cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:700}
+.btn-ghost{background:transparent;border:1px dashed #334155;color:var(--muted)}
+.icon-btn{padding:6px 10px;border-radius:10px;border:1px solid #334155;background:#0b1224;cursor:pointer}
+.btn-back{display:inline-block;text-decoration:none;font-weight:800;background:#0b1224;color:#e5e7eb;border:1px solid #334155;padding:10px 12px;border-radius:12px}
+.btn-back:active{transform:translateY(1px)}
+.btn-icon{display:inline-grid;place-items:center;width:44px;height:44px;padding:0;border-radius:12px}
+
+/* Board */
+.board{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:14px}
+@media(min-width:900px){.board{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.card{display:grid;gap:10px;background:var(--panel);border:1px solid #1f2937;border-radius:16px;padding:14px;min-height:190px}
+.card .head{display:flex;align-items:center;justify-content:space-between}
+.chore-name{font-weight:800}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1224;border:1px solid #334155}
+.person{display:flex;align-items:center;gap:10px}
+.face{width:52px;height:52px;border-radius:50%;background:#0b1224;display:grid;place-items:center;font-size:24px;border:2px solid #334155;overflow:hidden}
+.face img{width:100%;height:100%;object-fit:cover}
+.selector{display:flex;gap:8px;align-items:center}
+.select{max-width:100%}
+.swap{outline:2px solid transparent}
+.swap[aria-selected="true"]{outline:2px solid var(--accent)}
+.help{opacity:.8}
+
+/* Modal (Manage) */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.modal{width:min(900px,100%);background:var(--panel);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
+.modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937}
+.modal .body{padding:14px 16px;display:grid;gap:16px}
+.modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
+.list{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.chklist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media(min-width:720px){.chklist{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.footer{text-align:center;opacity:.7;font-size:.85rem}
+.version{opacity:.6;font-size:.8rem;margin-top:6px}
+</style>
+</head>
+<body>
+  <div class="app">
+    <header class="panel">
+      <div class="title">
+        <div style="font-size:1.6rem">Chores</div>
+        <div class="small">Weekly rotation (Mon–Sun). Tap a card to swap or use the dropdown to reassign.</div>
+      </div>
+      <div class="controls">
+        <a href="./index.html" class="btn-back" title="Back to Home">← Home</a>
+        <button id="btnManage" class="btn-primary">Manage</button>
+        <button id="btnAuto" class="icon-btn" title="Auto-rotate for this week">🔄</button>
+        <button id="btnAdmin" class="icon-btn" title="Admin">⚙️</button>
+      </div>
+    </header>
+
+    <section class="panel" id="weekPanel">
+      <div class="row">
+        <div class="help">Week of <b id="weekLabel"></b></div>
+      </div>
+    </section>
+
+    <section class="board" id="board"></section>
+
+    <div class="footer">
+      Works offline. Data stays on this device (local only).
+      <div class="version">Chores v1.0</div>
+    </div>
   </div>
-</div>
-<script>if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
-</body></html>
+
+  <!-- Manage Modal (PIN-gated) -->
+  <div class="modal-backdrop" id="manageModal" aria-hidden="true" role="dialog" aria-labelledby="manageTitle">
+    <div class="modal">
+      <header>
+        <div id="manageTitle" style="font-weight:800">Manage Chores</div>
+        <button id="manageClose" class="icon-btn">✖</button>
+      </header>
+      <div class="body">
+        <div class="help">Parents can edit the chore list and which kids participate in the rotation.</div>
+
+        <div>
+          <div class="badge">Chore List</div>
+          <div class="list" id="choreList"></div>
+          <div class="row">
+            <input id="newChore" placeholder="Add chore (e.g., Trash)" />
+            <button id="addChore" class="btn-primary">Add</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="badge">Eligible Kids</div>
+          <div id="kidChecks" class="chklist"></div>
+          <div class="help">Only checked kids will be included in the weekly rotation.</div>
+        </div>
+      </div>
+      <div class="footer">
+        <button id="manageSave" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+<!-- Family Store -->
+<script src="family.js?v=3.3.6"></script>
+<script>
+// If family.js failed (cache), shim minimal API so page still works
+if (!window.Family) {
+  console.warn('family.js not loaded — using fallback Family shim (Chores).');
+  (function(){
+    const K={pin:'hub:family:pin', parents:'hub:family:parents', kids:'hub:family:kids'};
+    const uid=()=>Math.random().toString(36).slice(2,10);
+    const load=(k,f)=>{ try{const v=JSON.parse(localStorage.getItem(k)); return v ?? f;}catch{ return f; } };
+    const save=(k,v)=>localStorage.setItem(k, JSON.stringify(v));
+    window.Family = {
+      verifyPin(p){ const real=load(K.pin,null); return real?String(real)===String(p):true; },
+      getKids(){ return load(K.kids, []); },
+      getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false); },
+      upsertKid(k){ const a=this.getKids(); const i=a.findIndex(x=>x.id===k.id);
+        if(i>=0) a[i]={...a[i],...k}; else a.push({...k,id:k.id||uid(),enabled:true}); save(K.kids,a); },
+      onChange(){ return ()=>{}; }
+    };
+  })();
+}
+
+// Route gear to Home Admin
+document.addEventListener('DOMContentLoaded',()=>{
+  const gear=document.getElementById('btnAdmin');
+  if(gear) gear.onclick=()=>{ location.href='./index.html#admin'; };
+});
+
+// ---------- Storage keys ----------
+const LS = {
+  chores: 'ch:chores:list',            // [{id,label}]
+  elig:   'ch:eligible:kids',          // [kidId]
+  week:   (mondayISO)=> `ch:assign:${mondayISO}` // { [choreId]: kidId }
+};
+
+const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
+const uid=()=>Math.random().toString(36).slice(2,10);
+const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{ return f;}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const initials=n=>((n||'?').trim()[0]||'?').toUpperCase();
+
+function getKids(){ // active only
+  try{
+    if(Family && typeof Family.getActiveKids==='function'){
+      const k=Family.getActiveKids(); if(Array.isArray(k)) return k;
+    }
+    if(Family && typeof Family.getKids==='function'){
+      const k=Family.getKids(); if(Array.isArray(k)) return k.filter(x=>x.enabled!==false);
+    }
+  }catch(e){ console.warn('Family store unavailable',e); }
+  return [];
+}
+
+// ---------- Week helpers ----------
+function startOfWeekMonday(d=new Date()){
+  const dt=new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = (dt.getUTCDay()+6)%7; // 0..6, Monday=0
+  dt.setUTCDate(dt.getUTCDate()-day);
+  return dt; // UTC date object
+}
+function isoDateUTC(d){ return d.toISOString().slice(0,10); } // YYYY-MM-DD
+function thisMondayISO(){ return isoDateUTC(startOfWeekMonday(new Date())); }
+
+// ---------- Defaults ----------
+function ensureDefaults(){
+  let chores = load(LS.chores, null);
+  if(!Array.isArray(chores) || !chores.length){
+    chores = [
+      {id:uid(), label:'Trash'},
+      {id:uid(), label:'Vacuuming'},
+      {id:uid(), label:'Feed Dogs'}
+    ];
+    save(LS.chores, chores);
+  }
+  let elig = load(LS.elig, null);
+  if(!Array.isArray(elig)){
+    // default: all active kids except youngest if named Emilia (best effort)
+    const kids = getKids();
+    const sorted = kids.slice().sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+    elig = sorted.map(k=>k.id);
+    save(LS.elig, elig);
+  }
+}
+
+// ---------- Rotation logic ----------
+function rotateForWeek(mondayISO){
+  const chores = load(LS.chores, []);
+  const eligIds = load(LS.elig, []).filter(id => getKids().some(k=>k.id===id));
+  if(!chores.length || !eligIds.length) return {};
+
+  // previous week
+  const prev = new Date(mondayISO); prev.setUTCDate(prev.getUTCDate()-7);
+  const prevISO = isoDateUTC(prev);
+  const prevMap = load(LS.week(prevISO), null);
+
+  let assignment = {};
+  if(prevMap){
+    // rotate by shifting the kid order to avoid repeats: for each chore position, shift elig by +1
+    const order = chores.map(c=> prevMap[c.id]).filter(Boolean);
+    // Build a sequence of eligIds in a stable order
+    const base = eligIds.slice();
+    // Find current index of each assigned kid in base; then shift all by +1
+    const used = order.map(kidId => base.indexOf(kidId));
+    if(used.every(ix=>ix>=0)){
+      const rotated = used.map(ix => base[(ix+1)%base.length]);
+      chores.forEach((c,i)=> assignment[c.id] = base[rotated[i%rotated.length]]);
+    } else {
+      // fallback to simple round-robin
+      chores.forEach((c,i)=> assignment[c.id] = eligIds[i%eligIds.length]);
+    }
+  } else {
+    // First week: seed by round-robin
+    chores.forEach((c,i)=> assignment[c.id] = eligIds[i%eligIds.length]);
+  }
+
+  // Guarantee: no one repeats same chore twice in a row (fix edge cases)
+  if(prevMap){
+    chores.forEach(c=>{
+      if(prevMap[c.id] === assignment[c.id]){
+        // swap with next chore
+        const j = (chores.findIndex(x=>x.id===c.id)+1)%chores.length;
+        const cj = chores[j];
+        const tmp = assignment[c.id];
+        assignment[c.id] = assignment[cj.id];
+        assignment[cj.id] = tmp;
+      }
+    });
+  }
+
+  save(LS.week(mondayISO), assignment);
+  return assignment;
+}
+
+// ---------- UI render ----------
+let selectedChoreId = null;
+
+function weekLabelText(mondayISO){
+  const m=new Date(mondayISO+'T00:00:00Z');
+  const end=new Date(m); end.setUTCDate(end.getUTCDate()+6);
+  const fmt=(d)=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  return `${fmt(m)} – ${fmt(end)}`;
+}
+
+function renderBoard(){
+  const mondayISO = thisMondayISO();
+  $('#weekLabel').textContent = weekLabelText(mondayISO);
+
+  const chores = load(LS.chores, []);
+  const kids = getKids();
+  const assigns = load(LS.week(mondayISO), {}) || {};
+
+  const board = $('#board'); board.innerHTML='';
+  if(!chores.length){
+    const n=document.createElement('div'); n.className='panel'; n.textContent='No chores defined. Tap “Manage”.';
+    board.appendChild(n); return;
+  }
+  if(!kids.length){
+    const n=document.createElement('div'); n.className='panel'; n.textContent='No active kids. Add/enable kids in Admin.';
+    board.appendChild(n); return;
+  }
+
+  chores.forEach(c=>{
+    const kidId = assigns[c.id];
+    const kid = kids.find(k=>k.id===kidId) || null;
+
+    const card=document.createElement('div'); card.className='card'; card.dataset.chore=c.id;
+    card.innerHTML = `
+      <div class="head">
+        <div class="chore-name">${c.label}</div>
+        <div class="badge">Weekly</div>
+      </div>
+      <div class="person">
+        <div class="face">${kid?.photo?`<img src="${kid.photo}">`:`<span>${initials(kid?.name||'?')}</span>`}</div>
+        <div style="font-weight:800">${kid? kid.name : 'Unassigned'}</div>
+      </div>
+      <div class="selector">
+        <label class="sr-only" for="sel-${c.id}">Assign</label>
+        <select id="sel-${c.id}" class="select">
+          ${kidOptions(kidId)}
+        </select>
+        <button class="icon-btn swapBtn" title="Tap to select for swap">🔁</button>
+      </div>
+    `;
+    board.appendChild(card);
+  });
+
+  // wiring
+  $$('.card .select', board).forEach(sel=>{
+    sel.onchange = (e)=>{
+      const choreId = e.target.id.slice(4);
+      assignKid(choreId, e.target.value);
+    };
+  });
+
+  $$('.swapBtn', board).forEach(btn=>{
+    btn.onclick = ()=>{
+      const card = btn.closest('.card');
+      const cid = card.dataset.chore;
+      if(selectedChoreId === cid){
+        selectedChoreId = null;
+        card.classList.remove('swap'); card.setAttribute('aria-selected','false');
+        return;
+      }
+      if(selectedChoreId){
+        // swap assignees between selectedChoreId and cid
+        const a = selectedChoreId, b = cid; selectedChoreId=null;
+        $$('.card').forEach(c=>{c.classList.remove('swap'); c.setAttribute('aria-selected','false');});
+        swapAssignees(a,b);
+      } else {
+        selectedChoreId = cid;
+        card.classList.add('swap'); card.setAttribute('aria-selected','true');
+      }
+    };
+  });
+}
+
+function kidOptions(selectedId){
+  const eligIds = load(LS.elig, []);
+  const kids = getKids().filter(k=> eligIds.includes(k.id));
+  return kids.map(k=>`<option value="${k.id}" ${k.id===selectedId?'selected':''}>${k.name}</option>`).join('');
+}
+
+// ---------- Assignments ----------
+function currentAssigns(){
+  return load(LS.week(thisMondayISO()), {}) || {};
+}
+function saveAssigns(a){
+  save(LS.week(thisMondayISO()), a);
+  renderBoard();
+}
+function assignKid(choreId, kidId){
+  const a = currentAssigns(); a[choreId]=kidId; saveAssigns(a);
+}
+function swapAssignees(choreIdA, choreIdB){
+  const a = currentAssigns();
+  const x=a[choreIdA], y=a[choreIdB]; a[choreIdA]=y; a[choreIdB]=x; saveAssigns(a);
+}
+
+// ---------- Manage modal (PIN-gated) ----------
+const manageModal = $('#manageModal');
+$('#manageClose').onclick = ()=> hide(manageModal);
+$('#manageSave').onclick = ()=>{
+  // nothing extra; everything saves live
+  hide(manageModal);
+  // If chores count changed, ensure assignments exist
+  ensureAssignmentsForThisWeek();
+  renderBoard();
+};
+$('#addChore').onclick = ()=>{
+  const label = ($('#newChore').value||'').trim();
+  if(!label) return;
+  const chores = load(LS.chores, []);
+  chores.push({id:uid(), label});
+  save(LS.chores, chores);
+  $('#newChore').value=''; buildManageLists();
+};
+
+$('#btnManage').onclick = ()=>{
+  const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
+  if (hasPin){
+    // simple numeric prompt—uses iPad keyboard automatically for cached input fields; you
+    // can swap to your custom PIN modal from index.html if you prefer reusability.
+    const pin = prompt('Enter Admin PIN (numbers only):','');
+    if(pin==null) return;
+    if(!/^\d{1,8}$/.test(pin)) return alert('PIN must be 1–8 digits.');
+    if(!Family.verifyPin(pin)) return alert('Incorrect PIN.');
+  }
+  openManage();
+};
+
+function openManage(){
+  buildManageLists();
+  show(manageModal);
+}
+function buildManageLists(){
+  const chores = load(LS.chores, []);
+  const list = $('#choreList'); list.innerHTML='';
+  chores.forEach(c=>{
+    const row=document.createElement('div'); row.className='item'; row.dataset.id=c.id;
+    row.innerHTML=`
+      <input class="lbl" value="${escapeHtml(c.label)}"/>
+      <button class="btn-ghost" data-remove>Remove</button>
+    `;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.item').forEach(row=>{
+    const id=row.dataset.id;
+    row.querySelector('.lbl').oninput = (e)=>{
+      const chores = load(LS.chores, []);
+      const i=chores.findIndex(x=>x.id===id); if(i>=0){ chores[i].label=e.target.value; save(LS.chores, chores); renderBoard(); }
+    };
+    row.querySelector('[data-remove]').onclick = ()=>{
+      const chores = load(LS.chores, []).filter(x=>x.id!==id);
+      save(LS.chores, chores);
+      // also drop assignment entries that referenced this chore
+      const a = currentAssigns(); if(id in a){ delete a[id]; saveAssigns(a); }
+      buildManageLists(); renderBoard();
+    };
+  });
+
+  // Eligible kids
+  const wrap = $('#kidChecks'); wrap.innerHTML='';
+  const kids = getKids();
+  const elig = load(LS.elig, []);
+  kids.forEach(k=>{
+    const id=`k-${k.id}`;
+    const div=document.createElement('label'); div.style.display='flex'; div.style.gap='8px'; div.style.alignItems='center';
+    div.innerHTML=`<input id="${id}" type="checkbox" ${elig.includes(k.id)?'checked':''}/> ${escapeHtml(k.name)}`;
+    wrap.appendChild(div);
+    div.querySelector('input').onchange = (e)=>{
+      let cur = load(LS.elig, []);
+      if(e.target.checked){ if(!cur.includes(k.id)) cur.push(k.id); }
+      else { cur = cur.filter(x=>x!==k.id); }
+      save(LS.elig, cur);
+      ensureAssignmentsForThisWeek();
+      renderBoard();
+    };
+  });
+}
+
+function show(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
+function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
+
+// ---------- Boot / weekly ensure ----------
+function ensureAssignmentsForThisWeek(){
+  const mondayISO = thisMondayISO();
+  let a = load(LS.week(mondayISO), null);
+  if(!a){
+    a = rotateForWeek(mondayISO);
+  } else {
+    // If chores changed vs saved map, make sure every chore has an assignee
+    const chores = load(LS.chores, []);
+    const eligIds = load(LS.elig, []);
+    chores.forEach((c,i)=>{
+      if(!a[c.id]){
+        const kids = getKids().filter(k=>eligIds.includes(k.id));
+        if(kids.length) a[c.id]=kids[i%kids.length].id;
+      }
+    });
+    save(LS.week(mondayISO), a);
+  }
+}
+
+$('#btnAuto').onclick = ()=>{
+  const mondayISO = thisMondayISO();
+  rotateForWeek(mondayISO);
+  renderBoard();
+};
+
+// Init
+ensureDefaults();
+ensureAssignmentsForThisWeek();
+renderBoard();
+
+// Refresh board if Family store changes (e.g., you enabled/renamed a kid)
+try { Family.onChange && Family.onChange(()=>{ ensureDefaults(); ensureAssignmentsForThisWeek(); renderBoard(); }); } catch(_){}
+
+// SW
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
