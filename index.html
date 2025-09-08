@@ -15,8 +15,8 @@
 :root{
   --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
   --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
-  --wallpaper:url('');                       /* set at runtime */
-  --wallpaper-shift: 40%;                    /* move focus up (40% from top) */
+  --wallpaper:url('');              /* set at runtime */
+  --wallpaper-shift: 40%;           /* upward crop focus */
 }
 html,body{height:100%}
 body{
@@ -29,38 +29,54 @@ body::before{
   content:""; position:fixed; inset:0; z-index:-2;
   background-image: var(--wallpaper);
   background-size: cover; background-repeat:no-repeat;
-  /* Bias the crop upward so faces stay visible above bottom tiles */
   background-position: center var(--wallpaper-shift);
   transform: translateZ(0);
 }
-/* Bottom gradient overlay for readability */
+/* Bottom gradient overlay */
 body::after{
   content:""; position:fixed; inset:0; z-index:-1;
   background: linear-gradient(180deg, rgba(15,23,42,0) 55%, rgba(15,23,42,.75) 80%, rgba(15,23,42,.95) 100%);
   pointer-events:none;
 }
 
-.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto 1fr auto}
+/* App layout: header at top, tiles+footer bottom-justified */
+.app{
+  min-height: 100svh;              /* iPad-safe viewport height */
+  display: flex; flex-direction: column; gap: 18px;
+  padding: 20px; padding-bottom: 20px; /* 20px cushion at bottom */
+  max-width:1100px; margin:0 auto;
+}
 
-/* Header (translucent) */
+/* Header (translucent & above tiles) */
 header{
+  position:relative; z-index: 9000; isolation:isolate;
   display:flex;justify-content:space-between;align-items:center;
   background:rgba(17,24,39,.5); border:1px solid rgba(11,18,36,.3);
   border-radius:var(--radius); box-shadow:var(--shadow); padding:16px;
   backdrop-filter: blur(8px);
 }
 .title{font-weight:800;font-size:1.4rem}
-.menu-wrap{position:relative}
+.menu-wrap{position:relative; z-index: 9001; overflow:visible}
 .hamburger{font:inherit;cursor:pointer;background:rgba(11,18,36,.6);color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:10px 12px}
-.menu-dropdown{position:absolute;right:0;top:110%;min-width:260px;z-index:9999;background:#111827;border:1px solid #1f2937;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:6px;display:none}
+.menu-dropdown{
+  position:absolute;right:0;top:110%;min-width:260px;z-index:9002 !important;
+  background:#111827;border:1px solid #1f2937;border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);padding:6px;display:none
+}
 .menu-dropdown.open{display:block}
 .menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
 .menu-item:hover{background:#0b1224}
 
 /* Tiles */
+main.grid{ margin-top:auto; } /* push tiles section to bottom */
 .grid{display:grid;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(min-width:900px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.tile{display:flex;flex-direction:column;gap:10px;align-items:flex-start;background:rgba(31,41,55,.85);border:1px solid rgba(31,41,55,.9);border-radius:16px;padding:16px;text-decoration:none;color:var(--text);box-shadow:var(--shadow);backdrop-filter: blur(4px)}
+.tile{
+  display:flex;flex-direction:column;gap:10px;align-items:flex-start;
+  background:rgba(31,41,55,.85);border:1px solid rgba(31,41,55,.9);
+  border-radius:16px;padding:16px;text-decoration:none;color:var(--text);
+  box-shadow:var(--shadow);backdrop-filter: blur(4px); position:relative; z-index:1;
+}
 .tile .emoji{font-size:36px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .tile .label{font-weight:800}
 .tile.disabled{opacity:.5;pointer-events:none}
@@ -87,34 +103,9 @@ header{
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 .toggle{display:inline-flex;align-items:center;gap:8px}
 
-footer{opacity:.85;text-align:center;font-size:.9rem;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+footer{align-self:end; opacity:.85;text-align:center;font-size:.9rem;text-shadow:0 1px 2px rgba(0,0,0,.5)}
 .version{opacity:.7;font-size:.8rem}
 </style>
-  <!-- PATCH v0.5.1: make hamburger menu float above tiles -->
-<style>
-  /* Put header on its own layer above the grid */
-  header{ position:relative; z-index: 9000; isolation:isolate; }
-  /* Ensure the menu wrapper sits above the header */
-  .menu-wrap{ position:relative; z-index: 9001; overflow:visible; }
-  /* Force the dropdown above everything */
-  .menu-dropdown{ position:absolute; z-index: 9002 !important; }
-  /* Keep tiles below */
-  .grid, .tile{ position:relative; z-index: 1; }
-  
-<!-- PATCH v0.5.2: bottom-justify tiles + footer with 20px cushion -->
-<style>
-  /* Use flex so header stays at top, tiles + footer sit at bottom */
-  .app{
-    min-height: 100svh;           /* iPad-safe viewport height */
-    display: flex !important;     /* override earlier grid */
-    flex-direction: column;
-    gap: 18px;                    /* keep your existing spacing */
-    padding-bottom: 20px;         /* 20px cushion above the system bar */
-  }
-  /* Push the cards section to the bottom; footer comes right after */
-  main.grid{ margin-top: auto; }
-</style>
-
 </head>
 <body>
   <div class="app">
@@ -159,7 +150,7 @@ footer{opacity:.85;text-align:center;font-size:.9rem;text-shadow:0 1px 2px rgba(
 
     <footer>
       Works offline. Data stays on this device (local only).
-      <div class="version">Hub v0.5 (Wallpaper)</div>
+      <div class="version">Hub v0.5.2 (Wallpaper + bottom-justify)</div>
     </footer>
   </div>
 
@@ -282,7 +273,7 @@ function pickWallpaper(){
   const input = document.getElementById('wallpaper-picker');
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0]; if(!file) return;
-    const dataUrl = await compressImage(file, /*maxSide*/ 2400, /*quality*/ 0.85);
+    const dataUrl = await compressImage(file, 2400, 0.85);
     localStorage.setItem(WP_KEY, dataUrl);
     document.documentElement.style.setProperty('--wallpaper', `url("${dataUrl}")`);
     input.value='';
@@ -364,7 +355,7 @@ function requestPinUI(onSuccess){
   open();
 }
 
-// Open Admin via #admin (from Breakfast gear)
+// Open Admin via #admin (from other pages)
 window.addEventListener('load', ()=>{
   if (location.hash === '#admin') {
     const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
