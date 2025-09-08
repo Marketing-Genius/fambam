@@ -92,17 +92,9 @@ button{cursor:pointer}
         <a href="./index.html" class="btn-back" title="Back to Home">← Home</a>
 
         <button id="btnClear" class="btn-ghost">Reset</button>
-
-        <!-- NEW: Menu manager -->
         <button id="btnMenuMgr" class="btn-primary">Menu</button>
-
-        <!-- Random now icon-only -->
         <button id="btnRandomize" class="icon-btn" title="Randomize">🎲</button>
-
-        <!-- Copy summary icon-only -->
         <button id="btnShare" class="btn-primary btn-icon" title="Copy Summary" aria-label="Copy Summary">📋</button>
-
-        <!-- Admin routes to Home Admin -->
         <button id="btnAdmin" class="icon-btn" title="Admin">⚙️</button>
       </div>
     </header>
@@ -113,7 +105,7 @@ button{cursor:pointer}
 
     <div class="footer">
       Works offline. Data stays on this device (local only).
-      <div class="version">Breakfast v3.4 (Menu Manager)</div>
+      <div class="version">Breakfast v3.4.1 (Family link + Menu)</div>
     </div>
   </div>
 
@@ -161,6 +153,32 @@ button{cursor:pointer}
 <!-- Family Store -->
 <script src="family.js?v=3.3.6"></script>
 <script>
+// Fallback Family shim (same as on Home) — ensures Breakfast can read kids
+if (!window.Family) {
+  console.warn('family.js not loaded — using fallback Family shim (Breakfast).');
+  (function(){
+    const K={pin:'hub:family:pin', parents:'hub:family:parents', kids:'hub:family:kids'};
+    const uid=()=>Math.random().toString(36).slice(2,10);
+    const load=(k,f)=>{ try{const v=JSON.parse(localStorage.getItem(k)); return v ?? f;}catch{ return f; } };
+    const save=(k,v)=>localStorage.setItem(k, JSON.stringify(v));
+    window.Family = {
+      setPin(pin){ save(K.pin, pin || null); },
+      verifyPin(pin){ const real = load(K.pin, null); return real ? String(real)===String(pin) : true; },
+      getParents(){ return load(K.parents, []); },
+      upsertParent(p){ const a=this.getParents(); const i=a.findIndex(x=>x.id===p.id);
+        if(i>=0) a[i]={...a[i],...p}; else a.push({...p,id:p.id||uid()}); save(K.parents,a); },
+      removeParent(id){ save(K.parents, this.getParents().filter(p=>p.id!==id)); },
+      getKids(){ return load(K.kids, []); },
+      getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false); },
+      upsertKid(k){ const a=this.getKids(); const i=a.findIndex(x=>x.id===k.id);
+        if(i>=0) a[i]={...a[i],...k}; else a.push({...k,id:k.id||uid(),enabled:true}); save(K.kids,a); },
+      removeKid(id){ save(K.kids, this.getKids().filter(k=>k.id!==id)); },
+      setKidEnabled(id,en){ const a=this.getKids(); const k=a.find(x=>x.id===id); if(k){ k.enabled=!!en; save(K.kids,a); } },
+      onChange(fn){ /* shim: no live events; Breakfast will poll via render on load */ return ()=>{}; }
+    };
+  })();
+}
+
 // ROUTE: gear to Home Admin
 document.addEventListener('DOMContentLoaded',()=>{
   const gear=document.getElementById('btnAdmin');
@@ -196,13 +214,16 @@ function setActive(a){save(LS.active,a.slice(0,4))}
 function setDay(d,o){save(LS.day(d),o)}
 function getDay(d){return load(LS.day(d),{})}
 
-// Only Family store (no phantom kids)
+// Prefer Family.getActiveKids(); otherwise fall back to getKids()+enabled
 function getKids(){
   try{
-    if(window.Family && typeof Family.getActiveKids==='function'){
-      const k=Family.getActiveKids(); if(Array.isArray(k)) return k;
+    if (Family && typeof Family.getActiveKids === 'function') {
+      const k = Family.getActiveKids(); if (Array.isArray(k)) return k;
     }
-  }catch(e){ console.warn('Family store unavailable',e); }
+    if (Family && typeof Family.getKids === 'function') {
+      const k = Family.getKids(); if (Array.isArray(k)) return k.filter(x=>x.enabled!==false);
+    }
+  }catch(e){ console.warn('Family store unavailable', e); }
   return [];
 }
 
@@ -210,32 +231,25 @@ function getKids(){
 let activeKid=null;
 
 function renderKids(){
-  const row = $('#kidsRow');
-  row.innerHTML = '';
-  // remove any previous notice
-  const oldNotice = document.getElementById('kidsNotice');
-  if (oldNotice) oldNotice.remove();
+  const row=$('#kidsRow'); row.innerHTML='';
+  const oldNotice=document.getElementById('kidsNotice'); if(oldNotice) oldNotice.remove();
 
-  const kids = getKids();
-  if (!kids.length) {
-    const notice = document.createElement('div');
-    notice.id = 'kidsNotice';
-    notice.className = 'panel';
-    notice.textContent = 'No kids yet. Tap ⚙️ on the Home page to add them in Admin.';
-    row.parentElement.insertBefore(notice, row);
+  const kids=getKids();
+  if(!kids.length){
+    const notice=document.createElement('div');
+    notice.id='kidsNotice'; notice.className='panel';
+    notice.textContent='No kids yet. Tap ⚙️ on the Home page to add them in Admin.';
+    row.parentElement.insertBefore(notice,row);
     return;
   }
-
-  kids.forEach(k => {
-    const el = document.createElement('div');
-    el.className = 'kid'; el.dataset.kid = k.id;
-    el.setAttribute('aria-selected', activeKid === k.id ? 'true' : 'false');
-    el.innerHTML = `<div class="face">${k.photo?`<img src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div>
-                    <div><div style="font-weight:800">${k.name}</div></div>`;
+  kids.forEach(k=>{
+    const el=document.createElement('div');
+    el.className='kid'; el.dataset.kid=k.id;
+    el.setAttribute('aria-selected',activeKid===k.id?'true':'false');
+    el.innerHTML=`<div class="face">${k.photo?`<img src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div><div><div style="font-weight:800">${k.name}</div></div>`;
     row.appendChild(el);
   });
 }
-
 function renderChoices(){
   const grid=$('#choicesGrid'); grid.innerHTML='';
   const date=$('#theDate').value; const picks=getDay(date);
@@ -261,7 +275,7 @@ function renderSummary(){
     s.innerHTML+=`<div class="summary-item"><div style="display:flex;align-items:center;gap:10px"><div class="face" style="width:42px;height:42px">${k.photo?`<img src="${k.photo}">`:`<span>${initials(k.name)}</span>`}</div><div>${k.name}</div></div>${ch?`<div class="pill"><span class="emoji">${ch.emoji}</span> ${ch.label}</div>`:`<div class="pill" style="opacity:.6">Not chosen</div>`}</div>`;
   });
 }
-function renderAll(){renderKids();renderChoices();renderSummary();attachInteractions();}
+function renderAll(){ renderKids(); renderChoices(); renderSummary(); attachInteractions(); }
 
 // ---------- Interactions ----------
 function attachInteractions(){
@@ -279,8 +293,6 @@ function bindControls(){
   $('#btnClear').onclick=()=>{localStorage.removeItem(LS.day($('#theDate').value)); renderAll();}
   $('#btnRandomize').onclick=()=>{const d=$('#theDate').value;const picks={};const act=getActive();const kids=getKids();if(!kids.length||!act.length)return;kids.forEach(k=>{picks[k.id]=act[Math.floor(Math.random()*act.length)]});setDay(d,picks);renderAll();}
   $('#btnShare').onclick=async()=>{const d=$('#theDate').value;const picks=getDay(d);const all=getAllMenu();const lines=getKids().map(k=>{const ch=all.find(c=>c.id===picks[k.id]);return `${k.name}: ${ch?`${ch.emoji} ${ch.label}`:'—'}`});const txt=`Breakfast ${d}\n`+lines.join('\n');try{await navigator.clipboard.writeText(txt);alert('Copied!');}catch{prompt('Copy manually:',txt)}}
-
-  // Menu manager open
   $('#btnMenuMgr').onclick=openMenuModal;
 }
 
@@ -290,16 +302,10 @@ $('#menuClose').onclick=closeMenuModal;
 $('#menuSave').onclick=saveMenuModal;
 $('#addItem').onclick=addMenuItem;
 
-function openMenuModal(){
-  buildMenuList();
-  buildActivePicker();
-  menuModal.style.display='flex';
-  menuModal.setAttribute('aria-hidden','false');
-}
-function closeMenuModal(){
-  menuModal.style.display='none';
-  menuModal.setAttribute('aria-hidden','true');
-}
+function openMenuModal(){ buildMenuList(); buildActivePicker(); showModal(menuModal); }
+function closeMenuModal(){ hideModal(menuModal); }
+function showModal(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
+function hideModal(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
 
 function buildMenuList(){
   const list=$('#menuList'); list.innerHTML='';
@@ -319,7 +325,6 @@ function buildMenuList(){
     list.appendChild(row);
   });
 
-  // wire edits
   list.querySelectorAll('.item').forEach(row=>{
     const id=row.dataset.id;
     row.querySelector('.lbl').oninput=(e)=> {
@@ -331,7 +336,6 @@ function buildMenuList(){
     row.querySelector('[data-remove]').onclick=()=>{
       const arr=getAllMenu().filter(x=>x.id!==id);
       setAllMenu(arr);
-      // also drop from active if there
       setActive(getActive().filter(x=>x!==id));
       buildMenuList(); buildActivePicker(); renderAll();
     };
@@ -353,7 +357,6 @@ function addMenuItem(){
 function buildActivePicker(){
   const wrap=$('#activeWrap'); wrap.innerHTML='';
   const items=getAllMenu(); const active=getActive();
-  const count=active.length;
   items.forEach(it=>{
     const on=active.includes(it.id);
     const el=document.createElement('div');
@@ -376,11 +379,7 @@ function buildActivePicker(){
   });
 }
 
-function saveMenuModal(){
-  // already saved as-you-go; just close and re-render main UI
-  closeMenuModal();
-  renderAll();
-}
+function saveMenuModal(){ closeMenuModal(); renderAll(); }
 
 function emojiOptions(selected){
   const opts=['🧇','🥣','🥯','🍓','🍳','🥚','🥞','🍌','🍎','🥛','🧃','🥐','🧁','🫐','🍇'];
@@ -393,9 +392,11 @@ function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'
 ensureSeed();
 bindControls();
 renderAll();
-  // Re-render whenever Family store changes (e.g., kids added in Admin)
+
+// Re-render whenever Family store changes (kids added/edited/enabled)
 try { Family.onChange && Family.onChange(renderAll); } catch (_) {}
 
+// SW
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
