@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Family Hub</title>
+<title>Fambam</title>
 
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -55,7 +55,8 @@ header{
   border-radius:var(--radius); box-shadow:var(--shadow); padding:16px;
   backdrop-filter: blur(8px);
 }
-.title{font-weight:800;font-size:1.4rem}
+.title{display:flex;align-items:center;gap:10px}
+.title img{height:38px;display:block}
 .menu-wrap{position:relative; z-index: 9001; overflow:visible}
 .hamburger{font:inherit;cursor:pointer;background:rgba(11,18,36,.6);color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:10px 12px}
 .menu-dropdown{
@@ -103,28 +104,24 @@ main.grid{ margin-top:auto; } /* push tiles section to bottom */
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 .toggle{display:inline-flex;align-items:center;gap:8px}
 
-footer{align-self:end; opacity:.85;text-align:center;font-size:.9rem;text-shadow:0 1px 2px rgba(0,0,0,.5)}
-.version{opacity:.7;font-size:.8rem}
-  <style>
-/* PATCH v0.6: footer + wordmark */
+/* Footer — smaller, 70% opaque, sky-blue, centered */
 footer{
   align-self:end;
   text-align:center;
   font-size:.75rem;
-  color:#38bdf8;
-  opacity:.7;
+  color:#38bdf8;          /* sky-400 */
+  opacity:.7;             /* 70% */
   text-shadow:none;
 }
 footer .version{opacity:.6;font-size:.7rem}
-</style>
 </style>
 </head>
 <body>
   <div class="app">
     <header>
       <div class="title">
-  <img src="fambam.png" alt="Fambam" style="height:36px; display:block;">
-</div>
+        <img src="fambam.png" alt="Fambam">
+      </div>
       <div class="menu-wrap">
         <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
         <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
@@ -164,7 +161,7 @@ footer .version{opacity:.6;font-size:.7rem}
 
     <footer>
       Works offline. Data stays on this device (local only).
-      <div class="version">Hub v0.5.2 (Wallpaper + bottom-justify)</div>
+      <div class="version">Hub v0.6 (wallpaper • bottom-justify • wordmark • footer)</div>
     </footer>
   </div>
 
@@ -338,7 +335,7 @@ function compressImage(file, maxSide=2400, quality=.85){
     } else if (action === 'clearwp') {
       clearWallpaper();
     } else if (action === 'about') {
-      alert('Family Hub — single-device PWA.\nWallpaper is stored locally on this iPad.');
+      alert('Fambam — single-device PWA.\nWallpaper is stored locally on this iPad.');
     }
   });
 })();
