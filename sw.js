@@ -1,5 +1,5 @@
 // Family Hub + Breakfast v3.3.0 SW
-const CACHE = "family-hub-v3-3-4"
+const CACHE = "family-hub-v3-3-6"
 const ASSETS = [
   "./",
   "./index.html",
