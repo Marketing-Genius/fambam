@@ -105,12 +105,26 @@ main.grid{ margin-top:auto; } /* push tiles section to bottom */
 
 footer{align-self:end; opacity:.85;text-align:center;font-size:.9rem;text-shadow:0 1px 2px rgba(0,0,0,.5)}
 .version{opacity:.7;font-size:.8rem}
+  <style>
+/* PATCH v0.6: footer + wordmark */
+footer{
+  align-self:end;
+  text-align:center;
+  font-size:.75rem;
+  color:#38bdf8;
+  opacity:.7;
+  text-shadow:none;
+}
+footer .version{opacity:.6;font-size:.7rem}
+</style>
 </style>
 </head>
 <body>
   <div class="app">
     <header>
-      <div class="title">Family Hub</div>
+      <div class="title">
+  <img src="fambam-wordmark.png" alt="Fambam" style="height:36px; display:block;">
+</div>
       <div class="menu-wrap">
         <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
         <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
