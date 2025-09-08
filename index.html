@@ -57,6 +57,16 @@ header{display:flex;justify-content:space-between;align-items:center;background:
 .toggle{display:inline-flex;align-items:center;gap:8px}
 footer{opacity:.7;text-align:center;font-size:.9rem}
 .version{opacity:.6;font-size:.8rem}
+  /* --- Admin modal polish --- */
+.list{display:grid; gap:12px;}                 /* was smaller gap */
+.item{padding:12px;}                           /* a bit more breathing room */
+.modal .body{gap:18px;}                        /* more space between sections */
+.row{display:flex; gap:12px; align-items:center; flex-wrap:wrap;}
+
+/* Make primary buttons consistent & larger option */
+.btn{font:inherit; color:#e5e7eb; background:#0b1224; border:1px solid #334155; border-radius:12px; padding:10px 12px; cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4); color:#001018; border:none; font-weight:800}
+.btn-lg{padding:12px 16px; border-radius:14px; font-weight:800}
 </style>
 </head>
 <body>
@@ -125,7 +135,7 @@ footer{opacity:.7;text-align:center;font-size:.9rem}
           <div class="list" id="parentsList"></div>
           <div class="row">
             <input id="newParentName" class="btn" placeholder="Add parent name" />
-            <button id="addParent" class="btn-primary">Add Parent</button>
+            <button id="addParent" class="btn-primary btn-lg">Add Parent</button>
           </div>
           <div class="row">
             <input id="pinInput" class="btn" placeholder="Set Admin PIN (optional)" inputmode="numeric" />
@@ -138,7 +148,7 @@ footer{opacity:.7;text-align:center;font-size:.9rem}
           <div class="list" id="kidsList"></div>
           <div class="row">
             <input id="newKidName" class="btn" placeholder="Add kid name" />
-            <button id="addKid" class="btn-primary">Add Kid</button>
+            <button id="addKid" class="btn-primary btn-lg">Add Kid</button>
           </div>
         </section>
       </div>
@@ -356,5 +366,26 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
 </script>
+  <script>
+  // Auto-open Admin when arriving with #admin (e.g., from Breakfast gear)
+  window.addEventListener('load', ()=>{
+    if (location.hash === '#admin') {
+      // If a PIN exists, you’ll be prompted first
+      try {
+        const open = ()=>openAdmin();
+        // if you use a PIN gate in your menu code, reuse it here:
+        const pin = localStorage.getItem('hub:family:pin');
+        if (pin && pin !== 'null') {
+          const entered = prompt('Enter Admin PIN (numbers only):', '');
+          if (entered && /^\d{1,8}$/.test(entered) && Family.verifyPin(entered)) open();
+          else if (entered!==null) alert('Incorrect PIN.');
+        } else {
+          open();
+        }
+      } catch (_) { openAdmin(); }
+    }
+  });
+</script>
+
 </body>
 </html>
