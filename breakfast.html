@@ -81,11 +81,32 @@ button{cursor:pointer}
 .btn-warn{background:#3f1620; border:1px solid #7f1d1d; color:#fecaca}
 .small{font-size:.9rem}
 .hint{font-size:.85rem; color:var(--muted)}
+  /* Breakfast: back button */
+.btn-back{
+  display:inline-block; text-decoration:none; font-weight:800;
+  background:#0b1224; color:#e5e7eb; border:1px solid #334155;
+  padding:10px 12px; border-radius:12px;
+}
+.btn-back:active{ transform: translateY(1px); }
+
 </style>
 </head>
 <body>
   <div class="app">
     <header class="panel">
+      <div class="controls">
+  <label class="sr-only" for="theDate">Date</label>
+  <input id="theDate" type="date"/>
+
+  <!-- Back to Home button -->
+  <a href="./index.html" class="btn-back" title="Back to Home">← Home</a>
+
+  <button id="btnClear" class="btn-ghost">Reset Day</button>
+  <button id="btnRandomize" class="btn-ghost">Randomize</button>
+  <button id="btnShare" class="btn-primary">Copy Summary</button>
+  <button id="btnAdmin" class="icon-btn" title="Admin">⚙️</button>
+</div>
+
       <div class="title">
         <div style="font-size:1.6rem">Breakfast Chooser</div>
         <div class="small">Tap a child, then tap a food card to choose.</div>
