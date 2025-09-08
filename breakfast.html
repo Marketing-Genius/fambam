@@ -85,7 +85,42 @@ button{cursor:pointer}
   <input type="file" id="file-picker" accept="image/*" class="sr-only"/>
 
 <!-- Family Store -->
-<script src="family.js"></script>
+<script src="family.js?v=3.3.6"></script>
+<script>
+// If family.js failed to load (cache or network), create a minimal shim
+if (!window.Family) {
+  console.warn('family.js not loaded — using fallback Family shim.');
+  (function(){
+    const K={pin:'hub:family:pin', parents:'hub:family:parents', kids:'hub:family:kids'};
+    const uid=()=>Math.random().toString(36).slice(2,10);
+    const load=(k,f)=>{ try{const v=JSON.parse(localStorage.getItem(k)); return v ?? f;}catch{ return f; } };
+    const save=(k,v)=>localStorage.setItem(k, JSON.stringify(v));
+
+    window.Family = {
+      // PIN
+      setPin(pin){ save(K.pin, pin || null); },
+      verifyPin(pin){ const real = load(K.pin, null); return real ? String(real)===String(pin) : true; },
+
+      // Parents
+      getParents(){ return load(K.parents, []); },
+      upsertParent(p){ const arr=this.getParents(); const i=arr.findIndex(x=>x.id===p.id);
+        if(i>=0) arr[i]={...arr[i],...p}; else arr.push({...p,id:p.id||uid()}); save(K.parents,arr); },
+      removeParent(id){ save(K.parents, this.getParents().filter(p=>p.id!==id)); },
+
+      // Kids
+      getKids(){ return load(K.kids, []); },
+      getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false); },
+      upsertKid(k){ const arr=this.getKids(); const i=arr.findIndex(x=>x.id===k.id);
+        if(i>=0) arr[i]={...arr[i],...k}; else arr.push({...k,id:k.id||uid(),enabled:true}); save(K.kids,arr); },
+      removeKid(id){ save(K.kids, this.getKids().filter(k=>k.id!==id)); },
+      setKidEnabled(id,en){ const arr=this.getKids(); const k=arr.find(x=>x.id===id); if(k){ k.enabled=!!en; save(K.kids,arr); } },
+
+      onChange(){ return ()=>{}; } // no-op
+    };
+  })();
+}
+</script>
+
 
 <script>
 // ---------- Utils ----------
