@@ -41,8 +41,7 @@ header{display:flex;gap:12px;align-items:center;justify-content:space-between;fl
 .kids{display:flex;gap:10px;flex-wrap:wrap}
 .kid{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid #374151;border-radius:14px;padding:8px 12px}
 .kid[data-active="true"]{outline:2px solid var(--accent)}
-.avatar{width:36px;height:36px;border-radius:50%;background:#0b1224;border:1px solid #334155;object-fit:cover;display:grid;place-items:center;font-weight:800}
-.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1224;border:1px solid #334155;color:#cbd5e1}
+.avatar{width:36px;height:36px;border-radius:50%;background:#0b1224;border:1px solid #334155;object-fit:cover;display:grid;place-items:center;font-weight:800;color:#e5e7eb}
 
 /* Choices grid */
 .grid{display:grid;gap:14px}
@@ -98,7 +97,7 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Breakfast v3.5</div>
+      <div class="version">Breakfast v3.5.1</div>
     </div>
   </div>
 
@@ -122,7 +121,6 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
   <!-- Family store -->
   <script src="family.js?v=3.3.6"></script>
   <script>
-  // Minimal shim if family.js unavailable (reads kids from 'hub:family:kids')
   if(!window.Family){
     (function(){
       const K={kids:'hub:family:kids', pin:'hub:family:pin'};
@@ -137,17 +135,21 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
   </script>
 
   <script>
-  /* ---------------- Keys & helpers ---------------- */
   const LS = {
-    menu:'bf:menu',              // [{emoji,label}] length 4
-    day:(iso)=>`bf:day:${iso}`   // {kidId: {emoji,label}}
+    menu:'bf:menu',
+    day:(iso)=>`bf:day:${iso}`
   };
   const $=(s,e=document)=>e.querySelector(s);
   const $$=(s,e=document)=>[...e.querySelectorAll(s)];
   const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
   const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 
-  function todayISO(){ const d=$('#theDate').value ? new Date($('#theDate').value) : new Date(); const off=d.getTimezoneOffset(); d=new Date(d.getTime()-off*60000); return d.toISOString().slice(0,10); }
+  function todayISO(){
+    let d = $('#theDate').value ? new Date($('#theDate').value) : new Date();
+    const off = d.getTimezoneOffset();
+    d = new Date(d.getTime() - off*60000);
+    return d.toISOString().slice(0,10);
+  }
 
   function seedMenu(){
     let m=load(LS.menu,null);
@@ -160,11 +162,8 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
     }
   }
 
-  /* ---------------- Share helper ---------------- */
   async function shareText(content){
-    try{
-      if(navigator.share){ await navigator.share({text:content}); return; }
-    }catch{}
+    try{ if(navigator.share){ await navigator.share({text:content}); return; } }catch{}
     const encoded=encodeURIComponent(content);
     const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
     const href=isIOS?`sms:&body=${encoded}`:`sms:?body=${encoded}`;
@@ -173,7 +172,6 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
     catch{ alert('Share unavailable. Copy/paste this:\n\n'+content); }
   }
 
-  /* ---------------- Render ---------------- */
   let activeKidId=null;
 
   function renderKids(){
@@ -182,9 +180,10 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
     if(!kids.length){ wrap.innerHTML='<span class="small" style="color:#cbd5e1">No kids yet. Add them in Home → Admin Settings.</span>'; return; }
     kids.forEach(k=>{
       const el=document.createElement('button'); el.className='kid'; el.dataset.active=activeKidId===k.id;
-      el.innerHTML=`<img class="avatar" ${k.photo?`src="${k.photo}"`:`alt="${k.name[0]||'K'}"`} />
-                    <span>${k.name}</span>`;
-      if(!k.photo){ el.querySelector('.avatar').textContent=(k.name||'?').slice(0,1).toUpperCase(); }
+      const imgHtml = k.photo
+        ? `<img class="avatar" src="${k.photo}" alt="${k.name}">`
+        : `<div class="avatar">${(k.name||'?').slice(0,1).toUpperCase()}</div>`;
+      el.innerHTML=`${imgHtml}<span>${k.name}</span>`;
       el.onclick=()=>{ activeKidId=(activeKidId===k.id? null : k.id); renderKids(); };
       wrap.appendChild(el);
     });
@@ -208,7 +207,6 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
       grid.appendChild(el);
     });
 
-    // fill picks (only show faces that chose it; otherwise empty)
     menu.forEach((_,idx)=>{
       const row=$(`#picks-${idx}`);
       Object.entries(map).forEach(([kidId,choiceIdx])=>{
@@ -218,13 +216,12 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
           const pill=document.createElement('div'); pill.className='pill';
           pill.innerHTML = kid.photo
             ? `<img src="${kid.photo}" alt=""> <span>${kid.name}</span>`
-            : `<span class="avatar" style="width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:.75rem">${(kid.name||'?').slice(0,1)}</span><span>${kid.name}</span>`;
+            : `<div class="avatar" style="width:20px;height:20px;font-size:.75rem">${(kid.name||'?').slice(0,1).toUpperCase()}</div><span>${kid.name}</span>`;
           row.appendChild(pill);
         }
       });
     });
 
-    // choose handlers
     $$('[data-choose]').forEach(btn=>{
       btn.onclick=()=>{
         if(!activeKidId){ alert('Tap a child first.'); return; }
@@ -250,11 +247,9 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
     return lines.join('\n');
   }
 
-  /* ---------------- Menu modal ---------------- */
   const menuModal=$('#menuModal');
   const closeMenu=()=>{menuModal.style.display='none';menuModal.setAttribute('aria-hidden','true');};
   const openMenu=()=>{buildMenuList();menuModal.style.display='flex';menuModal.setAttribute('aria-hidden','false');};
-
   $('#menuClose').onclick=closeMenu;
   $('#menuDone').onclick=closeMenu;
 
@@ -275,13 +270,10 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
     });
   }
 
-  /* ---------------- Buttons ---------------- */
   $('#btnMenu').onclick=openMenu;
 
-  // Reset clears today only
   $('#btnReset').onclick=()=>{ if(confirm('Clear choices for this date?')){ localStorage.removeItem(LS.day(todayISO())); renderChoices(); } };
 
-  // Random: assign random choices to all kids
   $('#btnRandom').onclick=()=>{
     const kids=(Family.getKids&&Family.getKids())||[];
     if(!kids.length) return;
@@ -291,21 +283,17 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
     save(LS.day(todayISO()),map); renderChoices();
   };
 
-  // Copy + Share
   $('#btnCopy').onclick=()=>{ const t=buildSummary(); navigator.clipboard.writeText(t).then(()=>alert('Summary copied.')); };
   $('#btnShare').onclick=()=> shareText(buildSummary());
 
-  // Admin gear: route to Home admin
   $('#btnAdmin').onclick=()=>location.href='./index.html#admin';
 
-  // Date
   (function initDate(){
     const d=new Date(); const off=d.getTimezoneOffset(); const local=new Date(d.getTime()-off*60000);
     $('#theDate').value=local.toISOString().slice(0,10);
     $('#theDate').onchange=()=>renderChoices();
   })();
 
-  /* ---------------- Boot ---------------- */
   seedMenu();
   renderKids();
   renderChoices();
