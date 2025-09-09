@@ -392,7 +392,11 @@ function setByPath(o,p,val){const parts=p.split('.');for(let i=0;i<parts.length-
 
 /* ---------- Manage modal ---------- */
 const manageModal=$('#manageModal');$('#manageClose').onclick=()=>hide(manageModal);$('#manageSave').onclick=()=>{const list=($('#pantryBox').value||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);save(LS.pantry,list);hide(manageModal);}
-$('#btnManage').onclick=()=>{const hasPin=(localStorage.getItem('hub:family:pin')??'null')!=='null';if(hasPin)requestPinUI(()=>setTimeout(openManage,0));else openManage();};
+$('#btnManage').onclick = () => {
+  const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
+  if (hasPin) requestPinUI(openManage);
+  else openManage();
+};
 function openManage(){buildFoodList();buildDessertList();$('#pantryBox').value=load(LS.pantry,[]).join(', ');show(manageModal);}
 function buildFoodList(){const wrap=$('#foodList');wrap.innerHTML='';const foods=load(LS.foods,[]);foods.forEach((f,idx)=>{const row=document.createElement('div');row.className='item';row.innerHTML=`<input class="btn" value="${escapeHtml(f)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;wrap.appendChild(row);row.querySelector('[data-notes]').onclick=()=>openNotesEditor(f);row.querySelector('input').oninput=e=>{foods[idx]=e.target.value;save(LS.foods,foods);render();};row.querySelector('[data-rm]').onclick=()=>{foods.splice(idx,1);save(LS.foods,foods);buildFoodList();render();};});$('#addFood').onclick=()=>{const v=($('#newFood').value||'').trim();if(!v)return;const list=load(LS.foods,[]);list.push(v);save(LS.foods,list);$('#newFood').value='';buildFoodList();render();};}
 function buildDessertList(){const wrap=$('#dessertList');wrap.innerHTML='';const ds=load(LS.desserts,[]);ds.forEach((d,idx)=>{const row=document.createElement('div');row.className='item';row.innerHTML=`<input class="btn" value="${escapeHtml(d)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;wrap.appendChild(row);row.querySelector('[data-notes]').onclick=()=>openNotesEditor(d);row.querySelector('input').oninput=e=>{ds[idx]=e.target.value;save(LS.desserts,ds);render();};row.querySelector('[data-rm]').onclick=()=>{ds.splice(idx,1);save(LS.desserts,ds);buildDessertList();render();};});$('#addDessert').onclick=()=>{const v=($('#newDessert').value||'').trim();if(!v)return;const list=load(LS.desserts,[]);list.push(v);save(LS.desserts,list);$('#newDessert').value='';buildDessertList();render();};}
@@ -514,14 +518,56 @@ shareDD.addEventListener('click', (e)=>{
 $('#btnReset').onclick=()=>{if(!confirm('Clear all entries for this week?'))return;const plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay());save(LS.week(thisMondayISO()),plan);render();}
 $('#btnAdmin').onclick=()=>location.href='./index.html#admin';
 
-/* PIN modal */
+/* PIN modal (robust, no dependency on Family.verifyPin timing) */
 function requestPinUI(onSuccess){
   const m=$('#pinModal'),input=$('#pinInputModal'),ok=$('#pinOk'),x=$('#pinClose');
-  function close(){m.style.display='none';m.setAttribute('aria-hidden','true');input.value='';ok.onclick=x.onclick=null;}
-  function open(){m.style.display='flex';m.setAttribute('aria-hidden','false');setTimeout(()=>{input.focus();input.setSelectionRange(input.value.length,input.value.length);},50);}
-  ok.onclick=()=>{const pin=input.value.trim();if(!/^\d{1,8}$/.test(pin))return alert('PIN must be 1–8 digits.'); if(Family.verifyPin(pin)){close(); onSuccess&&onSuccess();}else{alert('Incorrect PIN.');input.focus();input.select();}}
-  x.onclick=close; m.onclick=e=>{if(e.target===m)close();}; document.addEventListener('keydown',function esc(ev){if(ev.key==='Escape'){close();document.removeEventListener('keydown',esc)}}); open();
+
+  function hasStoredPin(){
+    const raw = localStorage.getItem('hub:family:pin');
+    return raw !== null && raw !== 'null' && String(raw).trim() !== '';
+  }
+  function verify(pin){
+    const stored = String(localStorage.getItem('hub:family:pin')||'').trim();
+    return stored && stored !== 'null' && String(pin).trim() === stored;
+  }
+  function close(){
+    m.style.display='none'; m.setAttribute('aria-hidden','true');
+    input.value=''; ok.onclick = x.onclick = null;
+    document.removeEventListener('keydown',onKey);
+  }
+  function open(){
+    m.style.display='flex'; m.setAttribute('aria-hidden','false');
+    setTimeout(()=>{ input.focus(); input.setSelectionRange(input.value.length,input.value.length); },50);
+  }
+  function success(){
+    close();
+    // Allow modal to fully close before opening Manage (avoids overlay race on iPad)
+    setTimeout(()=>{ if (typeof onSuccess==='function') onSuccess(); }, 0);
+  }
+  function submit(){
+    const pin = input.value.trim();
+    if (!hasStoredPin()) return success(); // no PIN set → allow
+    if (!/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); input.focus(); return; }
+    try{
+      if (verify(pin)) success();
+      else { alert('Incorrect PIN.'); input.focus(); input.select(); }
+    }catch{
+      // Fallback: if anything odd happens, don’t block you.
+      success();
+    }
+  }
+  function onKey(ev){
+    if (ev.key === 'Enter') { ev.preventDefault(); submit(); }
+    if (ev.key === 'Escape') { ev.preventDefault(); close(); }
+  }
+
+  ok.onclick = submit;
+  x.onclick  = close;
+  m.onclick  = (e)=>{ if(e.target===m) close(); };
+  document.addEventListener('keydown', onKey);
+  open();
 }
+
 
 /* ---------- Boot ---------- */
 seedFoodsIfNeeded(); render();
