@@ -53,6 +53,23 @@ button{cursor:pointer}
 .swap[aria-selected="true"]{outline:2px solid var(--accent)}
 .help{opacity:.8}
 
+/* Done circles row */
+.dots{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+.dot{
+  width:36px;height:36px;border-radius:999px;
+  background:#0b1224;border:1px solid #334155;
+  display:grid;place-items:center;
+  font-weight:800;font-size:.85rem;color:#cbd5e1;
+  cursor:pointer; user-select:none;
+}
+.dot.done{
+  background:#0f766e;            /* green-ish */
+  border-color:#0d9488;
+  color:#e6fffa;
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.18);
+}
+.dot:active{transform:translateY(1px)}
+
 /* Modal (Manage) */
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal{width:min(900px,100%);background:var(--panel);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
@@ -93,7 +110,7 @@ button{cursor:pointer}
 
     <div class="footer">
       Works offline. Data stays on this device (local only).
-      <div class="version">Chores v1.0</div>
+      <div class="version">Chores v1.1 (done circles)</div>
     </div>
   </div>
 
@@ -160,7 +177,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 const LS = {
   chores: 'ch:chores:list',            // [{id,label}]
   elig:   'ch:eligible:kids',          // [kidId]
-  week:   (mondayISO)=> `ch:assign:${mondayISO}` // { [choreId]: kidId }
+  week:   (mondayISO)=> `ch:assign:${mondayISO}`, // { [choreId]: kidId }
+  done:   (mondayISO)=> `ch:done:${mondayISO}`    // { [choreId]: {Mon:true,...} }
 };
 
 const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
@@ -204,7 +222,6 @@ function ensureDefaults(){
   }
   let elig = load(LS.elig, null);
   if(!Array.isArray(elig)){
-    // default: all active kids except youngest if named Emilia (best effort)
     const kids = getKids();
     const sorted = kids.slice().sort((a,b)=> (a.name||'').localeCompare(b.name||''));
     elig = sorted.map(k=>k.id);
@@ -225,29 +242,22 @@ function rotateForWeek(mondayISO){
 
   let assignment = {};
   if(prevMap){
-    // rotate by shifting the kid order to avoid repeats: for each chore position, shift elig by +1
     const order = chores.map(c=> prevMap[c.id]).filter(Boolean);
-    // Build a sequence of eligIds in a stable order
     const base = eligIds.slice();
-    // Find current index of each assigned kid in base; then shift all by +1
     const used = order.map(kidId => base.indexOf(kidId));
     if(used.every(ix=>ix>=0)){
       const rotated = used.map(ix => base[(ix+1)%base.length]);
       chores.forEach((c,i)=> assignment[c.id] = base[rotated[i%rotated.length]]);
     } else {
-      // fallback to simple round-robin
       chores.forEach((c,i)=> assignment[c.id] = eligIds[i%eligIds.length]);
     }
   } else {
-    // First week: seed by round-robin
     chores.forEach((c,i)=> assignment[c.id] = eligIds[i%eligIds.length]);
   }
 
-  // Guarantee: no one repeats same chore twice in a row (fix edge cases)
   if(prevMap){
     chores.forEach(c=>{
       if(prevMap[c.id] === assignment[c.id]){
-        // swap with next chore
         const j = (chores.findIndex(x=>x.id===c.id)+1)%chores.length;
         const cj = chores[j];
         const tmp = assignment[c.id];
@@ -259,6 +269,17 @@ function rotateForWeek(mondayISO){
 
   save(LS.week(mondayISO), assignment);
   return assignment;
+}
+
+// ---------- Done map (per week) ----------
+const DAY_KEYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_LABELS = ['M','T','W','Th','F','S','Su'];
+
+function loadWeekDone(){
+  return load(LS.done(thisMondayISO()), {}) || {};
+}
+function saveWeekDone(map){
+  save(LS.done(thisMondayISO()), map);
 }
 
 // ---------- UI render ----------
@@ -278,6 +299,7 @@ function renderBoard(){
   const chores = load(LS.chores, []);
   const kids = getKids();
   const assigns = load(LS.week(mondayISO), {}) || {};
+  const doneMap = loadWeekDone();
 
   const board = $('#board'); board.innerHTML='';
   if(!chores.length){
@@ -292,6 +314,13 @@ function renderBoard(){
   chores.forEach(c=>{
     const kidId = assigns[c.id];
     const kid = kids.find(k=>k.id===kidId) || null;
+    const done = doneMap[c.id] || {}; // {Mon:true,...}
+
+    const dotsHTML = DAY_KEYS.map((k,idx)=>{
+      const lbl = DAY_LABELS[idx];
+      const isDone = !!done[k];
+      return `<button class="dot ${isDone?'done':''}" data-chore="${c.id}" data-day="${k}" aria-pressed="${isDone}" title="${k}">${lbl}</button>`;
+    }).join('');
 
     const card=document.createElement('div'); card.className='card'; card.dataset.chore=c.id;
     card.innerHTML = `
@@ -310,11 +339,12 @@ function renderBoard(){
         </select>
         <button class="icon-btn swapBtn" title="Tap to select for swap">🔁</button>
       </div>
+      <div class="dots" aria-label="Completion">${dotsHTML}</div>
     `;
     board.appendChild(card);
   });
 
-  // wiring
+  // wiring — assignment changes
   $$('.card .select', board).forEach(sel=>{
     sel.onchange = (e)=>{
       const choreId = e.target.id.slice(4);
@@ -322,6 +352,7 @@ function renderBoard(){
     };
   });
 
+  // wiring — swap
   $$('.swapBtn', board).forEach(btn=>{
     btn.onclick = ()=>{
       const card = btn.closest('.card');
@@ -332,7 +363,6 @@ function renderBoard(){
         return;
       }
       if(selectedChoreId){
-        // swap assignees between selectedChoreId and cid
         const a = selectedChoreId, b = cid; selectedChoreId=null;
         $$('.card').forEach(c=>{c.classList.remove('swap'); c.setAttribute('aria-selected','false');});
         swapAssignees(a,b);
@@ -340,6 +370,21 @@ function renderBoard(){
         selectedChoreId = cid;
         card.classList.add('swap'); card.setAttribute('aria-selected','true');
       }
+    };
+  });
+
+  // wiring — done toggles
+  $$('.dot', board).forEach(dot=>{
+    dot.onclick = ()=>{
+      const choreId = dot.dataset.chore;
+      const dayKey  = dot.dataset.day; // Mon..Sun
+      const map = loadWeekDone();
+      const entry = map[choreId] || {};
+      entry[dayKey] = !entry[dayKey];
+      map[choreId] = entry;
+      saveWeekDone(map);
+      dot.classList.toggle('done', !!entry[dayKey]);
+      dot.setAttribute('aria-pressed', entry[dayKey] ? 'true' : 'false');
     };
   });
 }
@@ -370,9 +415,7 @@ function swapAssignees(choreIdA, choreIdB){
 const manageModal = $('#manageModal');
 $('#manageClose').onclick = ()=> hide(manageModal);
 $('#manageSave').onclick = ()=>{
-  // nothing extra; everything saves live
   hide(manageModal);
-  // If chores count changed, ensure assignments exist
   ensureAssignmentsForThisWeek();
   renderBoard();
 };
@@ -388,8 +431,6 @@ $('#addChore').onclick = ()=>{
 $('#btnManage').onclick = ()=>{
   const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
   if (hasPin){
-    // simple numeric prompt—uses iPad keyboard automatically for cached input fields; you
-    // can swap to your custom PIN modal from index.html if you prefer reusability.
     const pin = prompt('Enter Admin PIN (numbers only):','');
     if(pin==null) return;
     if(!/^\d{1,8}$/.test(pin)) return alert('PIN must be 1–8 digits.');
@@ -422,8 +463,9 @@ function buildManageLists(){
     row.querySelector('[data-remove]').onclick = ()=>{
       const chores = load(LS.chores, []).filter(x=>x.id!==id);
       save(LS.chores, chores);
-      // also drop assignment entries that referenced this chore
+      // also drop assignment & done entries that referenced this chore
       const a = currentAssigns(); if(id in a){ delete a[id]; saveAssigns(a); }
+      const d = loadWeekDone(); if(id in d){ delete d[id]; saveWeekDone(d); }
       buildManageLists(); renderBoard();
     };
   });
@@ -460,7 +502,6 @@ function ensureAssignmentsForThisWeek(){
   if(!a){
     a = rotateForWeek(mondayISO);
   } else {
-    // If chores changed vs saved map, make sure every chore has an assignee
     const chores = load(LS.chores, []);
     const eligIds = load(LS.elig, []);
     chores.forEach((c,i)=>{
@@ -484,7 +525,7 @@ ensureDefaults();
 ensureAssignmentsForThisWeek();
 renderBoard();
 
-// Refresh board if Family store changes (e.g., you enabled/renamed a kid)
+// Refresh board if Family store changes
 try { Family.onChange && Family.onChange(()=>{ ensureDefaults(); ensureAssignmentsForThisWeek(); renderBoard(); }); } catch(_){}
 
 // SW
