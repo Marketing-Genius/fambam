@@ -32,18 +32,20 @@ body::before{
   background-position: center var(--wallpaper-shift);
   transform: translateZ(0);
 }
-/* Bottom gradient overlay */
+/* Veil + bottom gradient (heavier focus on cards) */
 body::after{
   content:""; position:fixed; inset:0; z-index:-1;
-  background: linear-gradient(180deg, rgba(15,23,42,0) 55%, rgba(15,23,42,.75) 80%, rgba(15,23,42,.95) 100%);
+  background:
+    linear-gradient(180deg, rgba(15,23,42,0) 55%, rgba(15,23,42,.75) 80%, rgba(15,23,42,.95) 100%),
+    rgba(15,23,42,.90);   /* 90% veil */
   pointer-events:none;
 }
 
 /* App layout: header at top, tiles+footer bottom-justified */
 .app{
-  min-height: 100svh;              /* iPad-safe viewport height */
+  min-height: 100svh;
   display: flex; flex-direction: column; gap: 18px;
-  padding: 20px; padding-bottom: 20px; /* 20px cushion at bottom */
+  padding: 20px; padding-bottom: 20px;
   max-width:1100px; margin:0 auto;
 }
 
@@ -68,27 +70,69 @@ header{
 .menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
 .menu-item:hover{background:#0b1224}
 
-/* Tiles */
-main.grid{ margin-top:auto; } /* push tiles section to bottom */
-.grid{display:grid;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
+/* Grid & tiles */
+main.grid{ margin-top:auto; }
+.grid{
+  display:grid; gap:16px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
 @media(min-width:900px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.tile, .slot{
+  background:rgba(31,41,55,.85); border:1px solid rgba(31,41,55,.9);
+  border-radius:16px; box-shadow:var(--shadow); backdrop-filter: blur(4px);
+  position:relative; z-index:1; min-height:120px;
+}
 .tile{
-  display:flex;flex-direction:column;gap:10px;align-items:flex-start;
-  background:rgba(31,41,55,.85);border:1px solid rgba(31,41,55,.9);
-  border-radius:16px;padding:16px;text-decoration:none;color:var(--text);
-  box-shadow:var(--shadow);backdrop-filter: blur(4px); position:relative; z-index:1;
+  display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding:16px;text-decoration:none;color:var(--text);
+  transition:transform .12s ease, outline-color .12s ease;
 }
 .tile .emoji{font-size:36px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .tile .label{font-weight:800}
+.tile .hint{opacity:.8}
 .tile.disabled{opacity:.5;pointer-events:none}
 
-/* Modal + form UI (Admin & PIN) */
+.slot{
+  display:grid; place-items:center; padding:12px; border-style:dashed; border-color:#334155; background:rgba(17,24,39,.6);
+  color:#9ca3af; user-select:none;
+}
+.slot .plus{
+  width:56px;height:56px;border-radius:999px;border:1px solid #334155;background:#0b1224;display:grid;place-items:center;font-size:26px;cursor:pointer;
+}
+.slot:hover{border-color:#4b5563}
+
+/* Edit affordances */
+.app.editing .tile{ cursor:pointer; outline:2px solid transparent; }
+.app.editing .tile.selected{ outline:2px solid var(--accent); }
+.app.editing .tile .remove{
+  position:absolute; right:10px; bottom:10px;
+  width:32px;height:32px;border-radius:999px;display:grid;place-items:center;
+  background:#be123c; color:#fff; font-weight:800; border:1px solid #7f1d1d; cursor:pointer;
+}
+
+/* Editing bar */
+.editbar{
+  position:sticky; bottom:0; z-index:8000;
+  display:none; justify-content:flex-end; gap:10px;
+  padding:10px; margin-top:6px;
+}
+.app.editing .editbar{ display:flex; }
+
+/* Buttons & UI bits (shared) */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.btn{font:inherit;color:#e5e7eb;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
+.btn-ghost{background:transparent;border:1px dashed #334155;color:var(--muted)}
+.btn-lg{padding:12px 16px;border-radius:14px;font-weight:800}
+.btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
+
+/* Modal (Admin & Add Card share same skin) */
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal{width:min(900px,100%);background:rgba(17,24,39,.98);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
 .modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937}
 .modal .body{padding:14px 16px;display:grid;gap:18px}
 .modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
+
+/* Admin specific bits (unchanged) */
 .tabs{display:flex;gap:8px;flex-wrap:wrap}
 .tab{padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer}
 .tab[aria-selected="true"]{outline:2px solid var(--accent)}
@@ -98,26 +142,21 @@ main.grid{ margin-top:auto; } /* push tiles section to bottom */
 .face{width:48px;height:48px;border-radius:50%;background:#0b1224;display:grid;place-items:center;font-size:22px;border:2px solid #334155;overflow:hidden}
 .face img{width:100%;height:100%;object-fit:cover}
 .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:6px 0;}
-.btn{font:inherit;color:#e5e7eb;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;cursor:pointer}
-.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
-.btn-lg{padding:12px 16px;border-radius:14px;font-weight:800}
-.btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 .toggle{display:inline-flex;align-items:center;gap:8px}
 
-/* Footer — smaller, 70% opaque, sky-blue, centered */
+/* Footer */
 footer{
   align-self:end;
   text-align:center;
   font-size:.75rem;
-  color:#38bdf8;          /* sky-400 */
-  opacity:.7;             /* 70% */
-  text-shadow:none;
+  color:#38bdf8;
+  opacity:.7;
 }
 footer .version{opacity:.6;font-size:.7rem}
 </style>
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="appRoot">
     <header>
       <div class="title">
         <img src="fambam.png" alt="Fambam">
@@ -125,43 +164,28 @@ footer .version{opacity:.6;font-size:.7rem}
       <div class="menu-wrap">
         <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
         <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
+          <button class="menu-item" data-action="edithome" role="menuitem">Edit Home</button>
+          <div style="height:6px"></div>
           <button class="menu-item" data-action="admin" role="menuitem">Admin Settings</button>
           <button class="menu-item" data-action="wallpaper" role="menuitem">Edit Wallpaper</button>
           <button class="menu-item" data-action="clearwp" role="menuitem">Clear Wallpaper</button>
+          <div style="height:6px"></div>
           <button class="menu-item" data-action="about" role="menuitem">About</button>
         </div>
       </div>
     </header>
 
-    <main class="grid" aria-label="App sections">
-      <a class="tile" href="./breakfast.html">
-        <div class="emoji">🍽️</div>
-        <div class="label">Breakfast Chooser</div>
-        <div class="hint">Tap to open</div>
-      </a>
+    <!-- Rendered grid goes here -->
+    <main id="grid" class="grid" aria-label="App sections"></main>
 
-      <a class="tile" href="./chores.html">
-        <div class="emoji">🧹</div>
-        <div class="label">Chores</div>
-        <div class="hint">Weekly rotation</div>
-      </a>
-
-      <a class="tile" href="./dinner.html">
-        <div class="emoji">🍝</div>
-        <div class="label">Dinner Planner</div>
-        <div class="hint">Weekly plan</div>
-      </a>
-
-      <a class="tile" href="./calendar.html">
-        <div class="emoji">📅</div>
-        <div class="label">Family Calendar</div>
-        <div class="hint">Events & activities</div>
-      </a>
-    </main>
+    <!-- Editing bar -->
+    <div class="editbar">
+      <button id="btnDoneEdit" class="btn-primary">Done</button>
+    </div>
 
     <footer>
       Works offline. Data stays on this device (local only).
-      <div class="version">Hub v0.6 (wallpaper • bottom-justify • wordmark • footer)</div>
+      <div class="version">Hub v0.7 (wallpaper veil • editable home grid)</div>
     </footer>
   </div>
 
@@ -169,7 +193,7 @@ footer .version{opacity:.6;font-size:.7rem}
   <input type="file" id="file-picker" accept="image/*" class="sr-only"/>
   <input type="file" id="wallpaper-picker" accept="image/*" class="sr-only"/>
 
-  <!-- Admin Modal -->
+  <!-- Admin Modal (unchanged) -->
   <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
     <div class="modal">
       <header>
@@ -226,6 +250,20 @@ footer .version{opacity:.6;font-size:.7rem}
     </div>
   </div>
 
+  <!-- Add Card Modal -->
+  <div class="modal-backdrop" id="addCardModal" aria-hidden="true" role="dialog" aria-labelledby="addCardTitle">
+    <div class="modal" style="max-width:520px">
+      <header>
+        <div id="addCardTitle" style="font-weight:800">Add a Card</div>
+        <button id="addCardClose" class="btn">✖</button>
+      </header>
+      <div class="body" id="addCardBody"></div>
+      <div class="footer">
+        <button id="addCardDone" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
 <!-- Family Store -->
 <script src="family.js?v=3.3.6"></script>
 <script>
@@ -273,13 +311,10 @@ if (!window.Family) {
 <!-- Wallpaper utilities -->
 <script>
 const WP_KEY = 'hub:wallpaper:dataurl';
-
-// Apply wallpaper var on load
 (function applyWallpaper(){
   const data = localStorage.getItem(WP_KEY);
   if (data) document.documentElement.style.setProperty('--wallpaper', `url("${data}")`);
 })();
-
 function pickWallpaper(){
   const input = document.getElementById('wallpaper-picker');
   input.onchange = async (ev)=>{
@@ -295,7 +330,6 @@ function clearWallpaper(){
   localStorage.removeItem(WP_KEY);
   document.documentElement.style.setProperty('--wallpaper', `url('')`);
 }
-// Simple client resize for performance
 function compressImage(file, maxSide=2400, quality=.85){
   return new Promise(resolve=>{
     const img=new Image();
@@ -311,8 +345,179 @@ function compressImage(file, maxSide=2400, quality=.85){
 }
 </script>
 
-<!-- Menu + PIN gate -->
+<!-- Home modules + editable grid -->
 <script>
+/* ---------- Registry ---------- */
+const MODULES = {
+  breakfast: { id:'breakfast', label:'Breakfast Chooser', href:'./breakfast.html', emoji:'🍽️' },
+  chores:    { id:'chores',    label:'Chores',            href:'./chores.html',    emoji:'🧹' },
+  dinner:    { id:'dinner',    label:'Dinner Planner',    href:'./dinner.html',    emoji:'🍝' },
+  calendar:  { id:'calendar',  label:'Family Calendar',   href:'./calendar.html',  emoji:'📅' }
+};
+/* storage keys */
+const LAYOUT_KEY='hub:home:layout';
+const HIDDEN_KEY='hub:home:hidden';
+
+/* helpers */
+const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
+const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+
+/* editing state */
+let editing=false;
+let selectedId=null;
+let pendingSlotIndex=null; // where to add a new card via modal
+const app = $('#appRoot');
+const grid = $('#grid');
+
+/* default layout from existing modules (order matches your old HTML) */
+function defaultLayout(){ return ['breakfast','chores','dinner','calendar'].filter(id=>MODULES[id]); }
+function getLayout(){ let a=load(LAYOUT_KEY,null); if(!Array.isArray(a)||!a.length){ a=defaultLayout(); save(LAYOUT_KEY,a); } return a; }
+function setLayout(a){ save(LAYOUT_KEY,a); }
+function getHidden(){ return load(HIDDEN_KEY,{}); }
+function setHidden(map){ save(HIDDEN_KEY,map); }
+
+/* render grid (with placeholders while editing) */
+function renderGrid(){
+  const layout = getLayout().filter(id=>MODULES[id]);
+  const hidden = getHidden();
+  const visible = layout.filter(id=>!hidden[id]);
+
+  grid.innerHTML='';
+
+  // how many slots? keep at least current count, top out to next full row
+  const cols = matchMedia('(min-width:900px)').matches ? 4 : 2;
+  const minSlots = Math.max(visible.length, 4);
+  const rows = Math.max(1, Math.ceil(minSlots/cols));
+  const totalSlots = editing ? rows*cols + cols*1 /* one extra row while editing */ : rows*cols;
+
+  let visIndex = 0;
+  for(let i=0;i<totalSlots;i++){
+    const id = visible[visIndex] ?? null;
+
+    if(id){
+      // tile
+      const m = MODULES[id];
+      const a = document.createElement('a');
+      a.className='tile';
+      a.href = editing ? 'javascript:void(0)' : m.href;
+      a.dataset.id = id;
+      a.innerHTML = `<div class="emoji">${m.emoji}</div><div class="label">${m.label}</div><div class="hint">Tap to open</div>`;
+      if(editing){
+        const rm = document.createElement('button');
+        rm.className='remove'; rm.textContent='–'; rm.title='Remove from Home';
+        rm.onclick=(e)=>{ e.stopPropagation(); e.preventDefault(); removeCard(id); };
+        a.appendChild(rm);
+        a.onclick=(e)=>{ e.preventDefault(); selectTile(id,a); };
+      }
+      grid.appendChild(a);
+      visIndex++;
+    } else {
+      // empty slot
+      const slot = document.createElement('div');
+      slot.className='slot';
+      if(editing){
+        const p = document.createElement('button');
+        p.className='plus'; p.textContent='＋'; p.title='Add card here';
+        p.onclick=()=>openAddCardModal(i);
+        slot.appendChild(p);
+      } else {
+        slot.style.visibility='hidden'; // keep even spacing when not editing
+      }
+      grid.appendChild(slot);
+    }
+  }
+  // reflect selection
+  $$('[data-id]', grid).forEach(el=> el.classList.toggle('selected', el.dataset.id===selectedId));
+}
+
+/* selection + move by tapping a slot */
+function selectTile(id, el){
+  if(selectedId===id){ selectedId=null; renderGrid(); return; }
+  selectedId=id; renderGrid();
+  // next tap on a slot moves it there; we intercept on slot plus handler – simpler UX:
+}
+
+/* remove card (hide, not delete module) */
+function removeCard(id){
+  const hidden=getHidden(); hidden[id]=true; setHidden(hidden);
+  selectedId=null; renderGrid();
+}
+
+/* add card flow */
+const addCardModal = $('#addCardModal');
+const addCardBody  = $('#addCardBody');
+$('#addCardClose').onclick = ()=>hide(addCardModal);
+$('#addCardDone').onclick  = ()=>hide(addCardModal);
+
+function openAddCardModal(slotIndex){
+  pendingSlotIndex = slotIndex;
+  addCardBody.innerHTML='';
+  const layout = getLayout();
+  const hidden = getHidden();
+  const used = new Set(layout.filter(id=>!hidden[id]));
+  const choices = Object.values(MODULES).filter(m=>!used.has(m.id));
+  if(!choices.length){
+    const p=document.createElement('div'); p.textContent='All cards are already on the Home screen.'; p.style.opacity='.8';
+    addCardBody.appendChild(p);
+  } else {
+    choices.forEach(m=>{
+      const row=document.createElement('div');
+      row.className='item';
+      row.innerHTML = `<div style="display:flex;align-items:center;gap:10px">
+          <div class="emoji" style="font-size:26px">${m.emoji}</div>
+          <div>${m.label}</div>
+        </div>
+        <button class="btn-primary">Add</button>`;
+      row.querySelector('button').onclick=()=>{ placeCardAt(m.id, pendingSlotIndex); hide(addCardModal); };
+      addCardBody.appendChild(row);
+    });
+  }
+  show(addCardModal);
+}
+
+function placeCardAt(id, slotIndex){
+  const layout = getLayout().filter(x=>MODULES[x]); // clean
+  const hidden = getHidden();
+  const visible = layout.filter(x=>!hidden[x]);
+
+  // If the card is already in layout but hidden, unhide and place.
+  if(!layout.includes(id)) layout.push(id);
+  hidden[id]=false; setHidden(hidden);
+
+  // compute columns to know current slot → index insertion
+  const cols = matchMedia('(min-width:900px)').matches ? 4 : 2;
+
+  // build a new visible order inserting/placing id at desired slot
+  const afterAdd = visible.slice();
+  // If it's already visible, remove first (reposition)
+  const existingIx = afterAdd.indexOf(id);
+  if(existingIx>=0) afterAdd.splice(existingIx,1);
+
+  // clamp slotIndex
+  const maxIx = Math.max(0, afterAdd.length);
+  const ix = Math.min(Math.max(0, slotIndex), maxIx);
+  afterAdd.splice(ix, 0, id);
+
+  // now map back to full layout order: keep any hidden items at the end in their order
+  const newLayout = afterAdd.concat(layout.filter(x=>hidden[x]));
+  setLayout(newLayout);
+  selectedId=null; renderGrid();
+}
+
+/* move selected tile to a specific slot (called by slot + when a tile is selected) */
+function moveSelectedTo(slotIndex){
+  if(!selectedId) return;
+  placeCardAt(selectedId, slotIndex);
+}
+
+/* Edit mode toggling */
+function setEditing(on){
+  editing=!!on; app.classList.toggle('editing', editing);
+  selectedId=null; renderGrid();
+}
+
+/* Menu + PIN gate */
 (function menu(){
   const btn = document.getElementById('btnMenu');
   const dd  = document.getElementById('menuDropdown');
@@ -326,7 +531,9 @@ function compressImage(file, maxSide=2400, quality=.85){
     const el = e.target.closest('.menu-item'); if (!el) return;
     const action = el.dataset.action;
     closeDD();
-    if (action === 'admin') {
+    if (action === 'edithome') {
+      setEditing(!editing);
+    } else if (action === 'admin') {
       const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
       if (hasPin) requestPinUI(openAdmin);
       else openAdmin();
@@ -339,10 +546,9 @@ function compressImage(file, maxSide=2400, quality=.85){
     }
   });
 })();
-</script>
+document.getElementById('btnDoneEdit').onclick = ()=> setEditing(false);
 
-<!-- PIN modal helpers -->
-<script>
+/* PIN modal helpers (unchanged) */
 function requestPinUI(onSuccess){
   const m = document.getElementById('pinModal');
   const input = document.getElementById('pinInputModal');
@@ -366,18 +572,7 @@ function requestPinUI(onSuccess){
   open();
 }
 
-// Open Admin via #admin (from other pages)
-window.addEventListener('load', ()=>{
-  if (location.hash === '#admin') {
-    const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
-    if (hasPin) requestPinUI(openAdmin);
-    else openAdmin();
-  }
-});
-</script>
-
-<!-- Admin modal logic -->
-<script>
+/* Admin modal logic (unchanged) */
 const modal = document.getElementById('adminModal');
 document.getElementById('adminClose')?.addEventListener('click', closeAdmin);
 document.getElementById('adminSave')?.addEventListener('click', closeAdmin);
@@ -480,7 +675,6 @@ function pickPhoto(kind, id){
   };
   input.click();
 }
-
 function compress(file, maxSide=256, quality=0.8){
   return new Promise(resolve=>{
     const img=new Image();
@@ -494,6 +688,16 @@ function compress(file, maxSide=256, quality=0.8){
     const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
   });
 }
+
+/* Simple modal show/hide */
+function show(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
+function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
+
+/* Boot */
+renderGrid();
+
+/* Adjust layout live when breakpoint changes (so plus slots line up) */
+matchMedia('(min-width:900px)').addEventListener?.('change', renderGrid);
 
 // Service Worker
 if ('serviceWorker' in navigator) {
