@@ -16,15 +16,21 @@
   --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
   --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
   --wallpaper:url('');              /* set at runtime */
-  --wallpaper-shift: 40%;           /* upward crop focus */
+  --wallpaper-shift: 40%;
+  /* Home grid sizing (keeps slots & cards aligned) */
+  --slotW: 260px;
+  --slotH: 180px; /* <— synced height for slots AND cards */
+  --gridGap: 22px;
 }
+
+/* Base */
 html,body{height:100%}
 body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
   color:var(--text); background:#0f172a; overflow-x:hidden;
 }
 
-/* Wallpaper layer */
+/* Wallpaper */
 body::before{
   content:""; position:fixed; inset:0; z-index:-2;
   background-image: var(--wallpaper);
@@ -32,25 +38,27 @@ body::before{
   background-position: center var(--wallpaper-shift);
   transform: translateZ(0);
 }
-/* Heavier neutral overlay (90%) so cards pop */
+/* Heavy overlay so cards/menu pop */
 body::after{
   content:""; position:fixed; inset:0; z-index:-1;
-  background: rgba(18,24,38,.9);   /* neutral blue/gray */
+  /* slightly lighter, but still heavy mask */
+  background: rgba(12,17,34,0.90);
   pointer-events:none;
 }
 
 /* App layout */
 .app{
   min-height: 100svh;
-  display:flex; flex-direction:column; gap:18px;
-  padding:20px; max-width:1100px; margin:0 auto;
+  display: flex; flex-direction: column; gap: 18px;
+  padding: 20px;
+  max-width: 1160px; margin: 0 auto;
 }
 
-/* Header */
+/* Header (translucent) */
 header{
   position:relative; z-index: 9000; isolation:isolate;
   display:flex;justify-content:space-between;align-items:center;
-  background:rgba(17,24,39,.5); border:1px solid rgba(11,18,36,.3);
+  background:rgba(17,24,39,.55); border:1px solid rgba(11,18,36,.35);
   border-radius:var(--radius); box-shadow:var(--shadow); padding:16px;
   backdrop-filter: blur(8px);
 }
@@ -67,87 +75,89 @@ header{
 .menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
 .menu-item:hover{background:#0b1224}
 
-/* Grid slots (fixed 4×4 with optional gaps) */
-#slots{
-  margin-top:12px;        /* right under header */
-  display:grid; gap:16px;
-  grid-template-columns:repeat(4, minmax(0,1fr));
-  grid-auto-rows: 1fr;
-}
-@media(max-width:860px){ #slots{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
-.slot{
-  min-height:170px;
-  border-radius:16px;
-  position:relative;
-}
-.slot.editing{
-  outline:2px dashed #334155;
-  background:rgba(2,6,23,.25);
-}
-.slot.editing .add-btn{
-  position:absolute; inset:auto 10px 10px auto;
-  background:#0b1224; border:1px dashed #334155; color:#cbd5e1;
-  border-radius:999px; width:44px; height:44px; display:grid; place-items:center; cursor:pointer;
+/* Board (editable grid) */
+.board-wrap{margin-top:6px}
+.board{
+  display:grid;
+  grid-template-columns: repeat(4, var(--slotW));
+  grid-auto-rows: var(--slotH);
+  gap: var(--gridGap);
+  justify-content:flex-start;
 }
 
-/* Tile */
+/* Slots (visible in edit mode) */
+.slot{
+  width: var(--slotW); height: var(--slotH);
+  border: 2px dashed rgba(148,163,184,.35);
+  border-radius: 16px;
+  position: relative;
+  display:none; /* only in edit */
+}
+.board.edit .slot{ display:block; }
+
+/* Add “+” button on empty slot (edit mode) */
+.slot .addbtn{
+  position:absolute; inset:auto 10px 10px auto;
+  width:40px;height:40px;border-radius:999px;display:grid;place-items:center;
+  background:#0b1224;border:1px solid #334155;color:#e5e7eb;cursor:pointer;
+}
+
+/* Card tiles */
 .tile{
+  width: var(--slotW);
+  height: var(--slotH);          /* <— keep cards locked to slot height */
   display:flex;flex-direction:column;gap:10px;align-items:flex-start;
-  background:rgba(31,41,55,.9);border:1px solid rgba(31,41,55,.95);
+  background:rgba(31,41,55,.88);border:1px solid rgba(31,41,55,.95);
   border-radius:16px;padding:16px;text-decoration:none;color:var(--text);
-  box-shadow:var(--shadow);backdrop-filter: blur(4px); position:relative;
-  height:100%;
+  box-shadow:var(--shadow);backdrop-filter: blur(4px); position:relative; z-index:1;
+  overflow:hidden;
 }
 .tile .emoji{font-size:36px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
+.tile.disabled{opacity:.5;pointer-events:none}
 
-/* Edit affordances */
-.tile .minus{
-  position:absolute; right:8px; bottom:8px; width:36px; height:36px;
-  display:none; place-items:center; font-weight:800;
-  background:#3f1620; border:1px solid #7f1d1d; color:#fecaca; border-radius:999px;
+/* Remove “–” badge (edit mode only) */
+.tile .rm{
+  display:none;
+  position:absolute; right:10px; bottom:10px;
+  width:34px;height:34px;border-radius:999px;display:grid;place-items:center;
+  background:#3f1620;border:1px solid #7f1d1d;color:#fecaca;cursor:pointer;
 }
-.editing .tile .minus{ display:grid; cursor:pointer; }
-.tile.selecting{ outline:2px solid var(--accent); }
+.board.edit .tile .rm{ display:grid; }
 
-/* Photos preview in tile */
-.photo-prev{
-  position:absolute; inset:0; border-radius:16px;
-  overflow:hidden; z-index:0; opacity:.22;  /* subtle preview behind emoji/text */
+/* Move selection ring (edit mode only) */
+.board.edit .tile.selected{ outline:3px solid #22d3ee; outline-offset:3px; }
+
+/* Photos tile: image fills card, no overlay while playing */
+.tile.photo { padding:0; }
+.tile.photo .meta{ padding:16px; }
+.tile.photo img.viewer{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  display:none; border-radius:16px;
 }
-.photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; }
+.tile.photo.playing{
+  background: transparent;
+  border-color: transparent;
+}
+.tile.photo.playing .meta{ display:none; }
+.tile.photo.playing img.viewer{ display:block; }
 
-/* Modal + form UI (Admin & PIN & About & AddCard) */
+/* About modal */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
-.modal{width:min(900px,100%);background:rgba(17,24,39,.98);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
+.modal{width:min(720px,100%);background:rgba(17,24,39,.98);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
 .modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937}
-.modal .body{padding:14px 16px;display:grid;gap:18px;max-height:70vh;overflow:auto}
+.modal .body{padding:14px 16px;display:grid;gap:12px}
 .modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
-
-.tabs{display:flex;gap:8px;flex-wrap:wrap}
-.tab{padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer}
-.tab[aria-selected="true"]{outline:2px solid var(--accent)}
-.list{display:grid; gap:12px;}
-.item{display:flex;align-items:center;gap:10px;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:12px}
-.item .grow{flex:1}
-.face{width:48px;height:48px;border-radius:50%;background:#0b1224;display:grid;place-items:center;font-size:22px;border:2px solid #334155;overflow:hidden}
-.face img{width:100%;height:100%;object-fit:cover}
-.row{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:6px 0;}
 .btn{font:inherit;color:#e5e7eb;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;cursor:pointer}
 .btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
-.btn-lg{padding:12px 16px;border-radius:14px;font-weight:800}
-.btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
-.toggle{display:inline-flex;align-items:center;gap:8px}
 
-/* Edit bar */
-#editBar{
-  display:none; align-items:center; justify-content:space-between;
-  margin-top:6px; padding:10px 12px; border-radius:12px;
-  background:rgba(17,24,39,.65); border:1px solid #1f2937;
-}
-#editBar.show{display:flex}
+/* Add-card picker */
+.picker{display:none;position:fixed;inset:0;z-index:10001;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}
+.picker>div{background:#111827;border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow);padding:14px;min-width:300px}
+.picker .row{display:grid;gap:8px}
+.picker button{width:100%;text-align:left}
 </style>
 </head>
 <body>
@@ -159,181 +169,103 @@ header{
       <div class="menu-wrap">
         <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
         <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
-          <button class="menu-item" data-action="edithome" role="menuitem">Edit Home</button>
-          <button class="menu-item" data-action="admin" role="menuitem">Admin Settings</button>
-          <button class="menu-item" data-action="wallpaper" role="menuitem">Edit Wallpaper</button>
-          <button class="menu-item" data-action="clearwp" role="menuitem">Clear Wallpaper</button>
-          <button class="menu-item" data-action="about" role="menuitem">About</button>
+          <button class="menu-item" data-action="edithome">Edit Home</button>
+          <button class="menu-item" data-action="admin">Admin Settings</button>
+          <button class="menu-item" data-action="wallpaper">Edit Wallpaper</button>
+          <button class="menu-item" data-action="clearwp">Clear Wallpaper</button>
+          <button class="menu-item" data-action="about">About</button>
         </div>
       </div>
     </header>
 
-    <!-- Edit bar -->
-    <div id="editBar">
-      <div>Tap a card, then tap a slot to move it. Use “+” to add. Tap “−” on a card to remove.</div>
-      <div style="display:flex;gap:10px">
-        <button id="btnAddAnywhere" class="btn">Add Card</button>
-        <button id="btnDoneEdit" class="btn-primary">Done</button>
+    <!-- Board -->
+    <div class="board-wrap">
+      <div id="board" class="board"></div>
+    </div>
+  </div>
+
+  <!-- About -->
+  <div id="aboutModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="aboutTitle">
+    <div class="modal">
+      <header>
+        <div id="aboutTitle" style="font-weight:800">About Fambam</div>
+        <button class="btn" data-x>✖</button>
+      </header>
+      <div class="body">
+        <div>Fambam — single-device PWA.</div>
+        <div>Wallpaper and data are stored locally on this iPad (offline-first).</div>
+        <div>Home screen layout can be customized from <b>Menu → Edit Home</b>.</div>
+      </div>
+      <div class="footer">
+        <button class="btn" data-x>Close</button>
       </div>
     </div>
+  </div>
 
-    <!-- Fixed grid of 16 slots -->
-    <main id="slots" aria-label="Home grid"></main>
-
-    <!-- (footer moved to About modal) -->
+  <!-- Add-card picker -->
+  <div id="picker" class="picker" aria-hidden="true">
+    <div>
+      <div style="font-weight:800;margin-bottom:8px">Add a card</div>
+      <div class="row" id="pickerList"></div>
+      <div style="text-align:right;margin-top:10px">
+        <button class="btn" id="pickerCancel">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <!-- Hidden pickers -->
-  <input type="file" id="file-picker" accept="image/*" class="sr-only"/>
   <input type="file" id="wallpaper-picker" accept="image/*" class="sr-only"/>
+  <input type="file" id="photos-picker" accept="image/*" multiple class="sr-only"/>
 
-  <!-- Admin Modal (unchanged) -->
-  <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
-    <div class="modal">
-      <header>
-        <div id="adminTitle" style="font-weight:800">Admin Settings</div>
-        <button id="adminClose" class="btn">✖</button>
-      </header>
-      <div class="body">
-        <div class="tabs">
-          <button class="tab" data-tab="parents" aria-selected="true">Parents</button>
-          <button class="tab" data-tab="kids">Kids</button>
-        </div>
+  <!-- Family store (kept) -->
+  <script src="family.js?v=3.3.6"></script>
 
-        <section class="tab-panel" data-panel="parents">
-          <div class="list" id="parentsList"></div>
-          <div class="row">
-            <input id="newParentName" class="btn" placeholder="Add parent name" />
-            <button id="addParent" class="btn-primary btn-lg">Add Parent</button>
-          </div>
-          <div class="row">
-            <input id="pinInput" class="btn" placeholder="Set Admin PIN (optional)" inputmode="numeric" />
-            <button id="savePin" class="btn-primary btn-lg">Save PIN</button>
-          </div>
-        </section>
-
-        <section class="tab-panel" data-panel="kids" style="display:none">
-          <div class="list" id="kidsList"></div>
-          <div class="row">
-            <input id="newKidName" class="btn" placeholder="Add kid name" />
-            <button id="addKid" class="btn-primary btn-lg">Add Kid</button>
-          </div>
-        </section>
-      </div>
-      <div class="footer">
-        <button id="adminSave" class="btn-primary">Done</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- PIN Modal -->
-  <div id="pinModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="pinTitle">
-    <div class="modal" style="max-width:420px">
-      <header>
-        <div id="pinTitle" style="font-weight:800">Enter Admin PIN</div>
-        <button id="pinClose" class="btn">✖</button>
-      </header>
-      <div class="body" style="gap:12px">
-        <input id="pinInputModal" class="btn" inputmode="numeric" pattern="\\d*" placeholder="PIN (numbers only)" autofocus />
-      </div>
-      <div class="footer">
-        <button id="pinOk" class="btn-primary btn-lg">OK</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add Card Modal -->
-  <div id="addCardModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="addCardTitle">
-    <div class="modal" style="max-width:560px">
-      <header>
-        <div id="addCardTitle" style="font-weight:800">Add a Card</div>
-        <button id="addCardClose" class="btn">✖</button>
-      </header>
-      <div class="body" id="addCardBody"></div>
-      <div class="footer">
-        <button id="addCardDone" class="btn-primary">Done</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- About Modal -->
-  <div id="aboutModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="aboutTitle">
-    <div class="modal" style="max-width:600px">
-      <header>
-        <div id="aboutTitle" style="font-weight:800">About Fambam</div>
-        <button id="aboutClose" class="btn">✖</button>
-      </header>
-      <div class="body">
-        <p><b>Fambam</b> — single-device family hub (PWA). Data stays on this iPad.</p>
-        <ul>
-          <li>Wallpaper is stored locally and never uploaded.</li>
-          <li>Admin-gated settings via PIN.</li>
-          <li>Home supports drag-free grid placement by tapping a card then a slot.</li>
-        </ul>
-        <p style="opacity:.75">Works offline. Data stays on this device (local only).</p>
-      </div>
-      <div class="footer">
-        <button class="btn-primary" id="aboutOk">OK</button>
-      </div>
-    </div>
-  </div>
-
-<!-- Family Store -->
-<script src="family.js?v=3.3.6"></script>
 <script>
-// Fallback Family shim if family.js failed
-if (!window.Family) {
-  console.warn('family.js not loaded — using fallback Family shim.');
-  (function(){
-    const K={pin:'hub:family:pin', parents:'hub:family:parents', kids:'hub:family:kids'};
-    const uid=()=>Math.random().toString(36).slice(2,10);
-    const load=(k,f)=>{ try{const v=JSON.parse(localStorage.getItem(k)); return v ?? f;}catch{ return f; } };
-    const save=(k,v)=>localStorage.setItem(k, JSON.stringify(v));
-    window.Family = {
-      setPin(pin){ save(K.pin, pin || null); },
-      verifyPin(pin){ const real = load(K.pin, null); return real ? String(real)===String(pin) : true; },
-      getParents(){ return load(K.parents, []); },
-      upsertParent(p){ const a=this.getParents(); const i=a.findIndex(x=>x.id===p.id);
-        if(i>=0) a[i]={...a[i],...p}; else a.push({...p,id:p.id||uid()}); save(K.parents,a); },
-      removeParent(id){ save(K.parents, this.getParents().filter(p=>p.id!==id)); },
-      getKids(){ return load(K.kids, []); },
-      getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false); },
-      upsertKid(k){ const a=this.getKids(); const i=a.findIndex(x=>x.id===k.id);
-        if(i>=0) a[i]={...a[i],...k}; else a.push({...k,id:k.id||uid(),enabled:true}); save(K.kids,a); },
-      removeKid(id){ save(K.kids, this.getKids().filter(k=>k.id!==id)); },
-      setKidEnabled(id,en){ const a=this.getKids(); const k=a.find(x=>x.id===id); if(k){ k.enabled=!!en; save(K.kids,a); } },
-      onChange(){ return ()=>{}; }
+/* -------------------- State & helpers -------------------- */
+const WP_KEY='hub:wallpaper:dataurl';
+const LAYOUT_KEY='hub:home:layout:v2';     // {slots:[{id|null}], cards:{id:{href,label,hint,emoji,type}}}
+const PHOTOS_KEY='hub:photos:list';        // [dataURL,...]
+const PHOTOS_IVL='hub:photos:interval';    // ms
+
+const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f}catch{return f}};
+const escapeHtml=s=>(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+/* -------------------- Initial content -------------------- */
+const DEFAULT_CARDS={
+  breakfast:{id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast Chooser', hint:'Tap to open'},
+  dinner:   {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner',    hint:'Weekly plan'},
+  chores:   {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',            hint:'Weekly rotation'},
+  calendar: {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar',   hint:'Events & activities'},
+  photos:   {id:'photos',    href:'#',                emoji:'🖼️', label:'Photos',            hint:'Slideshow', type:'photos'}
+};
+
+function seedLayoutIfNeeded(){
+  let st=load(LAYOUT_KEY,null);
+  if(!st){
+    st={
+      // 4 columns × 4 rows = 16 slots
+      slots: Array.from({length:16}, (_,i)=>({id:null})),
+      cards: DEFAULT_CARDS
     };
-  })();
+    // place 4 defaults in top row
+    st.slots[0].id='breakfast';
+    st.slots[1].id='dinner';
+    st.slots[2].id='chores';
+    st.slots[3].id='calendar';
+    save(LAYOUT_KEY,st);
+  }
+  return st;
 }
-</script>
 
-<!-- Seed PIN once to 4321 -->
-<script>
-(function seedPinOnce(){
-  try{
-    const FLAG = 'hub:pinSeeded';
-    if (!localStorage.getItem(FLAG)) {
-      Family.setPin('4321');
-      localStorage.setItem(FLAG, '1');
-      console.log('Admin PIN seeded to 4321');
-    }
-  }catch(e){ console.warn('PIN seed failed', e); }
-})();
-</script>
-
-<!-- Wallpaper utilities -->
-<script>
-const WP_KEY = 'hub:wallpaper:dataurl';
-
-// Apply wallpaper var on load
+/* -------------------- Wallpaper -------------------- */
 (function applyWallpaper(){
   const data = localStorage.getItem(WP_KEY);
   if (data) document.documentElement.style.setProperty('--wallpaper', `url("${data}")`);
 })();
-
 function pickWallpaper(){
-  const input = document.getElementById('wallpaper-picker');
+  const input = $('#wallpaper-picker');
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0]; if(!file) return;
     const dataUrl = await compressImage(file, 2400, 0.85);
@@ -360,352 +292,203 @@ function compressImage(file, maxSide=2400, quality=.85){
     const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
   });
 }
-</script>
 
-<!-- Menu + PIN gate -->
-<script>
+/* -------------------- Menu -------------------- */
 (function menu(){
-  const btn = document.getElementById('btnMenu');
-  const dd  = document.getElementById('menuDropdown');
+  const btn = $('#btnMenu'), dd  = $('#menuDropdown');
   const openDD = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
   const closeDD= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
-
   btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?closeDD():openDD(); });
   document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) closeDD(); });
-
   dd?.addEventListener('click', (e)=>{
     const el = e.target.closest('.menu-item'); if (!el) return;
-    const action = el.dataset.action;
-    closeDD();
-    if (action === 'edithome') {
-      toggleEdit(true);
-    } else if (action === 'admin') {
+    const action = el.dataset.action; closeDD();
+    if (action === 'admin') {
       const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
-      if (hasPin) requestPinUI(openAdmin); else openAdmin();
-    } else if (action === 'wallpaper') {
-      pickWallpaper();
-    } else if (action === 'clearwp') {
-      clearWallpaper();
-    } else if (action === 'about') {
-      showModal('aboutModal', true);
+      if (hasPin) requestPinUI(()=>alert('Open Admin from Home via #admin is kept; go to Settings in your existing flow.'));
+      else alert('No PIN set.');
+    } else if (action==='about'){
+      show($('#aboutModal'));
+    } else if (action==='edithome'){
+      toggleEdit(true);
+    } else if (action==='wallpaper'){ pickWallpaper(); }
+    else if (action==='clearwp'){ clearWallpaper(); }
+  });
+  // About close
+  $$('#aboutModal [data-x]').forEach(b=> b.onclick=()=>hide($('#aboutModal')));
+})();
+
+/* -------------------- Home board rendering -------------------- */
+let EDIT=false, moveSelection=null, photosTimer=null, photosIdx=0;
+
+function toggleEdit(on){
+  EDIT=on;
+  $('#board').classList.toggle('edit', EDIT);
+  moveSelection=null;
+  renderBoard();
+}
+
+function renderBoard(){
+  const st=seedLayoutIfNeeded();
+  const board=$('#board'); board.innerHTML='';
+  st.slots.forEach((slot,ix)=>{
+    // slot bg (only shows in edit)
+    const s=document.createElement('div'); s.className='slot'; s.dataset.ix=ix;
+    const hasCard=!!slot.id && st.cards[slot.id];
+    if(!hasCard){
+      const add=document.createElement('button'); add.className='addbtn'; add.textContent='+';
+      add.title='Add card';
+      add.onclick=()=>openPicker(ix);
+      s.appendChild(add);
+    }
+    board.appendChild(s);
+
+    if(hasCard){
+      const c=st.cards[slot.id];
+      const a=document.createElement('a');
+      a.className='tile' + (c.type==='photos'?' photo':'');
+      a.style.gridArea='auto'; // keep standard grid flow
+      a.dataset.id=c.id;
+      if(c.type==='photos'){ a.href='javascript:void(0)'; } else { a.href=c.href; }
+
+      // Photos viewer (image under the content)
+      if(c.type==='photos'){
+        const img=document.createElement('img'); img.className='viewer'; img.alt='Slideshow';
+        a.appendChild(img);
+      }
+
+      const meta=document.createElement('div'); meta.className='meta';
+      meta.innerHTML=`<div class="emoji">${c.emoji||''}</div>
+                      <div class="label">${escapeHtml(c.label||'')}</div>
+                      <div class="hint">${escapeHtml(c.hint||'')}</div>`;
+      a.appendChild(meta);
+
+      // remove badge in edit mode
+      const rm=document.createElement('button'); rm.className='rm'; rm.textContent='−'; rm.title='Remove from Home';
+      rm.onclick=(ev)=>{ev.preventDefault(); removeCard(ix);};
+      a.appendChild(rm);
+
+      // click behavior (edit vs normal)
+      if(EDIT){
+        a.onclick=(ev)=>{ev.preventDefault();
+          if(moveSelection===ix){ moveSelection=null; a.classList.remove('selected'); return; }
+          if(moveSelection==null){ moveSelection=ix; a.classList.add('selected'); }
+          else { swapSlots(moveSelection, ix); moveSelection=null; }
+        };
+      }else{
+        if(c.type==='photos'){
+          a.onclick=(ev)=>{ev.preventDefault(); openPhotosPicker();};
+        }
+      }
+
+      board.appendChild(a);
+
+      // If photos tile and not editing: start/continue slideshow and show image cleanly
+      if(c.type==='photos' && !EDIT){
+        const list = load(PHOTOS_KEY, []);
+        const imgEl = a.querySelector('img.viewer');
+        if(list.length){
+          a.classList.add('playing');
+          if(!photosTimer){
+            photosIdx = photosIdx % list.length;
+            imgEl.src = list[photosIdx];
+            const ivl = load(PHOTOS_IVL, 10000);
+            photosTimer = setInterval(()=>{
+              const list2 = load(PHOTOS_KEY, []);
+              if(!list2.length){ clearInterval(photosTimer); photosTimer=null; a.classList.remove('playing'); return; }
+              photosIdx = (photosIdx+1)%list2.length;
+              const anchor = $('#board .tile.photo img.viewer'); if(anchor) anchor.src=list2[photosIdx];
+            }, ivl);
+          } else {
+            imgEl.src = list[photosIdx % list.length];
+          }
+        }else{
+          a.classList.remove('playing');
+          if(photosTimer){ clearInterval(photosTimer); photosTimer=null; }
+        }
+      }
     }
   });
-})();
-</script>
-
-<!-- PIN modal helpers -->
-<script>
-function requestPinUI(onSuccess){
-  const m = document.getElementById('pinModal');
-  const input = document.getElementById('pinInputModal');
-  const ok = document.getElementById('pinOk');
-  const x = document.getElementById('pinClose');
-
-  function close(){ m.style.display='none'; m.setAttribute('aria-hidden','true'); input.value=''; ok.onclick = x.onclick = null; }
-  function open(){
-    m.style.display='flex'; m.setAttribute('aria-hidden','false');
-    setTimeout(()=>{ input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 50);
-  }
-
-  ok.onclick = ()=> {
-    const pin = input.value.trim();
-    if (!/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
-    if (Family.verifyPin(pin)) { close(); onSuccess(); }
-    else { alert('Incorrect PIN.'); input.focus(); input.select(); }
-  };
-  x.onclick = close;
-
-  open();
 }
 
-// Open Admin via #admin (from other pages)
-window.addEventListener('load', ()=>{
-  if (location.hash === '#admin') {
-    const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
-    if (hasPin) requestPinUI(openAdmin); else openAdmin();
-  }
-});
-</script>
+/* swap and remove helpers */
+function swapSlots(a,b){
+  const st=seedLayoutIfNeeded();
+  [st.slots[a], st.slots[b]] = [st.slots[b], st.slots[a]];
+  save(LAYOUT_KEY, st);
+  renderBoard();
+}
+function removeCard(ix){
+  const st=seedLayoutIfNeeded();
+  st.slots[ix].id=null;
+  save(LAYOUT_KEY, st);
+  renderBoard();
+}
 
-<!-- Admin modal logic (unchanged) -->
-<script>
-const modal = document.getElementById('adminModal');
-document.getElementById('adminClose')?.addEventListener('click', closeAdmin);
-document.getElementById('adminSave')?.addEventListener('click', closeAdmin);
-
-document.querySelectorAll('.tab').forEach(t=>{
-  t.addEventListener('click', ()=>{
-    const tab = t.dataset.tab;
-    document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected','false'));
-    t.setAttribute('aria-selected','true');
-    document.querySelectorAll('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab?'':'none'));
+/* Add-card picker */
+function openPicker(ix){
+  const st=seedLayoutIfNeeded();
+  const inUse = new Set(st.slots.map(s=>s.id).filter(Boolean));
+  const list=$('#pickerList'); list.innerHTML='';
+  Object.values(st.cards).forEach(c=>{
+    if(inUse.has(c.id)) return;
+    const btn=document.createElement('button'); btn.className='btn';
+    btn.innerHTML=`${c.emoji||''} ${escapeHtml(c.label)}`;
+    btn.onclick=()=>{ st.slots[ix].id=c.id; save(LAYOUT_KEY,st); closePicker(); renderBoard(); };
+    list.appendChild(btn);
   });
+  show($('#picker'));
+}
+function closePicker(){ hide($('#picker')); }
+$('#pickerCancel').onclick=closePicker;
+
+/* Edit toggle via hash (optional) */
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && EDIT){ toggleEdit(false); }
 });
 
-function openAdmin(){ buildParents(); buildKids(); showModal('adminModal', true); }
-function closeAdmin(){ showModal('adminModal', false); }
-
-/* Parents UI */
-function buildParents(){
-  const list = document.getElementById('parentsList'); list.innerHTML='';
-  (Family.getParents?.() || []).forEach(p=>{
-    const row = document.createElement('div'); row.className='item'; row.dataset.id=p.id;
-    row.innerHTML = `
-      <div class="face">${p.photo?`<img src="${p.photo}" alt="${escapeHtml(p.name)}">`:`<span>${initials(p.name)}</span>`}</div>
-      <input class="grow btn" value="${escapeHtml(p.name||'Parent')}" />
-      <button class="btn" data-photo>Change Photo</button>
-      <button class="btn-warn" data-remove>Remove</button>`;
-    list.appendChild(row);
-  });
-
-  document.getElementById('addParent').onclick = ()=>{
-    const name = (document.getElementById('newParentName').value||'').trim(); if(!name) return;
-    Family.upsertParent({ name }); document.getElementById('newParentName').value=''; buildParents();
-  };
-  document.getElementById('savePin').onclick = ()=>{
-    const pin = (document.getElementById('pinInput').value||'').trim() || null;
-    if (pin && !/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
-    Family.setPin(pin); alert(pin ? 'PIN saved.' : 'PIN cleared.');
-  };
-
-  list.querySelectorAll('.item').forEach(row=>{
-    const id = row.dataset.id;
-    row.querySelector('input').oninput = (e)=> Family.upsertParent({ id, name:e.target.value });
-    row.querySelector('[data-photo]').onclick = ()=> pickPhoto('parent', id);
-    row.querySelector('[data-remove]').onclick = ()=>{ Family.removeParent(id); buildParents(); };
-  });
-}
-
-/* Kids UI */
-function buildKids(){
-  const list = document.getElementById('kidsList'); list.innerHTML='';
-  (Family.getKids?.() || []).forEach(k=>{
-    const row = document.createElement('div'); row.className='item'; row.dataset.id=k.id;
-    row.innerHTML = `
-      <div class="face">${k.photo?`<img src="${k.photo}" alt="${escapeHtml(k.name)}">`:`<span>${initials(k.name)}</span>`}</div>
-      <input class="grow btn" value="${escapeHtml(k.name||'Kid')}" />
-      <label class="toggle"><input type="checkbox" ${k.enabled!==false?'checked':''}/> Enabled</label>
-      <button class="btn" data-photo>Change Photo</button>
-      <button class="btn-warn" data-remove>Remove</button>`;
-    list.appendChild(row);
-  });
-
-  document.getElementById('addKid').onclick = ()=>{
-    const name = (document.getElementById('newKidName').value||'').trim(); if(!name) return;
-    Family.upsertKid({ name }); document.getElementById('newKidName').value=''; buildKids();
-  };
-
-  list.querySelectorAll('.item').forEach(row=>{
-    const id = row.dataset.id;
-    row.querySelector('input').oninput = (e)=> Family.upsertKid({ id, name:e.target.value });
-    row.querySelector('input[type="checkbox"]').onchange = (e)=> Family.setKidEnabled(id, e.target.checked);
-    row.querySelector('[data-photo]').onclick = ()=> pickPhoto('kid', id);
-    row.querySelector('[data-remove]').onclick = ()=>{ Family.removeKid(id); buildKids(); };
-  });
-}
-
-/* Shared helpers */
-function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
-function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
-
-function pickPhoto(kind, id){
-  const input = document.getElementById('file-picker');
-  const useCamera = confirm('Use camera to take a new photo? (Cancel = choose from Photo Library/Files)');
-  if (useCamera) input.setAttribute('capture','environment'); else input.removeAttribute('capture');
-
-  input.onchange = async (ev)=>{
-    const file = ev.target.files && ev.target.files[0]; if(!file) return;
-    const dataUrl = await compress(file, 256, 0.8);
-    try{
-      if (kind==='kid') Family.upsertKid({ id, photo:dataUrl });
-      else Family.upsertParent({ id, photo:dataUrl });
-      if (kind==='kid') buildKids(); else buildParents();
-    }catch(_){ alert('Could not save photo.'); }
-    input.value=''; input.removeAttribute('capture');
+/* -------------------- Photos: pick & interval -------------------- */
+function openPhotosPicker(){
+  // tap photo card to add/replace images; long-term you can add a small gear menu
+  const input=$('#photos-picker');
+  input.onchange=async (ev)=>{
+    const files=[...ev.target.files||[]];
+    if(!files.length) return;
+    const resized=[];
+    for(const f of files){
+      const b=await compressImage(f, 2000, .85);
+      resized.push(b);
+    }
+    const prev=load(PHOTOS_KEY,[]);
+    save(PHOTOS_KEY, prev.concat(resized));
+    input.value='';
+    renderBoard();
   };
   input.click();
 }
 
-function compress(file, maxSide=256, quality=0.8){
-  return new Promise(resolve=>{
-    const img=new Image();
-    img.onload=()=>{
-      const scale=Math.min(1, maxSide/Math.max(img.width,img.height));
-      const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
-      const c=document.createElement('canvas'); c.width=w; c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
-      resolve(c.toDataURL('image/jpeg', quality));
-    };
-    const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
-  });
-}
-</script>
+/* -------------------- Modal helpers -------------------- */
+function show(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
+function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
 
-<!-- Home grid logic (slots + editing + Photos preview) -->
-<script>
-const SLOT_KEY = 'hub:home:slots:v2';        // Array(16) of card ids or null
-const SLOTS_TOTAL = 16;
-
-const CARDS = [
-  {id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast Chooser', hint:'Tap to open'},
-  {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner',    hint:'Weekly plan'},
-  {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',            hint:'Weekly rotation'},
-  {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar',   hint:'Events & activities'},
-  // NEW: Photos
-  {id:'photos',    href:'./photos.html',    emoji:'🖼️', label:'Photos',            hint:'Slideshow'}
-];
-const byId = Object.fromEntries(CARDS.map(c=>[c.id,c]));
-
-function loadSlots(){
-  try{ const v=JSON.parse(localStorage.getItem(SLOT_KEY)); if(Array.isArray(v)) return v.slice(0,SLOTS_TOTAL).concat(Array(SLOTS_TOTAL).fill(null)).slice(0,SLOTS_TOTAL);}catch{}
-  // seed: first row
-  const seed = ['breakfast','dinner','chores','calendar'];
-  return seed.concat(Array(SLOTS_TOTAL-seed.length).fill(null));
-}
-function saveSlots(a){ localStorage.setItem(SLOT_KEY, JSON.stringify(a)); }
-
-let slots = loadSlots();
-let isEditing = false;
-let selectedCardId = null;
-let selectedFromSlot = -1;
-
-const $ = (s,e=document)=>e.querySelector(s);
-const $$= (s,e=document)=>[...e.querySelectorAll(s,e)];
-
-function renderGrid(){
-  const wrap = $('#slots'); wrap.innerHTML='';
-  for(let i=0;i<SLOTS_TOTAL;i++){
-    const div = document.createElement('div');
-    div.className = 'slot' + (isEditing?' editing':'');
-    div.dataset.pos = i;
-    const id = slots[i];
-    if(id && byId[id]){
-      const t = renderTile(byId[id]);
-      if(isEditing){
-        t.addEventListener('click', (ev)=>{
-          ev.preventDefault(); ev.stopPropagation();
-          if(selectedCardId===id){ selectedCardId=null; selectedFromSlot=-1; t.classList.remove('selecting'); return; }
-          // selecting new source
-          $$('.tile').forEach(x=>x.classList.remove('selecting'));
-          selectedCardId = id; selectedFromSlot = i; t.classList.add('selecting');
-        });
-        t.querySelector('.minus').onclick = (ev)=>{
-          ev.stopPropagation();
-          slots[i]=null; selectedCardId=null; selectedFromSlot=-1; saveSlots(slots); renderGrid();
-        };
-      }
-      div.appendChild(t);
-    } else {
-      // empty slot
-      if(isEditing){
-        const add = document.createElement('button');
-        add.className='add-btn'; add.textContent='+';
-        add.title='Add card';
-        add.onclick=(ev)=>{ ev.stopPropagation(); openAddCard(i); };
-        div.appendChild(add);
-      }
-    }
-    // clicking any slot performs move/swap when in editing & a source selected
-    div.addEventListener('click', ()=>{
-      if(!isEditing || selectedCardId==null) return;
-      const to = i;
-      const from = selectedFromSlot;
-      if(from===to) return;
-      const idB = slots[to];
-      slots[to] = selectedCardId;
-      slots[from] = idB ?? null;
-      selectedCardId=null; selectedFromSlot=-1;
-      saveSlots(slots); renderGrid();
-    });
-    wrap.appendChild(div);
-  }
+/* -------------------- PIN modal (re-used from earlier pages if needed) -------------------- */
+function requestPinUI(onSuccess){
+  // lightweight inline prompt here to avoid re-introducing the big modal on Home
+  const pin=prompt('Enter Admin PIN (numbers only):','');
+  if(pin==null) return;
+  if(!/^\d{1,8}$/.test(pin)) return alert('PIN must be 1–8 digits.');
+  try{
+    if(Family && Family.verifyPin && Family.verifyPin(pin)) onSuccess&&onSuccess();
+    else alert('Incorrect PIN.');
+  }catch{ onSuccess&&onSuccess(); }
 }
 
-function renderTile(c){
-  const a = document.createElement('a');
-  a.href = c.href; a.className='tile'; a.innerHTML = `
-    <div class="emoji">${c.emoji}</div>
-    <div class="label">${c.label}</div>
-    <div class="hint">${c.hint||''}</div>
-    <button class="minus">−</button>
-  `;
-  if(isEditing){ a.addEventListener('click', (e)=>e.preventDefault()); }
-  // Photos: subtle live preview
-  if(c.id==='photos'){
-    const prev = document.createElement('div'); prev.className='photo-prev';
-    prev.innerHTML = `<img alt="">`;
-    a.prepend(prev);
-    try{
-      const list = JSON.parse(localStorage.getItem('photos:list'))||[];
-      if(list.length){
-        let idx = 0;
-        const img = prev.querySelector('img');
-        img.src = list[0];
-        let t = setInterval(()=>{
-          idx = (idx+1)%list.length; img.src=list[idx];
-        }, 10000); // 10s preview cadence
-        a.addEventListener('mouseenter',()=>{}); // keeps ref alive
-        a.addEventListener('click',()=>clearInterval(t),{once:true});
-      }
-    }catch{}
-  }
-  return a;
-}
-
-/* ----- Edit mode controls ----- */
-function toggleEdit(on){
-  isEditing = !!on;
-  $('#editBar').classList.toggle('show', isEditing);
-  selectedCardId=null; selectedFromSlot=-1;
-  renderGrid();
-}
-$('#btnDoneEdit').onclick = ()=> toggleEdit(false);
-
-// Add Card modal
-function openAddCard(targetIndex){
-  // Build list of cards not already placed
-  const placed = new Set(slots.filter(Boolean));
-  const avail = CARDS.filter(c=> !placed.has(c.id));
-  const body = $('#addCardBody'); body.innerHTML='';
-  if(!avail.length){ body.textContent='All cards are already on the home screen.'; }
-  else{
-    avail.forEach(c=>{
-      const row=document.createElement('div');
-      row.className='item';
-      row.innerHTML=`<div class="grow">${c.emoji} <b>${c.label}</b><div style="opacity:.8">${c.hint||''}</div></div><button class="btn">Add</button>`;
-      row.querySelector('button').onclick=()=>{
-        slots[targetIndex]=c.id; saveSlots(slots); showModal('addCardModal', false); renderGrid();
-      };
-      body.appendChild(row);
-    });
-  }
-  showModal('addCardModal', true);
-}
-$('#addCardDone').onclick=()=>showModal('addCardModal', false);
-$('#addCardClose').onclick=()=>showModal('addCardModal', false);
-$('#btnAddAnywhere').onclick=()=>{
-  // open modal; when a card is chosen, if no target supplied, drop into first empty slot
-  const firstEmpty = slots.findIndex(x=>!x);
-  openAddCard(firstEmpty<0?0:firstEmpty);
-};
-
-/* ----- About modal wires ----- */
-function showModal(id, show){
-  const m=document.getElementById(id);
-  if(!m) return;
-  if(show){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
-  else    { m.style.display='none'; m.setAttribute('aria-hidden','true'); }
-}
-$('#aboutOk')?.addEventListener('click',()=>showModal('aboutModal',false));
-$('#aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
-
-/* ----- Boot ----- */
-renderGrid();
+/* -------------------- Boot -------------------- */
+seedLayoutIfNeeded();
+toggleEdit(false); // render once
 
 // SW
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
-}
+if('serviceWorker' in navigator){ addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
 </script>
 </body>
 </html>
