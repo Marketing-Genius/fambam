@@ -24,7 +24,7 @@ body{
   color:var(--text); background:#0f172a; overflow-x:hidden;
 }
 
-/* Wallpaper layer */
+/* Wallpaper */
 body::before{
   content:""; position:fixed; inset:0; z-index:-2;
   background-image: var(--wallpaper);
@@ -32,28 +32,27 @@ body::before{
   background-position: center var(--wallpaper-shift);
   transform: translateZ(0);
 }
-/* Veil + bottom gradient (heavier focus on cards) */
+/* Veil (lighter gray/blue, still heavy) + bottom gradient */
 body::after{
   content:""; position:fixed; inset:0; z-index:-1;
   background:
-    linear-gradient(180deg, rgba(15,23,42,0) 55%, rgba(15,23,42,.75) 80%, rgba(15,23,42,.95) 100%),
-    rgba(15,23,42,.90);   /* 90% veil */
+    linear-gradient(180deg, rgba(30,41,59,0) 55%, rgba(30,41,59,.70) 80%, rgba(30,41,59,.90) 100%),
+    rgba(30,41,59,.85); /* slate-800 @ 85% */
   pointer-events:none;
 }
 
-/* App layout: header at top, tiles+footer bottom-justified */
+/* App layout */
 .app{
   min-height: 100svh;
   display: flex; flex-direction: column; gap: 18px;
-  padding: 20px; padding-bottom: 20px;
-  max-width:1100px; margin:0 auto;
+  padding: 20px; max-width:1100px; margin:0 auto;
 }
 
-/* Header (translucent & above tiles) */
+/* Header */
 header{
   position:relative; z-index: 9000; isolation:isolate;
   display:flex;justify-content:space-between;align-items:center;
-  background:rgba(17,24,39,.5); border:1px solid rgba(11,18,36,.3);
+  background:rgba(17,24,39,.55); border:1px solid rgba(11,18,36,.35);
   border-radius:var(--radius); box-shadow:var(--shadow); padding:16px;
   backdrop-filter: blur(8px);
 }
@@ -70,8 +69,8 @@ header{
 .menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
 .menu-item:hover{background:#0b1224}
 
-/* Grid & tiles */
-main.grid{ margin-top:auto; }
+/* Grid & tiles (now pinned at the top) */
+main.grid{ /* removed margin-top:auto; tiles live under header */ }
 .grid{
   display:grid; gap:16px;
   grid-template-columns:repeat(2,minmax(0,1fr));
@@ -111,13 +110,14 @@ main.grid{ margin-top:auto; }
 
 /* Editing bar */
 .editbar{
-  position:sticky; bottom:0; z-index:8000;
+  position:sticky; top:0; /* keep visible near top while editing */
+  z-index:8000;
   display:none; justify-content:flex-end; gap:10px;
-  padding:10px; margin-top:6px;
+  padding:6px 0 0;
 }
 .app.editing .editbar{ display:flex; }
 
-/* Buttons & UI bits (shared) */
+/* Buttons & bits */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .btn{font:inherit;color:#e5e7eb;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;cursor:pointer}
 .btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
@@ -125,14 +125,14 @@ main.grid{ margin-top:auto; }
 .btn-lg{padding:12px 16px;border-radius:14px;font-weight:800}
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 
-/* Modal (Admin & Add Card share same skin) */
+/* Modal (Admin / PIN / Add Card / About share styles) */
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal{width:min(900px,100%);background:rgba(17,24,39,.98);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
 .modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937}
 .modal .body{padding:14px 16px;display:grid;gap:18px}
 .modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
 
-/* Admin specific bits (unchanged) */
+/* Admin-specific (unchanged) */
 .tabs{display:flex;gap:8px;flex-wrap:wrap}
 .tab{padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer}
 .tab[aria-selected="true"]{outline:2px solid var(--accent)}
@@ -143,16 +143,6 @@ main.grid{ margin-top:auto; }
 .face img{width:100%;height:100%;object-fit:cover}
 .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:6px 0;}
 .toggle{display:inline-flex;align-items:center;gap:8px}
-
-/* Footer */
-footer{
-  align-self:end;
-  text-align:center;
-  font-size:.75rem;
-  color:#38bdf8;
-  opacity:.7;
-}
-footer .version{opacity:.6;font-size:.7rem}
 </style>
 </head>
 <body>
@@ -175,25 +165,18 @@ footer .version{opacity:.6;font-size:.7rem}
       </div>
     </header>
 
-    <!-- Rendered grid goes here -->
-    <main id="grid" class="grid" aria-label="App sections"></main>
-
-    <!-- Editing bar -->
     <div class="editbar">
       <button id="btnDoneEdit" class="btn-primary">Done</button>
     </div>
 
-    <footer>
-      Works offline. Data stays on this device (local only).
-      <div class="version">Hub v0.7 (wallpaper veil • editable home grid)</div>
-    </footer>
+    <main id="grid" class="grid" aria-label="App sections"></main>
   </div>
 
   <!-- Hidden pickers -->
   <input type="file" id="file-picker" accept="image/*" class="sr-only"/>
   <input type="file" id="wallpaper-picker" accept="image/*" class="sr-only"/>
 
-  <!-- Admin Modal (unchanged) -->
+  <!-- Admin Modal (unchanged internals) -->
   <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
     <div class="modal">
       <header>
@@ -260,6 +243,24 @@ footer .version{opacity:.6;font-size:.7rem}
       <div class="body" id="addCardBody"></div>
       <div class="footer">
         <button id="addCardDone" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Modal -->
+  <div class="modal-backdrop" id="aboutModal" aria-hidden="true" role="dialog" aria-labelledby="aboutTitle">
+    <div class="modal" style="max-width:520px">
+      <header>
+        <div id="aboutTitle" style="font-weight:800">About Fambam</div>
+        <button id="aboutClose" class="btn">✖</button>
+      </header>
+      <div class="body" id="aboutBody">
+        <p>Fambam — single-device PWA. Wallpaper is stored locally on this iPad.</p>
+        <p>Works offline. Data stays on this device (local only).</p>
+        <p style="opacity:.7">Hub v0.8 (editable home grid · lighter veil · About modal)</p>
+      </div>
+      <div class="footer">
+        <button id="aboutOk" class="btn-primary">OK</button>
       </div>
     </div>
   </div>
@@ -345,117 +346,130 @@ function compressImage(file, maxSide=2400, quality=.85){
 }
 </script>
 
-<!-- Home modules + editable grid -->
+<!-- Home modules + fixed-slot editable grid -->
 <script>
-/* ---------- Registry ---------- */
+/* Modules registry */
 const MODULES = {
   breakfast: { id:'breakfast', label:'Breakfast Chooser', href:'./breakfast.html', emoji:'🍽️' },
   chores:    { id:'chores',    label:'Chores',            href:'./chores.html',    emoji:'🧹' },
   dinner:    { id:'dinner',    label:'Dinner Planner',    href:'./dinner.html',    emoji:'🍝' },
   calendar:  { id:'calendar',  label:'Family Calendar',   href:'./calendar.html',  emoji:'📅' }
 };
-/* storage keys */
-const LAYOUT_KEY='hub:home:layout';
-const HIDDEN_KEY='hub:home:hidden';
 
-/* helpers */
+/* storage keys */
+const SLOTS_KEY='hub:home:slots';    // array of slot ids (module id or null)
 const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
 const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 
-/* editing state */
-let editing=false;
-let selectedId=null;
-let pendingSlotIndex=null; // where to add a new card via modal
-const app = $('#appRoot');
-const grid = $('#grid');
+/* grid size (4x4 large, 2x4 small) */
+function gridSpec(){ return matchMedia('(min-width:900px)').matches ? {cols:4,rows:4} : {cols:2,rows:4}; }
+function totalSlots(){ const {cols,rows}=gridSpec(); return cols*rows; }
 
-/* default layout from existing modules (order matches your old HTML) */
-function defaultLayout(){ return ['breakfast','chores','dinner','calendar'].filter(id=>MODULES[id]); }
-function getLayout(){ let a=load(LAYOUT_KEY,null); if(!Array.isArray(a)||!a.length){ a=defaultLayout(); save(LAYOUT_KEY,a); } return a; }
-function setLayout(a){ save(LAYOUT_KEY,a); }
-function getHidden(){ return load(HIDDEN_KEY,{}); }
-function setHidden(map){ save(HIDDEN_KEY,map); }
+/* migrate legacy layout -> first slots */
+function ensureSlots(){
+  const cur = load(SLOTS_KEY, null);
+  if(Array.isArray(cur)) return cur;
+  const legacy = ['breakfast','chores','dinner','calendar'].filter(id=>MODULES[id]);
+  const slots = new Array(totalSlots()).fill(null);
+  legacy.forEach((id,i)=>{ if(i<slots.length) slots[i]=id; });
+  save(SLOTS_KEY, slots);
+  return slots;
+}
 
-/* render grid (with placeholders while editing) */
+/* normalize size when breakpoint changes */
+function normalizeSlotsSize(){
+  let slots = load(SLOTS_KEY, null) || ensureSlots();
+  const ids = slots.filter(Boolean);
+  const sized = new Array(totalSlots()).fill(null);
+  ids.slice(0, sized.length).forEach((id,i)=> sized[i]=id);
+  save(SLOTS_KEY, sized);
+  return sized;
+}
+
+let editing=false, selectedId=null;
+const app = $('#appRoot'), grid = $('#grid');
+
 function renderGrid(){
-  const layout = getLayout().filter(id=>MODULES[id]);
-  const hidden = getHidden();
-  const visible = layout.filter(id=>!hidden[id]);
-
+  const slots = normalizeSlotsSize(); // size-safe
   grid.innerHTML='';
 
-  // how many slots? keep at least current count, top out to next full row
-  const cols = matchMedia('(min-width:900px)').matches ? 4 : 2;
-  const minSlots = Math.max(visible.length, 4);
-  const rows = Math.max(1, Math.ceil(minSlots/cols));
-  const totalSlots = editing ? rows*cols + cols*1 /* one extra row while editing */ : rows*cols;
+  const {cols,rows}=gridSpec();
+  grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0,1fr))`;
 
-  let visIndex = 0;
-  for(let i=0;i<totalSlots;i++){
-    const id = visible[visIndex] ?? null;
-
-    if(id){
-      // tile
+  for(let i=0;i<slots.length;i++){
+    const id = slots[i];
+    if(id && MODULES[id]){
       const m = MODULES[id];
       const a = document.createElement('a');
       a.className='tile';
       a.href = editing ? 'javascript:void(0)' : m.href;
-      a.dataset.id = id;
+      a.dataset.id = id; a.dataset.slot=i;
       a.innerHTML = `<div class="emoji">${m.emoji}</div><div class="label">${m.label}</div><div class="hint">Tap to open</div>`;
       if(editing){
-        const rm = document.createElement('button');
+        const rm=document.createElement('button');
         rm.className='remove'; rm.textContent='–'; rm.title='Remove from Home';
-        rm.onclick=(e)=>{ e.stopPropagation(); e.preventDefault(); removeCard(id); };
+        rm.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); setSlot(i,null); };
         a.appendChild(rm);
         a.onclick=(e)=>{ e.preventDefault(); selectTile(id,a); };
       }
+      if(editing && selectedId===id) a.classList.add('selected');
       grid.appendChild(a);
-      visIndex++;
     } else {
-      // empty slot
       const slot = document.createElement('div');
-      slot.className='slot';
+      slot.className='slot'; slot.dataset.slot=i;
       if(editing){
-        const p = document.createElement('button');
-        p.className='plus'; p.textContent='＋'; p.title='Add card here';
-        p.onclick=()=>openAddCardModal(i);
+        const p=document.createElement('button');
+        p.className='plus'; p.textContent='＋'; p.title='Add or move here';
+        p.onclick=()=>{ if(selectedId) moveSelectedTo(i); else openAddCardModal(i); };
         slot.appendChild(p);
       } else {
-        slot.style.visibility='hidden'; // keep even spacing when not editing
+        slot.style.display='none'; // keep the grid compact when not editing
       }
       grid.appendChild(slot);
     }
   }
-  // reflect selection
-  $$('[data-id]', grid).forEach(el=> el.classList.toggle('selected', el.dataset.id===selectedId));
 }
 
-/* selection + move by tapping a slot */
 function selectTile(id, el){
-  if(selectedId===id){ selectedId=null; renderGrid(); return; }
-  selectedId=id; renderGrid();
-  // next tap on a slot moves it there; we intercept on slot plus handler – simpler UX:
+  selectedId = (selectedId===id) ? null : id;
+  $$('[data-id]', grid).forEach(n=>n.classList.toggle('selected', n.dataset.id===selectedId));
 }
 
-/* remove card (hide, not delete module) */
-function removeCard(id){
-  const hidden=getHidden(); hidden[id]=true; setHidden(hidden);
-  selectedId=null; renderGrid();
+function setSlot(ix, idOrNull){
+  const slots = normalizeSlotsSize();
+  slots[ix] = idOrNull;
+  save(SLOTS_KEY, slots);
+  // If we placed a module that exists elsewhere, clear the old one (no duplicates).
+  if(idOrNull){
+    for(let i=0;i<slots.length;i++){
+      if(i!==ix && slots[i]===idOrNull){ slots[i]=null; }
+    }
+    save(SLOTS_KEY, slots);
+  }
+  renderGrid();
 }
 
-/* add card flow */
+function moveSelectedTo(ix){
+  if(!selectedId) return;
+  setSlot(ix, selectedId);
+  selectedId=null;
+  renderGrid();
+}
+
+/* Add card modal */
 const addCardModal = $('#addCardModal');
 const addCardBody  = $('#addCardBody');
-$('#addCardClose').onclick = ()=>hide(addCardModal);
-$('#addCardDone').onclick  = ()=>hide(addCardModal);
+let pendingIx=null;
 
-function openAddCardModal(slotIndex){
-  pendingSlotIndex = slotIndex;
+$('#addCardClose').onclick=()=>hide(addCardModal);
+$('#addCardDone').onclick =()=>hide(addCardModal);
+
+function openAddCardModal(ix){
+  pendingIx=ix;
   addCardBody.innerHTML='';
-  const layout = getLayout();
-  const hidden = getHidden();
-  const used = new Set(layout.filter(id=>!hidden[id]));
+  const slots = normalizeSlotsSize();
+  const used = new Set(slots.filter(Boolean));
   const choices = Object.values(MODULES).filter(m=>!used.has(m.id));
   if(!choices.length){
     const p=document.createElement('div'); p.textContent='All cards are already on the Home screen.'; p.style.opacity='.8';
@@ -469,55 +483,21 @@ function openAddCardModal(slotIndex){
           <div>${m.label}</div>
         </div>
         <button class="btn-primary">Add</button>`;
-      row.querySelector('button').onclick=()=>{ placeCardAt(m.id, pendingSlotIndex); hide(addCardModal); };
+      row.querySelector('button').onclick=()=>{ setSlot(pendingIx, m.id); hide(addCardModal); };
       addCardBody.appendChild(row);
     });
   }
   show(addCardModal);
 }
 
-function placeCardAt(id, slotIndex){
-  const layout = getLayout().filter(x=>MODULES[x]); // clean
-  const hidden = getHidden();
-  const visible = layout.filter(x=>!hidden[x]);
-
-  // If the card is already in layout but hidden, unhide and place.
-  if(!layout.includes(id)) layout.push(id);
-  hidden[id]=false; setHidden(hidden);
-
-  // compute columns to know current slot → index insertion
-  const cols = matchMedia('(min-width:900px)').matches ? 4 : 2;
-
-  // build a new visible order inserting/placing id at desired slot
-  const afterAdd = visible.slice();
-  // If it's already visible, remove first (reposition)
-  const existingIx = afterAdd.indexOf(id);
-  if(existingIx>=0) afterAdd.splice(existingIx,1);
-
-  // clamp slotIndex
-  const maxIx = Math.max(0, afterAdd.length);
-  const ix = Math.min(Math.max(0, slotIndex), maxIx);
-  afterAdd.splice(ix, 0, id);
-
-  // now map back to full layout order: keep any hidden items at the end in their order
-  const newLayout = afterAdd.concat(layout.filter(x=>hidden[x]));
-  setLayout(newLayout);
-  selectedId=null; renderGrid();
-}
-
-/* move selected tile to a specific slot (called by slot + when a tile is selected) */
-function moveSelectedTo(slotIndex){
-  if(!selectedId) return;
-  placeCardAt(selectedId, slotIndex);
-}
-
-/* Edit mode toggling */
+/* Edit toggle */
 function setEditing(on){
   editing=!!on; app.classList.toggle('editing', editing);
   selectedId=null; renderGrid();
 }
+document.getElementById('btnDoneEdit').onclick=()=>setEditing(false);
 
-/* Menu + PIN gate */
+/* Menu (Edit Home + Admin + Wallpaper + About) */
 (function menu(){
   const btn = document.getElementById('btnMenu');
   const dd  = document.getElementById('menuDropdown');
@@ -542,11 +522,10 @@ function setEditing(on){
     } else if (action === 'clearwp') {
       clearWallpaper();
     } else if (action === 'about') {
-      alert('Fambam — single-device PWA.\nWallpaper is stored locally on this iPad.');
+      show($('#aboutModal'));
     }
   });
 })();
-document.getElementById('btnDoneEdit').onclick = ()=> setEditing(false);
 
 /* PIN modal helpers (unchanged) */
 function requestPinUI(onSuccess){
@@ -586,16 +565,10 @@ document.querySelectorAll('.tab').forEach(t=>{
   });
 });
 
-function openAdmin(){
-  buildParents();
-  buildKids();
-  modal.style.display='flex'; modal.setAttribute('aria-hidden','false');
-}
-function closeAdmin(){
-  modal.style.display='none'; modal.setAttribute('aria-hidden','true');
-}
+function openAdmin(){ buildParents(); buildKids(); modal.style.display='flex'; modal.setAttribute('aria-hidden','false'); }
+function closeAdmin(){ modal.style.display='none'; modal.setAttribute('aria-hidden','true'); }
 
-/* Parents UI */
+/* Parents/Kids builders (unchanged) */
 function buildParents(){
   const list = document.getElementById('parentsList'); list.innerHTML='';
   (Family.getParents?.() || []).forEach(p=>{
@@ -625,8 +598,6 @@ function buildParents(){
     row.querySelector('[data-remove]').onclick = ()=>{ Family.removeParent(id); buildParents(); };
   });
 }
-
-/* Kids UI */
 function buildKids(){
   const list = document.getElementById('kidsList'); list.innerHTML='';
   (Family.getKids?.() || []).forEach(k=>{
@@ -657,12 +628,10 @@ function buildKids(){
 /* Shared helpers */
 function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
-
 function pickPhoto(kind, id){
   const input = document.getElementById('file-picker');
   const useCamera = confirm('Use camera to take a new photo? (Cancel = choose from Photo Library/Files)');
   if (useCamera) input.setAttribute('capture','environment'); else input.removeAttribute('capture');
-
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0]; if(!file) return;
     const dataUrl = await compress(file, 256, 0.8);
@@ -693,13 +662,15 @@ function compress(file, maxSide=256, quality=0.8){
 function show(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
 function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
 
-/* Boot */
-renderGrid();
+/* About modal wiring */
+document.getElementById('aboutClose').onclick=()=>hide(document.getElementById('aboutModal'));
+document.getElementById('aboutOk').onclick=()=>hide(document.getElementById('aboutModal'));
 
-/* Adjust layout live when breakpoint changes (so plus slots line up) */
+/* Boot & responsiveness */
+renderGrid();
 matchMedia('(min-width:900px)').addEventListener?.('change', renderGrid);
 
-// Service Worker
+/* SW */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
