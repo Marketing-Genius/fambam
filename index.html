@@ -13,9 +13,9 @@
 
 <style>
 :root{
-  --bg:#0d1327;              /* base background */
-  --panel: rgba(13,19,39,.5);/* translucent top bar */
-  --card:#111827;
+  --bg:#0d1327;
+  --panel: rgba(13,19,39,.5);
+  --card: rgba(17,24,39,.85);
   --muted:#94a3b8;
   --text:#e5e7eb;
   --accent:#22d3ee;
@@ -45,7 +45,7 @@ body{
 
 /* Top bar */
 .topbar{
-  position:sticky; top:0; z-index:10;
+  position:sticky; top:0; z-index:50;
   backdrop-filter: blur(10px);
   background: var(--panel);
   border-bottom:1px solid rgba(255,255,255,.08);
@@ -54,23 +54,24 @@ body{
   display:flex; align-items:center; justify-content:space-between;
   padding:12px 16px;
 }
-.brand{
-  display:flex; gap:10px; align-items:center;
-  font-weight:800; letter-spacing:.2px;
-}
+.brand{ display:flex; gap:10px; align-items:center; }
 .brand img{ height:28px; width:auto; display:block; }
+
+.menu-wrap{ position:relative }
 .menu-btn{
   background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
   color:var(--text); border-radius:12px; padding:8px 10px; cursor:pointer;
 }
 .menu{
-  position:absolute; right:12px; top:56px; min-width:220px;
+  position:absolute; right:0; top:46px; min-width:220px;
   background:rgba(17,24,39,.95); border:1px solid rgba(255,255,255,.12);
-  border-radius:14px; box-shadow:var(--shadow); padding:8px; display:none; z-index:20;
+  border-radius:14px; box-shadow:var(--shadow); padding:8px;
+  display:none; z-index:60;
 }
 .menu a, .menu button{
   display:flex; width:100%; text-align:left; gap:10px; align-items:center;
-  background:transparent; border:0; color:var(--text); padding:10px 12px; border-radius:10px; cursor:pointer;
+  background:transparent; border:0; color:var(--text); padding:10px 12px;
+  border-radius:10px; cursor:pointer;
 }
 .menu a:hover, .menu button:hover{ background:rgba(255,255,255,.06) }
 
@@ -78,18 +79,20 @@ body{
 .app{min-height:100%; display:flex; flex-direction:column}
 .content{flex:1; display:flex; flex-direction:column}
 
-/* Cards docked at bottom */
+/* Bottom-anchored cards */
 .cards-wrap{ display:flex; flex-direction:column; flex:1 }
-.spacer{ flex:1 } /* pushes cards to the bottom */
+.spacer{ flex:1 } /* pushes cards to bottom */
 .cards{
   display:grid; gap:12px;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  padding:0 16px 20px 16px;
+  padding:0 16px 20px 16px; /* 20px bottom gap as requested */
 }
-@media(min-width:840px){ .cards{ grid-template-columns:repeat(3,minmax(0,330px)); justify-content:center } }
+@media(min-width:840px){
+  .cards{ grid-template-columns:repeat(3,minmax(0,330px)); justify-content:center }
+}
 .card{
   display:flex; gap:12px; align-items:center; justify-content:space-between;
-  background:rgba(17,24,39,.85); border:1px solid rgba(255,255,255,.08);
+  background:var(--card); border:1px solid rgba(255,255,255,.08);
   border-radius:16px; padding:14px 16px; text-decoration:none; color:var(--text);
   box-shadow:var(--shadow);
 }
@@ -99,21 +102,18 @@ body{
 .card .icon{ font-size:1.4rem }
 
 /* Footer note */
-.note{
-  text-align:center; padding:6px 12px 14px;
-  color:#8fb7ff; opacity:.7; font-size:.9rem;
-}
+.note{ text-align:center; padding:6px 12px 14px; color:#8fb7ff; opacity:.7; font-size:.9rem }
 
-/* ---- Splash overlay (Lottie) ---- */
+/* ---- Splash (Lottie) ---- */
 #splash{
   position:fixed; inset:0; z-index:100000;
   display:none; place-items:center;
-  background:#0d1327; /* requested color */
+  background:#0d1327;
   transition: opacity 1s ease; /* 1s fade-out */
 }
 #splash .box{
-  width:min(960px, 60vw);   /* ~half of 1920, responsive cap */
-  aspect-ratio: 16 / 9;     /* your AE comp ratio */
+  width:min(960px, 60vw);   /* ~50% of 1920, responsive */
+  aspect-ratio: 16 / 9;     /* AE comp ratio */
   display:grid; place-items:center;
 }
 
@@ -124,7 +124,7 @@ body{
 </style>
 </head>
 <body>
-  <!-- Splash: one-time per session -->
+  <!-- One-time splash -->
   <div id="splash" aria-hidden="true">
     <div class="box" id="lottieBox"></div>
   </div>
@@ -136,15 +136,14 @@ body{
     <div class="topbar">
       <div class="topbar-inner">
         <div class="brand">
-          <!-- Replace with your wordmark -->
           <img src="fambam.png" alt="Fambam"/>
         </div>
-        <div style="position:relative">
-          <button id="menuBtn" class="menu-btn">☰</button>
+        <div class="menu-wrap">
+          <button id="menuBtn" class="menu-btn" aria-haspopup="true" aria-expanded="false">☰</button>
           <div id="menu" class="menu" role="menu" aria-hidden="true">
             <button id="editWallpaper">🖼️ Edit Wallpaper</button>
             <button id="clearWallpaper">🗑️ Remove Wallpaper</button>
-            <a href="#admin" id="openAdmin">⚙️ Admin Settings</a>
+            <button id="adminSettings">⚙️ Admin Settings</button>
           </div>
         </div>
       </div>
@@ -171,10 +170,11 @@ body{
             <div class="icon">🍽️</div>
           </a>
 
-          <a class="card" href="./chores.html" style="opacity:.6; pointer-events:none">
+          <!-- ENABLED chores link -->
+          <a class="card" href="./chores.html">
             <div>
               <div class="title">Chores</div>
-              <div class="subtitle">Coming soon</div>
+              <div class="subtitle">Weekly rotation</div>
             </div>
             <div class="icon">🧹</div>
           </a>
@@ -196,14 +196,14 @@ body{
   <!-- Hidden file input for wallpaper -->
   <input id="wallpaperInput" type="file" accept="image/*" style="display:none"/>
 
-  <!-- Family store (for Admin PIN etc., optional include) -->
+  <!-- (Optional) family store include if your admin modal relies on it -->
   <script src="family.js?v=3.3.6"></script>
 
   <!-- Lottie -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" integrity="sha512-Eu9e6iYjP2cJ9e9WoP4o32Cptq0SxQ5uGKV1wSRqYb8xJzvEbv1n5JfYzVCskCqXG8eTtnQ0gW/5z2gK8u1QfQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <script>
-  /* ------------ Wallpaper load/save ------------ */
+  /* -------- Wallpaper load/save -------- */
   (function(){
     const KEY='hub:home:wallpaper';
     const box=document.getElementById('wallpaper');
@@ -230,52 +230,53 @@ body{
     };
   })();
 
-  /* ------------ Simple menu toggle ------------ */
+  /* -------- Menu toggle -------- */
   (function(){
     const btn=document.getElementById('menuBtn');
     const menu=document.getElementById('menu');
     btn.addEventListener('click',()=>{
       const open=menu.style.display==='block';
       menu.style.display = open ? 'none' : 'block';
+      btn.setAttribute('aria-expanded', open?'false':'true');
       menu.setAttribute('aria-hidden', open?'true':'false');
     });
     document.addEventListener('click',(e)=>{
       if (!menu.contains(e.target) && e.target!==btn) {
-        menu.style.display='none'; menu.setAttribute('aria-hidden','true');
+        menu.style.display='none';
+        btn.setAttribute('aria-expanded','false');
+        menu.setAttribute('aria-hidden','true');
       }
     });
-    document.getElementById('openAdmin').onclick=(e)=>{
-      e.preventDefault();
-      // If you have a PIN-gated admin on Home, navigate to hash:
-      location.hash = '#admin';
-      // (Hook your existing admin modal opener to hashchange if needed.)
+
+    // Admin: trigger both hash and event, so either handler works
+    document.getElementById('adminSettings').onclick=()=>{
+      try{ location.hash = '#admin'; }catch{}
+      try{ window.dispatchEvent(new CustomEvent('open-admin')); }catch{}
+      menu.style.display='none';
+      btn.setAttribute('aria-expanded','false');
+      menu.setAttribute('aria-hidden','true');
     };
   })();
 
-  /* ------------ One-time Lottie splash ------------ */
+  /* -------- One-time Lottie splash (2s + 1s fade) -------- */
   (function runSplashOnce(){
-    const KEY='fambam:splash:shown';
-    if (sessionStorage.getItem(KEY)) return; // don't show again this session
+    const KEY='fambam:splash:shown:v2'; // new key so it will show once
+    if (sessionStorage.getItem(KEY)) return;
 
     const splash=document.getElementById('splash');
     const box=document.getElementById('lottieBox');
-    if(!splash || !box || !window.lottie) return;
+    if(!splash || !box || !window.lottie){ sessionStorage.setItem(KEY,'1'); return; }
 
-    // Show overlay
     splash.style.display='grid';
     splash.style.opacity='1';
 
-    // Load and play once (your JSON is 2s long)
     const anim=lottie.loadAnimation({
       container: box,
       renderer: 'svg',
       loop: false,
       autoplay: true,
-      path: 'splash.json',      // <-- your file at site root
-      rendererSettings: {
-        preserveAspectRatio: 'xMidYMid meet',
-        progressiveLoad: true
-      }
+      path: 'splash.json', // put your JSON at site root
+      rendererSettings: { preserveAspectRatio: 'xMidYMid meet', progressiveLoad:true }
     });
 
     let finished=false;
@@ -283,21 +284,16 @@ body{
       if(finished) return;
       finished=true;
       sessionStorage.setItem(KEY,'1');
-      // Fade out over 1s (matches CSS)
-      splash.style.opacity='0';
+      splash.style.opacity='0';               // 1s fade as per CSS
       setTimeout(()=>{ try{splash.remove();}catch{} }, 1000);
     }
 
-    // When animation ends (~2s), fade
     anim.addEventListener('complete', endSplash);
-
-    // Safety: if JSON fails or stalls, still continue (2s anim + 1s fade budget → cut at ~3s)
-    setTimeout(endSplash, 3000);
-
     anim.addEventListener('data_failed', endSplash);
+    setTimeout(endSplash, 3000); // safety: 2s anim + 1s fade budget
   })();
 
-  /* ------------ Service worker (cache bump if needed) ------------ */
+  /* -------- Service worker -------- */
   if('serviceWorker' in navigator){
     window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
   }
