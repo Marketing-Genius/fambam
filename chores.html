@@ -273,7 +273,7 @@ function rotateForWeek(mondayISO){
 
 // ---------- Done map (per week) ----------
 const DAY_KEYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const DAY_LABELS = ['M','T','W','Th','F','S','Su'];
+const DAY_LABELS = ['M','T','W','T','F','S','S'];
 
 function loadWeekDone(){
   return load(LS.done(thisMondayISO()), {}) || {};
