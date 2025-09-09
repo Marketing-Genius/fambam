@@ -37,12 +37,13 @@ button{cursor:pointer}
 .btn-ghost{background:transparent;border:1px dashed #334155;color:var(--muted)}
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 .btn-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;border:1px solid #334155;background:#0b1224}
-.btn-badge{position:relative}
-.btn-badge[data-hasnotes="true"]::after{
-  content:""; position:absolute; right:8px; top:8px; width:8px; height:8px; border-radius:50%;
-  background:#22d3ee; box-shadow:0 0 0 2px rgba(11,18,36,.8);
-}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1224;border:1px solid #334155;color:#cbd5e1}
+.menu{position:relative}
+.menu-btn{min-width:110px}
+.menu-dd{position:absolute;right:0;top:110%;background:#111827;border:1px solid #1f2937;border-radius:12px;box-shadow:var(--shadow);display:none;padding:6px;z-index:10}
+.menu-dd.open{display:block}
+.menu-dd .mi{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px}
+.menu-dd .mi:hover{background:#0b1224}
 
 .grid{display:grid;gap:14px}
 @media(min-width:860px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -66,11 +67,16 @@ button{cursor:pointer}
 @supports (-webkit-touch-callout: none) { .modal .body{ -webkit-overflow-scrolling: touch; } }
 .modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:inherit}
 
-/* Lists inside Manage */
+/* Lists in Manage */
 .list{display:grid;gap:10px}
 .item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
-.two-col{display:grid;gap:16px}
-@media(min-width:780px){.two-col{grid-template-columns:1fr 1fr}}
+
+/* Notes badges */
+.btn-badge{position:relative}
+.btn-badge[data-hasnotes="true"]::after{
+  content:""; position:absolute; right:8px; top:8px; width:8px; height:8px; border-radius:50%;
+  background:#22d3ee; box-shadow:0 0 0 2px rgba(11,18,36,.8);
+}
 
 .pin-input{font:inherit;color:var(--text);background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px 16px;letter-spacing:2px;text-align:center}
 .smallmuted{color:#94a3b8;font-size:.9rem}
@@ -85,15 +91,23 @@ button{cursor:pointer}
         <div class="small">Plan dinners for the week. Templates, groceries & sharing included.</div>
       </div>
       <div class="controls">
-        <a href="./index.html" class="btn-back">← Home</a>
+        <a href="./index.html" class="btn">← Home</a>
         <button id="btnTemplates" class="btn">Templates</button>
         <button id="btnPizzaFri" class="btn-ghost" title="Auto-fill 🍕 on Fridays">🍕 Pizza Fri: <span id="pizzaState">off</span></button>
         <button id="btnManage" class="btn-primary">Manage</button>
         <button id="btnGroceries" class="btn">Groceries</button>
-        <button id="btnShareGro" class="btn">Share Groceries</button>
-        <button id="btnSharePlan" class="btn">Share Plan</button>
+
+        <!-- Share dropdown -->
+        <div class="menu">
+          <button id="btnShare" class="btn menu-btn">Share ▾</button>
+          <div id="shareDD" class="menu-dd" role="menu" aria-hidden="true">
+            <button class="mi" data-share="gro">Groceries (share)</button>
+            <button class="mi" data-share="plan">Plan (share)</button>
+            <button class="mi" data-share="copy">Copy Summary</button>
+          </div>
+        </div>
+
         <button id="btnReset"  class="btn">Reset Week</button>
-        <button id="btnCopy"   class="btn">Copy Summary</button>
         <button id="btnAdmin"  class="btn-icon" title="Admin">⚙️</button>
       </div>
     </header>
@@ -106,7 +120,7 @@ button{cursor:pointer}
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Dinner Planner v1.3 (Food notes + rating dropdown)</div>
+      <div class="version">Dinner Planner v1.3.1 (notes + share menu + rating default)</div>
     </div>
   </div>
 
@@ -117,27 +131,23 @@ button{cursor:pointer}
         <div id="manageTitle" style="font-weight:800">Manage Menus</div>
         <button id="manageClose" class="btn">✖</button>
       </header>
-      <div class="body two-col">
-        <div>
-          <div class="badge">Food Options (for Main & Side)</div>
-          <div id="foodList" class="list"></div>
-          <div class="add-line">
-            <input id="newFood" type="text" placeholder="Add food (e.g., 🍕 Pizza)"/>
-            <button id="addFood" class="btn-primary">Add</button>
-          </div>
+      <div class="body">
+        <div class="badge">Food Options (for Main & Side)</div>
+        <div id="foodList" class="list"></div>
+        <div class="add-line">
+          <input id="newFood" type="text" placeholder="Add food (e.g., 🍕 Pizza)"/>
+          <button id="addFood" class="btn-primary">Add</button>
         </div>
-        <div>
-          <div class="badge">Dessert Options</div>
-          <div id="dessertList" class="list"></div>
-          <div class="add-line">
-            <input id="newDessert" type="text" placeholder="Add dessert (e.g., 🍨 Ice Cream)"/>
-            <button id="addDessert" class="btn-primary">Add</button>
-          </div>
+
+        <div class="badge">Dessert Options</div>
+        <div id="dessertList" class="list"></div>
+        <div class="add-line">
+          <input id="newDessert" type="text" placeholder="Add dessert (e.g., 🍨 Ice Cream)"/>
+          <button id="addDessert" class="btn-primary">Add</button>
         </div>
-        <div style="grid-column:1 / -1">
-          <div class="badge">Pantry / Staples (excluded from grocery list)</div>
-          <textarea id="pantryBox" placeholder="e.g., salt, pepper, ketchup, olive oil"></textarea>
-        </div>
+
+        <div class="badge">Pantry / Staples (excluded from grocery list)</div>
+        <textarea id="pantryBox" placeholder="e.g., salt, pepper, ketchup, olive oil"></textarea>
       </div>
       <div class="footer">
         <button id="manageSave" class="btn-primary">Done</button>
@@ -190,16 +200,14 @@ button{cursor:pointer}
         <div id="dayNotesTitle" style="font-weight:800">Food Notes</div>
         <button id="dayNotesClose" class="btn">✖</button>
       </header>
-      <div class="body" id="dayNotesBody">
-        <!-- rows injected -->
-      </div>
+      <div class="body" id="dayNotesBody"></div>
       <div class="footer">
         <button id="dayNotesDone" class="btn-primary">Done</button>
       </div>
     </div>
   </div>
 
-  <!-- Food Notes Editor Modal -->
+  <!-- Food Notes Editor Modal (global only) -->
   <div class="modal-backdrop" id="notesEditModal" aria-hidden="true" role="dialog" aria-labelledby="notesEditTitle">
     <div class="modal">
       <header>
@@ -212,12 +220,12 @@ button{cursor:pointer}
 
         <div class="badge">Global notes</div>
         <textarea id="fnGlobal"></textarea>
-
-        <div class="badge">Kid-specific notes</div>
-        <div id="fnKids"></div>
       </div>
-      <div class="footer">
-        <button id="fnSave" class="btn-primary">Save</button>
+      <div class="footer" style="justify-content:space-between">
+        <button id="fnClear" class="btn-warn">Clear Notes</button>
+        <div>
+          <button id="fnSave" class="btn-primary">Save</button>
+        </div>
       </div>
     </div>
   </div>
@@ -255,7 +263,7 @@ button{cursor:pointer}
   </script>
 
   <script>
-/* ---------- Base storage/seed (unchanged) ---------- */
+/* ---------- Base storage/seed ---------- */
 const LS={foods:'dp:foods:list',desserts:'dp:desserts:list',week:(m)=>`dp:plan:${m}`,templates:'dp:tpls',pantry:'dp:pantry',pizzaFri:'dp:pizzaFri', notes:'dp:food:notes'};
 const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
 const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
@@ -266,16 +274,15 @@ function isoDateUTC(d){return d.toISOString().slice(0,10)} function thisMondayIS
 function weekLabelText(mISO){const m=new Date(mISO+'T00:00:00Z');const e=new Date(m);e.setUTCDate(e.getUTCDate()+6);const f=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});return `${f(m)} – ${f(e)}`}
 function seedFoodsIfNeeded(){let foods=load(LS.foods,null);if(!Array.isArray(foods)||foods.length<10){foods=["🍕 Pizza","🌮 Tacos","🍝 Spaghetti","🍗 Chicken Nuggets","🥪 Sandwiches","🌭 Hot Dogs","🍔 Burgers","🥗 Caesar Salad","🍛 Curry & Rice","🥟 Potstickers","🍤 Shrimp Stir-Fry","🥞 Breakfast for Dinner","🥔 Baked Potatoes","🍣 Sushi Night","🌯 Burritos","🥘 Chili","🍜 Ramen","🥙 Pita & Hummus","🍖 BBQ Chicken","🥦 Veggie Stir-Fry","🧆 Meatballs","🥩 Steak & Veg","🥧 Pot Pie","🍚 Fried Rice","🧀 Mac & Cheese","🐟 Baked Fish","🥚 Omelets","🍲 Chicken Noodle Soup","🥒 Snack Plate","🥬 Tacos (Veggie)","🌮 Taco Salad","🌯 Quesadillas","🍝 Penne & Marinara","🥗 Greek Salad","🍖 Pulled Pork","🍗 Roasted Chicken","🍝 Alfredo Pasta","🥪 BLT","🌶️ Fajitas","🍖 Ribs","🍝 Lasagna","🥗 Cobb Salad","🍛 Butter Chicken","🥘 Paella","🍚 Teriyaki Bowls","🍠 Sweet Potatoes","🥨 Pretzel Dogs","🥪 Grilled Cheese","🍤 Popcorn Shrimp","🍕 Flatbreads"];save(LS.foods,foods)}let desserts=load(LS.desserts,null);if(!Array.isArray(desserts)||desserts.length<3){desserts=["🍪 Cookies","🍨 Ice Cream","🍰 Cake","🍓 Berries & Cream","🥧 Pie","🍫 Brownies","🍮 Pudding","🍎 Apple Slices & PB"];save(LS.desserts,desserts)}if(load(LS.pantry,null)==null){save(LS.pantry,["salt","pepper","ketchup","mustard","olive oil","butter"])}if(load(LS.pizzaFri,null)==null){save(LS.pizzaFri,false)}}
 
-/* ---------- Plan model (unchanged) ---------- */
+/* ---------- Plan model ---------- */
 const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-function emptyDay(){return {kids:{main:"",side:""},parents:{main:"",side:""},dessert:"",rating:0}}
+function emptyDay(){return {kids:{main:"",side:""},parents:{main:"",side:""},dessert:"",rating:null}}  /* rating default = blank */
 function loadWeekPlan(mISO){let plan=load(LS.week(mISO),null);if(!plan){plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay());save(LS.week(mISO),plan)}if(load(LS.pizzaFri,false)){const fri=plan.days["Fri"];if(fri&&!fri.kids.main&&!fri.parents.main){fri.kids.main="🍕 Pizza";fri.parents.main="🍕 Pizza";save(LS.week(mISO),plan)}}return plan}
 function saveWeekPlan(mISO,plan){save(LS.week(mISO),plan)}
 
 /* ---------- Food Notes store ---------- */
 function getNotes(){ return load(LS.notes, {}); }
 function setNotes(map){ save(LS.notes, map); }
-function getKids(){ return (window.Family && Family.getKids && Family.getKids()) || []; }
 
 /* ---------- Render ---------- */
 function render(){
@@ -292,13 +299,13 @@ function render(){
 
     const el=document.createElement('div'); el.className='card'; el.dataset.day=day;
 
-    // rating dropdown
+    // rating dropdown (blank default)
     const rateSel = `
       <select data-rate="${day}" title="How did dinner go?">
-        <option value="">— rating —</option>
-        <option value="1"${data.rating===1?' selected':''}>👍</option>
-        <option value="0"${data.rating===0?' selected':''}>😐</option>
-        <option value="-1"${data.rating===-1?' selected':''}>👎</option>
+        <option value="" ${data.rating==null?'selected':''}>— rating —</option>
+        <option value="1" ${data.rating===1?'selected':''}>👍</option>
+        <option value="0" ${data.rating===0?'selected':''}>😐</option>
+        <option value="-1" ${data.rating===-1?'selected':''}>👎</option>
       </select>`;
 
     // notes button + indicator
@@ -353,12 +360,12 @@ function render(){
     };
   });
 
-  // rating dropdown
+  // rating save
   $$('select[data-rate]').forEach(r=>{
     r.onchange=()=>{
-      const day=r.dataset.rate, val=r.value===''?null:parseInt(r.value,10);
+      const day=r.dataset.rate;
       const plan=loadWeekPlan(thisMondayISO());
-      plan.days[day].rating = (val===null?0:val);
+      plan.days[day].rating = (r.value===''? null : parseInt(r.value,10));
       saveWeekPlan(thisMondayISO(),plan);
     };
   });
@@ -371,7 +378,6 @@ function render(){
   $('#pizzaState').textContent=load(LS.pizzaFri,false)?'on':'off';
 }
 
-// helper to set options
 function options(list,selected,allowBlank=false){
   const placeholder='— Choose item —';
   const arr=allowBlank?[placeholder,...list]:[placeholder,...list];
@@ -384,9 +390,9 @@ function options(list,selected,allowBlank=false){
 function escapeHtml(s){return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function setByPath(o,p,val){const parts=p.split('.');for(let i=0;i<parts.length-1;i++)o=o[parts[i]];o[parts[parts.length-1]]=val}
 
-/* ---------- Manage modal + lists (unchanged) ---------- */
+/* ---------- Manage modal ---------- */
 const manageModal=$('#manageModal');$('#manageClose').onclick=()=>hide(manageModal);$('#manageSave').onclick=()=>{const list=($('#pantryBox').value||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);save(LS.pantry,list);hide(manageModal);}
-$('#btnManage').onclick=()=>{const hasPin=(localStorage.getItem('hub:family:pin')??'null')!=='null';if(hasPin)requestPinUI(openManage);else openManage();};
+$('#btnManage').onclick=()=>{const hasPin=(localStorage.getItem('hub:family:pin')??'null')!=='null';if(hasPin)requestPinUI(()=>setTimeout(openManage,0));else openManage();};
 function openManage(){buildFoodList();buildDessertList();$('#pantryBox').value=load(LS.pantry,[]).join(', ');show(manageModal);}
 function buildFoodList(){const wrap=$('#foodList');wrap.innerHTML='';const foods=load(LS.foods,[]);foods.forEach((f,idx)=>{const row=document.createElement('div');row.className='item';row.innerHTML=`<input class="btn" value="${escapeHtml(f)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;wrap.appendChild(row);row.querySelector('[data-notes]').onclick=()=>openNotesEditor(f);row.querySelector('input').oninput=e=>{foods[idx]=e.target.value;save(LS.foods,foods);render();};row.querySelector('[data-rm]').onclick=()=>{foods.splice(idx,1);save(LS.foods,foods);buildFoodList();render();};});$('#addFood').onclick=()=>{const v=($('#newFood').value||'').trim();if(!v)return;const list=load(LS.foods,[]);list.push(v);save(LS.foods,list);$('#newFood').value='';buildFoodList();render();};}
 function buildDessertList(){const wrap=$('#dessertList');wrap.innerHTML='';const ds=load(LS.desserts,[]);ds.forEach((d,idx)=>{const row=document.createElement('div');row.className='item';row.innerHTML=`<input class="btn" value="${escapeHtml(d)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;wrap.appendChild(row);row.querySelector('[data-notes]').onclick=()=>openNotesEditor(d);row.querySelector('input').oninput=e=>{ds[idx]=e.target.value;save(LS.desserts,ds);render();};row.querySelector('[data-rm]').onclick=()=>{ds.splice(idx,1);save(LS.desserts,ds);buildDessertList();render();};});$('#addDessert').onclick=()=>{const v=($('#newDessert').value||'').trim();if(!v)return;const list=load(LS.desserts,[]);list.push(v);save(LS.desserts,list);$('#newDessert').value='';buildDessertList();render();};}
@@ -415,7 +421,7 @@ function openDayNotes(day){
 
   const notes = getNotes();
   items.forEach(it=>{
-    const has = !!notes[it.label];
+    const has = !!(notes[it.label] && (notes[it.label].global||'').trim());
     const row = document.createElement('div');
     row.className='noteRow';
     row.innerHTML = `
@@ -435,7 +441,7 @@ function openDayNotes(day){
 function dayHasAnyNotes(dayData){
   const n=getNotes();
   return [dayData?.kids?.main, dayData?.kids?.side, dayData?.parents?.main, dayData?.parents?.side, dayData?.dessert]
-    .filter(Boolean).some(lab => !!n[lab]);
+    .filter(Boolean).some(lab => !!(n[lab] && (n[lab].global||'').trim()));
 }
 function updateNotesBadgesFor(day){
   const mISO=thisMondayISO(); const plan=loadWeekPlan(mISO); const data=plan.days[day];
@@ -443,10 +449,15 @@ function updateNotesBadgesFor(day){
   if (btn) btn.setAttribute('data-hasnotes', String( dayHasAnyNotes(data) ));
 }
 
-/* ---------- Notes editor (global + per-kid) ---------- */
+/* ---------- Notes editor (global only) ---------- */
 const notesEditModal = $('#notesEditModal');
 $('#notesEditClose').onclick = ()=> hide(notesEditModal);
 $('#fnSave').onclick = saveNotesFromEditor;
+$('#fnClear').onclick = ()=>{
+  if (!confirm('Clear notes for this item?')) return;
+  const map=getNotes(); delete map[_editingLabel]; setNotes(map); hide(notesEditModal);
+  if (notesEditModal._onSavedCb) notesEditModal._onSavedCb();
+};
 
 let _editingLabel = '';
 function openNotesEditor(label, onSaved){
@@ -454,43 +465,23 @@ function openNotesEditor(label, onSaved){
   $('#fnLabel').textContent = label;
 
   const map = getNotes();
-  const entry = map[label] || { global:'', perKid:{} };
+  const entry = map[label] || { global:'' };
   $('#fnGlobal').value = entry.global || '';
 
-  const kidsWrap = $('#fnKids'); kidsWrap.innerHTML='';
-  const kids = getKids();
-  if (!kids.length) {
-    const p=document.createElement('div');
-    p.className='smallmuted';
-    p.textContent='(Optional: add kids in Admin on Home to save kid-specific notes.)';
-    kidsWrap.appendChild(p);
-  } else {
-    kids.forEach(k=>{
-      const div=document.createElement('div');
-      div.innerHTML = `
-        <div class="smallmuted" style="margin:.4rem 0 .2rem 0">${escapeHtml(k.name)}</div>
-        <textarea data-kid="${k.id}" class="btn" style="width:100%;min-height:60px"></textarea>`;
-      div.querySelector('textarea').value = entry.perKid?.[k.id] || '';
-      kidsWrap.appendChild(div);
-    });
-  }
-
-  notesEditModal.dataset.onsaved = onSaved ? '1' : '';
   notesEditModal._onSavedCb = onSaved || null;
   show(notesEditModal);
 }
 function saveNotesFromEditor(){
   const label = _editingLabel;
+  const g = ($('#fnGlobal').value||'').trim();
   const map = getNotes();
-  const perKid = {};
-  $$('#fnKids textarea').forEach(t=>{ const v=t.value.trim(); if(v) perKid[t.dataset.kid]=v; });
-  map[label] = { global: $('#fnGlobal').value.trim(), perKid };
+  if (!g) { delete map[label]; } else { map[label] = { global:g }; }
   setNotes(map);
   hide(notesEditModal);
   if (notesEditModal._onSavedCb) notesEditModal._onSavedCb();
 }
 
-/* ---------- Templates / Groceries / Share (unchanged) ---------- */
+/* ---------- Templates / Groceries / Share ---------- */
 const tplModal=$('#tplModal');$('#tplClose').onclick=()=>hide(tplModal);$('#tplApplyDone').onclick=()=>hide(tplModal);$('#btnTemplates').onclick=()=>openTemplates();
 $('#tplSave').onclick=()=>{const name=($('#tplName').value||'').trim();if(!name)return alert('Name your template');const plan=loadWeekPlan(thisMondayISO());const t=load(LS.templates,[]);t.push({id:uid(),name,plan});save(LS.templates,t);$('#tplName').value='';buildTplLists();}
 function openTemplates(){buildTplLists();show(tplModal)}
@@ -502,16 +493,25 @@ const groModal=$('#groModal');$('#groClose').onclick=()=>hide(groModal);
 $('#btnGroceries').onclick=()=>openGroceries();
 $('#groCopy').onclick=()=>navigator.clipboard.writeText(groceryText()).then(()=>alert('Grocery list copied.'));
 $('#groDownload').onclick=()=>{const blob=new Blob([groceryText()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fambam-Groceries-${thisMondayISO()}.txt`;a.click();URL.revokeObjectURL(a.href);}
-$('#btnShareGro').onclick=()=>shareText(groceryText());
-$('#btnSharePlan').onclick=()=>shareText(planSummaryText());
 
 function openGroceries(){const pre=document.createElement('pre');pre.style.whiteSpace='pre-wrap';pre.style.margin='0';pre.textContent=groceryText();const body=$('#groBody');body.innerHTML='';body.appendChild(pre);show(groModal);}
 function groceryText(){const plan=loadWeekPlan(thisMondayISO());const pantry=new Set(load(LS.pantry,[]).map(s=>s.toLowerCase()));const buckets={"Kids mains":{}, "Kids sides":{}, "Parents mains":{}, "Parents sides":{}, "Desserts":{}};const bump=(b,name)=>{if(!name)return;const clean=name.replace(/^[^\w]+/,'').trim();if(!clean)return;if(pantry.has(clean.toLowerCase()))return;buckets[b][clean]=(buckets[b][clean]||0)+1;};DAYS.forEach(d=>{const x=plan.days[d]||emptyDay();bump("Kids mains",x.kids.main);bump("Kids sides",x.kids.side);bump("Parents mains",x.parents.main);bump("Parents sides",x.parents.side);bump("Desserts",x.dessert);});const lines=[`🛒 Fambam Groceries — ${$('#weekLabel').textContent}`];for(const [section,items] of Object.entries(buckets)){const names=Object.keys(items).sort((a,b)=>a.localeCompare(b));if(!names.length)continue;lines.push(`\n${section}`);names.forEach(n=>lines.push(`- ${n}${items[n]>1?` ×${items[n]}`:''}`));}if(pantry.size){lines.push(`\n(Excluded pantry: ${[...pantry].join(', ')})`);}return lines.join('\n');}
-function planSummaryText(){const plan=loadWeekPlan(thisMondayISO());const lines=[`🍽️ Fambam Dinner Plan — ${$('#weekLabel').textContent}`];DAYS.forEach(d=>{const x=plan.days[d];const r=x.rating===1?'👍':(x.rating===-1?'👎':'😐');const kids=[x.kids.main,x.kids.side].filter(Boolean).join(' + ');const pars=[x.parents.main,x.parents.side].filter(Boolean).join(' + ');const des=x.dessert?` • Dessert: ${x.dessert}`:'';lines.push(`${d}: Kids ${kids||'—'} | Parents ${pars||'—'} ${des} ${r}`)});return lines.join('\n');}
+function planSummaryText(){const plan=loadWeekPlan(thisMondayISO());const lines=[`🍽️ Fambam Dinner Plan — ${$('#weekLabel').textContent}`];DAYS.forEach(d=>{const x=plan.days[d];const r=(x.rating==null)?'':(x.rating===1?' 👍':(x.rating===-1?' 👎':' 😐'));const kids=[x.kids.main,x.kids.side].filter(Boolean).join(' + ');const pars=[x.parents.main,x.parents.side].filter(Boolean).join(' + ');const des=x.dessert?` • Dessert: ${x.dessert}`:'';lines.push(`${d}: Kids ${kids||'—'} | Parents ${pars||'—'}${des}${r}`)});return lines.join('\n');}
 
-/* Reset/Copy/Admin */
+/* Share dropdown */
+const shareBtn = $('#btnShare'), shareDD = $('#shareDD');
+shareBtn.onclick = (e)=>{ e.stopPropagation(); shareDD.classList.toggle('open'); };
+document.addEventListener('click', ()=>shareDD.classList.remove('open'));
+shareDD.addEventListener('click', (e)=>{
+  const a = e.target.closest('.mi'); if(!a) return;
+  shareDD.classList.remove('open');
+  if (a.dataset.share==='gro') shareText(groceryText());
+  else if (a.dataset.share==='plan') shareText(planSummaryText());
+  else if (a.dataset.share==='copy') navigator.clipboard.writeText(planSummaryText()).then(()=>alert('Summary copied.'));
+});
+
+/* Reset/Copy/Admin (copy moved into Share menu) */
 $('#btnReset').onclick=()=>{if(!confirm('Clear all entries for this week?'))return;const plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay());save(LS.week(thisMondayISO()),plan);render();}
-$('#btnCopy').onclick=()=>navigator.clipboard.writeText(planSummaryText()).then(()=>alert('Summary copied.'));
 $('#btnAdmin').onclick=()=>location.href='./index.html#admin';
 
 /* PIN modal */
@@ -519,7 +519,7 @@ function requestPinUI(onSuccess){
   const m=$('#pinModal'),input=$('#pinInputModal'),ok=$('#pinOk'),x=$('#pinClose');
   function close(){m.style.display='none';m.setAttribute('aria-hidden','true');input.value='';ok.onclick=x.onclick=null;}
   function open(){m.style.display='flex';m.setAttribute('aria-hidden','false');setTimeout(()=>{input.focus();input.setSelectionRange(input.value.length,input.value.length);},50);}
-  ok.onclick=()=>{const pin=input.value.trim();if(!/^\d{1,8}$/.test(pin))return alert('PIN must be 1–8 digits.'); if(Family.verifyPin(pin)){close();onSuccess();}else{alert('Incorrect PIN.');input.focus();input.select();}}
+  ok.onclick=()=>{const pin=input.value.trim();if(!/^\d{1,8}$/.test(pin))return alert('PIN must be 1–8 digits.'); if(Family.verifyPin(pin)){close(); onSuccess&&onSuccess();}else{alert('Incorrect PIN.');input.focus();input.select();}}
   x.onclick=close; m.onclick=e=>{if(e.target===m)close();}; document.addEventListener('keydown',function esc(ev){if(ev.key==='Escape'){close();document.removeEventListener('keydown',esc)}}); open();
 }
 
