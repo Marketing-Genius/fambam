@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Fambam · Photos</title>
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{ --panel:#111827; --card:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --accent:#22d3ee; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px; }
+html,body{height:100%}
+body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%); color:var(--text);}
+.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto 1fr auto}
+.panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.btn{font:inherit;color:#e5e7eb;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
+.grid{display:grid;gap:14px;grid-template-columns:1fr 320px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.viewer{position:relative;height:60vh;min-height:360px;border-radius:16px;overflow:hidden;background:#0b1224;border:1px solid #334155}
+.viewer img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .5s}
+.list{display:grid;gap:10px;max-height:60vh;overflow:auto}
+.item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
+.small{font-size:.9rem;color:#cbd5e1}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="panel">
+    <div>
+      <div style="font-size:1.4rem;font-weight:800">Photos</div>
+      <div class="small">Pick images for the home slideshow card.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btn" href="./index.html">← Home</a>
+      <button id="btnAdd" class="btn-primary">Add Photos</button>
+    </div>
+  </header>
+
+  <section class="grid">
+    <div class="panel">
+      <div class="viewer"><img id="big" alt=""></div>
+    </div>
+    <div class="panel">
+      <div class="small" style="margin-bottom:8px">Rotate every:</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <label><input type="radio" name="iv" value="10000"> 10s</label>
+        <label><input type="radio" name="iv" value="30000"> 30s</label>
+        <label><input type="radio" name="iv" value="60000"> 1m</label>
+      </div>
+      <div class="small" style="margin-bottom:8px">Photos</div>
+      <div id="list" class="list"></div>
+    </div>
+  </section>
+
+  <footer class="panel small" style="text-align:center;opacity:.75">
+    Images are stored locally on this device only.
+  </footer>
+</div>
+
+<input id="picker" type="file" accept="image/*" multiple class="sr-only"/>
+
+<script>
+const LS_LIST='photos:list', LS_IV='photos:interval';
+const $=(s,e=document)=>e.querySelector(s);
+const listEl=$('#list'), big=$('#big'), picker=$('#picker');
+
+function loadList(){ try{const v=JSON.parse(localStorage.getItem(LS_LIST)); if(Array.isArray(v)) return v; }catch{} return []; }
+function saveList(a){ localStorage.setItem(LS_LIST, JSON.stringify(a)); }
+function loadIv(){ const v=+localStorage.getItem(LS_IV)||10000; return [10000,30000,60000].includes(v)?v:10000; }
+function saveIv(v){ localStorage.setItem(LS_IV, v); }
+
+let imgs=loadList(); let iv=loadIv(); let idx=0; let timer=null;
+
+function renderList(){
+  listEl.innerHTML='';
+  if(!imgs.length){ listEl.innerHTML='<div class="small" style="opacity:.8">No photos yet. Tap “Add Photos”.</div>'; big.removeAttribute('src'); return; }
+  imgs.forEach((src,i)=>{
+    const row=document.createElement('div'); row.className='item';
+    row.innerHTML=`<div class="small">Photo ${i+1}</div><button class="btn">Remove</button>`;
+    row.querySelector('button').onclick=()=>{ imgs.splice(i,1); saveList(imgs); renderList(); startShow(); };
+    listEl.appendChild(row);
+  });
+}
+
+function startShow(){
+  if(timer) clearInterval(timer);
+  if(!imgs.length){ big.removeAttribute('src'); return; }
+  idx=idx%imgs.length; big.src=imgs[idx];
+  timer=setInterval(()=>{ idx=(idx+1)%imgs.length; big.style.opacity=0; setTimeout(()=>{ big.src=imgs[idx]; big.style.opacity=1; },150); }, iv);
+}
+
+document.querySelectorAll('input[name="iv"]').forEach(r=>{
+  if(+r.value===iv) r.checked=true;
+  r.onchange=()=>{ iv=+r.value; saveIv(iv); startShow(); };
+});
+
+document.getElementById('btnAdd').onclick=()=>{ picker.click(); };
+picker.onchange=async (e)=>{
+  const files=[...e.target.files||[]];
+  for(const f of files){
+    const data=await readAndShrink(f, 1800, .9);
+    imgs.push(data);
+  }
+  saveList(imgs); renderList(); startShow(); picker.value='';
+};
+
+function readAndShrink(file,maxSide=1800,quality=.9){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1, maxSide/Math.max(img.width,img.height));
+      const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+      res(c.toDataURL('image/jpeg',quality));
+    };
+    const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
+  });
+}
+
+renderList(); startShow();
+
+// SW
+if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
