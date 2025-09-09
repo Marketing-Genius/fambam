@@ -6,518 +6,526 @@
 <title>Fambam · Dinner Planner</title>
 
 <meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
 <style>
 :root{
   --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
-  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:14px;
+  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px
 }
 html,body{height:100%}
 body{
-  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
-  color:var(--text); background:#0f172a;
-  -webkit-tap-highlight-color: transparent;
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  color:var(--text); background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
 }
-
-/* Header */
-header{
-  display:flex; gap:12px; align-items:center; justify-content:space-between;
-  background:#0b1224; border:1px solid #243043; border-radius:16px; padding:12px 14px;
-  box-shadow: var(--shadow); margin:16px;
+.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
+.panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.title{font-weight:800;letter-spacing:.2px}
+.title .small{font-weight:600;font-size:.85rem;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+input,button,select{font:inherit;color:var(--text)}
+select, input[type="text"], textarea{background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 12px;min-width:140px;color:var(--text)}
+textarea{min-height:88px;resize:vertical}
+button{cursor:pointer}
+.btn{background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px}
+.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
+.btn-ghost{background:transparent;border:1px dashed #334155;color:var(--muted)}
+.btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
+.btn-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;border:1px solid #334155;background:#0b1224}
+.btn-badge{position:relative}
+.btn-badge[data-hasnotes="true"]::after{
+  content:""; position:absolute; right:8px; top:8px; width:8px; height:8px; border-radius:50%;
+  background:#22d3ee; box-shadow:0 0 0 2px rgba(11,18,36,.8);
 }
-.title{display:flex; flex-direction:column;}
-.title .big{font-weight:800; font-size:1.2rem}
-.title .small{color:var(--muted); font-size:.9rem}
-.controls{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-.btn{font:inherit; color:#e5e7eb; background:#0b1224; border:1px solid #334155; border-radius:12px; padding:8px 12px; cursor:pointer}
-.btn-ghost{background:transparent}
-.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4); color:#001018; border:none; font-weight:800}
-.icon{font-size:1.1rem}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1224;border:1px solid #334155;color:#cbd5e1}
 
-/* Week row */
-.weekRow{display:flex; gap:12px; align-items:center; padding:0 16px; margin-top:-6px}
-.weekBadge{background:#0b1224; border:1px solid #334155; border-radius:10px; padding:6px 10px}
+.grid{display:grid;gap:14px}
+@media(min-width:860px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.card{display:grid;gap:12px;background:var(--panel);border:1px solid #1f2937;border-radius:16px;padding:14px}
+.card .head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.card .head .right{display:flex;gap:8px;align-items:center}
+.day{font-weight:800}
+.row{display:grid;gap:8px;grid-template-columns:92px 1fr 1fr}
+.row .label{color:#cbd5e1;align-self:center}
+.row .actions{display:flex;gap:8px;align-items:center}
+.add-line{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hint{opacity:.8;font-size:.9rem;text-align:center}
+.version{opacity:.6;font-size:.8rem;margin-top:6px}
 
-/* Day cards */
-.container{max-width:1100px; margin:0 auto 40px; padding:0 16px; display:grid; gap:14px}
-@media(min-width:900px){ .container{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
-.card{
-  background:rgba(31,41,55,.85); border:1px solid rgba(31,41,55,.9);
-  border-radius:16px; padding:12px; box-shadow:var(--shadow)
-}
-.card header{ display:flex; justify-content:space-between; align-items:center; padding:8px 0 12px 0; background:transparent; border:0; margin:0 }
-.card h3{ margin:0; font-size:1rem }
-.row{ display:grid; grid-template-columns: 120px 1fr auto; gap:10px; align-items:center; margin:8px 0 }
-.label{ color:var(--muted) }
-.sel{ display:flex; gap:8px; align-items:center }
-select{ width:100%; background:#0b1224; color:#e5e7eb; border:1px solid #334155; border-radius:10px; padding:8px 10px; font:inherit }
-.noteBtn{ min-width:40px }
-.badge{ display:inline-block; background:#0b1224; border:1px solid #334155; border-radius:10px; padding:4px 8px; font-size:.8rem; color:#cbd5e1 }
-
-/* Modals */
-.sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* Modal (scroll-safe) */
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
-.modal{width:min(900px,100%);background:rgba(17,24,39,.98);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
-.modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937}
-.modal .body{padding:14px 16px;display:grid;gap:14px; max-height:70vh; overflow:auto}
-.modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
+.modal{width:min(900px,100%);max-height:90vh;display:flex;flex-direction:column;
+       background:var(--panel);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
+.modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937;position:sticky;top:0;background:inherit;z-index:1}
+.modal .body{padding:14px 16px;display:grid;gap:16px;overflow:auto;max-height:70vh}
+@supports (-webkit-touch-callout: none) { .modal .body{ -webkit-overflow-scrolling: touch; } }
+.modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:inherit}
 
-/* Manage foods list */
-.list{display:grid; gap:10px;}
-.item{display:flex; align-items:center; gap:10px; background:#1f2937; border:1px solid #111827; border-radius:12px; padding:10px}
-.item input{flex:1; background:#0b1224; color:#e5e7eb; border:1px solid #334155; border-radius:10px; padding:8px 10px}
-.item .rowBtns{display:flex; gap:8px}
-.tabbar{display:flex; gap:8px; flex-wrap:wrap}
-.tab{padding:8px 12px; border-radius:10px; background:#0b1224; border:1px solid #334155; cursor:pointer}
-.tab[aria-selected="true"]{ outline:2px solid var(--accent) }
-.tabpanel{ display:none }
-.tabpanel[aria-hidden="false"]{ display:block }
+/* Lists inside Manage */
+.list{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
+.two-col{display:grid;gap:16px}
+@media(min-width:780px){.two-col{grid-template-columns:1fr 1fr}}
 
-/* Footer note */
-footer{ text-align:center; color:#8fb7ff; opacity:.7; font-size:.85rem; padding:10px }
-footer .v{ opacity:.6; font-size:.72rem }
+.pin-input{font:inherit;color:var(--text);background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px 16px;letter-spacing:2px;text-align:center}
+.smallmuted{color:#94a3b8;font-size:.9rem}
+.noteRow{display:flex;align-items:center;justify-content:space-between;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
 </style>
 </head>
 <body>
-
-<header>
-  <div class="title">
-    <div class="big">Dinner Planner</div>
-    <div class="small">Plan dinners · templates · groceries</div>
-  </div>
-  <div class="controls">
-    <a class="btn" href="./index.html">← Home</a>
-    <span class="weekBadge" id="weekLabel">Week of …</span>
-    <button id="btnPrev" class="btn btn-ghost">◀</button>
-    <button id="btnNext" class="btn btn-ghost">▶</button>
-    <button id="btnManage" class="btn">Manage</button>
-    <button id="btnGroceries" class="btn">Copy Groceries</button>
-  </div>
-</header>
-
-<div class="container" id="days"></div>
-
-<footer>
-  Works offline · data stays on this device
-  <div class="v">Dinner v1.3 (Food Notes)</div>
-</footer>
-
-<!-- Manage Foods Modal -->
-<div id="manageModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="manageTitle">
-  <div class="modal">
-    <header>
-      <div id="manageTitle" style="font-weight:800">Manage Foods</div>
-      <button class="btn" data-close>✖</button>
-    </header>
-    <div class="body">
-      <div class="tabbar">
-        <button class="tab" data-tab="kidsMain" aria-selected="true">Kids – Main</button>
-        <button class="tab" data-tab="kidsSide">Kids – Side</button>
-        <button class="tab" data-tab="parentMain">Parents – Main</button>
-        <button class="tab" data-tab="parentSide">Parents – Side</button>
-        <button class="tab" data-tab="desserts">Desserts</button>
+  <div class="app">
+    <header class="panel">
+      <div class="title">
+        <div style="font-size:1.6rem">Dinner Planner</div>
+        <div class="small">Plan dinners for the week. Templates, groceries & sharing included.</div>
       </div>
+      <div class="controls">
+        <a href="./index.html" class="btn-back">← Home</a>
+        <button id="btnTemplates" class="btn">Templates</button>
+        <button id="btnPizzaFri" class="btn-ghost" title="Auto-fill 🍕 on Fridays">🍕 Pizza Fri: <span id="pizzaState">off</span></button>
+        <button id="btnManage" class="btn-primary">Manage</button>
+        <button id="btnGroceries" class="btn">Groceries</button>
+        <button id="btnShareGro" class="btn">Share Groceries</button>
+        <button id="btnSharePlan" class="btn">Share Plan</button>
+        <button id="btnReset"  class="btn">Reset Week</button>
+        <button id="btnCopy"   class="btn">Copy Summary</button>
+        <button id="btnAdmin"  class="btn-icon" title="Admin">⚙️</button>
+      </div>
+    </header>
 
-      <!-- Panels -->
-      <section class="tabpanel" data-panel="kidsMain" aria-hidden="false">
-        <div class="list" id="list-kidsMain"></div>
-        <div class="item">
-          <input id="add-kidsMain" placeholder="Add item"/>
-          <div class="rowBtns">
-            <button class="btn" data-add="kidsMain">Add</button>
+    <section class="panel" id="weekPanel">
+      <div>Week of <b id="weekLabel"></b></div>
+    </section>
+
+    <section class="grid" id="cards"></section>
+
+    <div class="hint">
+      Works offline. Data stays on this device (local only).
+      <div class="version">Dinner Planner v1.3 (Food notes + rating dropdown)</div>
+    </div>
+  </div>
+
+  <!-- Manage Modal -->
+  <div class="modal-backdrop" id="manageModal" aria-hidden="true" role="dialog" aria-labelledby="manageTitle">
+    <div class="modal">
+      <header>
+        <div id="manageTitle" style="font-weight:800">Manage Menus</div>
+        <button id="manageClose" class="btn">✖</button>
+      </header>
+      <div class="body two-col">
+        <div>
+          <div class="badge">Food Options (for Main & Side)</div>
+          <div id="foodList" class="list"></div>
+          <div class="add-line">
+            <input id="newFood" type="text" placeholder="Add food (e.g., 🍕 Pizza)"/>
+            <button id="addFood" class="btn-primary">Add</button>
           </div>
         </div>
-      </section>
-
-      <section class="tabpanel" data-panel="kidsSide" aria-hidden="true">
-        <div class="list" id="list-kidsSide"></div>
-        <div class="item">
-          <input id="add-kidsSide" placeholder="Add item"/>
-          <div class="rowBtns"><button class="btn" data-add="kidsSide">Add</button></div>
+        <div>
+          <div class="badge">Dessert Options</div>
+          <div id="dessertList" class="list"></div>
+          <div class="add-line">
+            <input id="newDessert" type="text" placeholder="Add dessert (e.g., 🍨 Ice Cream)"/>
+            <button id="addDessert" class="btn-primary">Add</button>
+          </div>
         </div>
-      </section>
-
-      <section class="tabpanel" data-panel="parentMain" aria-hidden="true">
-        <div class="list" id="list-parentMain"></div>
-        <div class="item">
-          <input id="add-parentMain" placeholder="Add item"/>
-          <div class="rowBtns"><button class="btn" data-add="parentMain">Add</button></div>
+        <div style="grid-column:1 / -1">
+          <div class="badge">Pantry / Staples (excluded from grocery list)</div>
+          <textarea id="pantryBox" placeholder="e.g., salt, pepper, ketchup, olive oil"></textarea>
         </div>
-      </section>
-
-      <section class="tabpanel" data-panel="parentSide" aria-hidden="true">
-        <div class="list" id="list-parentSide"></div>
-        <div class="item">
-          <input id="add-parentSide" placeholder="Add item"/>
-          <div class="rowBtns"><button class="btn" data-add="parentSide">Add</button></div>
-        </div>
-      </section>
-
-      <section class="tabpanel" data-panel="desserts" aria-hidden="true">
-        <div class="list" id="list-desserts"></div>
-        <div class="item">
-          <input id="add-desserts" placeholder="Add dessert"/>
-          <div class="rowBtns"><button class="btn" data-add="desserts">Add</button></div>
-        </div>
-      </section>
-    </div>
-    <div class="footer">
-      <button class="btn-primary" data-close>Done</button>
+      </div>
+      <div class="footer">
+        <button id="manageSave" class="btn-primary">Done</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Food Notes Modal (editor) -->
-<div id="notesModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="notesTitle">
-  <div class="modal">
-    <header>
-      <div id="notesTitle" style="font-weight:800">Food Notes</div>
-      <button class="btn" data-close>✖</button>
-    </header>
-    <div class="body">
-      <div class="badge">Item</div>
-      <div id="fn-item" class="badge" style="font-weight:800"></div>
-
-      <div class="badge">Global notes</div>
-      <textarea id="fn-global" class="btn" style="min-height:80px"></textarea>
-
-      <div class="badge">Kid-specific notes</div>
-      <div id="fn-kids"></div>
-    </div>
-    <div class="footer">
-      <button id="fn-save" class="btn-primary">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- Food Notes Modal (viewer) -->
-<div id="notesView" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="notesViewTitle">
-  <div class="modal" style="max-width:620px">
-    <header>
-      <div id="notesViewTitle" style="font-weight:800">Notes</div>
-      <button class="btn" data-close>✖</button>
-    </header>
-    <div class="body" id="notesViewBody"></div>
-    <div class="footer">
-      <button class="btn-primary" data-close>Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- Family store (if available) -->
-<script src="family.js?v=3.3.6"></script>
-<script>
-/* ===== Utilities & Store ===== */
-const $$ = (sel, root=document)=> Array.from(root.querySelectorAll(sel));
-const load = (k, f)=>{ try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? f; }catch{ return f; } };
-const save = (k, v)=> localStorage.setItem(k, JSON.stringify(v));
-const uid = ()=> Math.random().toString(36).slice(2,10);
-const today = new Date();
-function mondayOf(d){ const n=new Date(d); const day=(n.getDay()+6)%7; n.setDate(n.getDate()-day); n.setHours(0,0,0,0); return n; }
-function fmtDate(d){ return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}); }
-function weekKey(d){ const m = mondayOf(d); const y = m.getFullYear(); const w = Math.floor(( (m - new Date(y,0,1)) / 86400000 + ((new Date(y,0,1).getDay()+6)%7) ) / 7)+1; return `${y}-W${String(w).padStart(2,'0')}`; }
-
-const K = {
-  foods: {
-    kidsMain: 'dp:foods:kidsMain',
-    kidsSide: 'dp:foods:kidsSide',
-    parentMain: 'dp:foods:parentMain',
-    parentSide: 'dp:foods:parentSide',
-    desserts: 'dp:foods:desserts',
-  },
-  planPrefix: 'dp:plan:week:',
-  notes: 'dp:food:notes' // map: label -> {global, perKid:{kidId:text}}
-};
-
-// Seed defaults once
-(function seed(){
-  if (!localStorage.getItem(K.foods.kidsMain)) save(K.foods.kidsMain,
-    ['🍝 Spaghetti','🍗 Chicken Nuggets','🌮 Tacos','🍕 Pizza','🥪 Sandwiches','🍛 Fried Rice','🥣 Mac & Cheese','🥟 Pot Stickers','🍲 Soup','🥚 Omelets']);
-  if (!localStorage.getItem(K.foods.kidsSide)) save(K.foods.kidsSide,
-    ['🥦 Veggies','🍎 Fruit','🥗 Salad','🍞 Bread','🧀 Cheese','🥔 Fries','🍚 Rice','🫘 Beans']);
-  if (!localStorage.getItem(K.foods.parentMain)) save(K.foods.parentMain,
-    ['🥩 Steak & Veg','🍣 Baked Fish','🍗 Roast Chicken','🥘 Curry','🍝 Pasta','🥗 Big Salad','🍔 Burgers','🌯 Fajitas']);
-  if (!localStorage.getItem(K.foods.parentSide)) save(K.foods.parentSide,
-    ['🥦 Veggies','🥗 Salad','🍞 Bread','🥔 Potatoes','🍚 Rice','🫘 Beans']);
-  if (!localStorage.getItem(K.foods.desserts)) save(K.foods.desserts,
-    ['🍨 Ice Cream','🍪 Cookies','🧁 Cupcakes','🍫 Chocolate','🍓 Berries','🍰 Cake']);
-})();
-
-/* ===== Week state ===== */
-let currentMonday = mondayOf(today);
-const weekLabel = document.getElementById('weekLabel');
-function updateWeekLabel(){
-  const end = new Date(currentMonday); end.setDate(end.getDate()+6);
-  weekLabel.textContent = `Week of ${fmtDate(currentMonday)} – ${fmtDate(end)}`;
-}
-document.getElementById('btnPrev').onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); renderWeek(); };
-document.getElementById('btnNext').onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); renderWeek(); };
-
-/* ===== Plan storage ===== */
-function loadPlan(){
-  return load(K.planPrefix+weekKey(currentMonday), {
-    days: Array.from({length:7},()=>({
-      kids:{main:'',side:'',dessert:''},
-      parents:{main:'',side:''}
-    }))
-  });
-}
-function savePlan(p){
-  save(K.planPrefix+weekKey(currentMonday), p);
-}
-
-/* ===== Food Notes helpers ===== */
-function getNotesMap(){ return load(K.notes, {}); }
-function setNotesMap(m){ save(K.notes, m); }
-function getKidList(){ return (window.Family && Family.getKids && Family.getKids()) || []; }
-
-/* ===== UI: Manage modal ===== */
-const manageModal = document.getElementById('manageModal');
-function openManage(){ manageModal.style.display='flex'; buildManageLists(); }
-function closeManage(){ manageModal.style.display='none'; }
-$$('#manageModal [data-close]').forEach(b=> b.onclick = closeManage);
-
-// Tabs
-$$('#manageModal .tab').forEach(t=>{
-  t.onclick = ()=>{
-    $$(`#manageModal .tab`).forEach(x=>x.setAttribute('aria-selected','false'));
-    t.setAttribute('aria-selected','true');
-    const key = t.dataset.tab;
-    $$(`#manageModal .tabpanel`).forEach(p=>p.setAttribute('aria-hidden', String(p.dataset.panel!==key)));
-  };
-});
-
-function buildManageLists(){
-  ['kidsMain','kidsSide','parentMain','parentSide','desserts'].forEach(key=>{
-    const listEl = document.getElementById('list-'+key);
-    const arr = load(K.foods[key], []);
-    listEl.innerHTML='';
-    arr.forEach((label, idx)=>{
-      const row = document.createElement('div');
-      row.className='item';
-      row.innerHTML = `
-        <input value="${escapeHtml(label)}"/>
-        <div class="rowBtns">
-          <button class="btn" data-notes>📝 Notes</button>
-          <button class="btn" data-up>▲</button>
-          <button class="btn" data-down>▼</button>
-          <button class="btn" data-del>Remove</button>
-        </div>`;
-      const input = row.querySelector('input');
-      input.oninput = () => { arr[idx] = input.value; save(K.foods[key], arr); };
-      row.querySelector('[data-del]').onclick = () => { arr.splice(idx,1); save(K.foods[key],arr); buildManageLists(); };
-      row.querySelector('[data-up]').onclick = () => { if(idx>0){ const t=arr[idx-1]; arr[idx-1]=arr[idx]; arr[idx]=t; save(K.foods[key],arr); buildManageLists(); } };
-      row.querySelector('[data-down]').onclick = () => { if(idx<arr.length-1){ const t=arr[idx+1]; arr[idx+1]=arr[idx]; arr[idx]=t; save(K.foods[key],arr); buildManageLists(); } };
-      row.querySelector('[data-notes]').onclick = ()=> openNotesEditor(label, (newLabel)=>{
-        // If label text changed in editor header we can remap notes (optional)
-        if (newLabel && newLabel!==label){
-          const notes = getNotesMap();
-          if (notes[label] && !notes[newLabel]){ notes[newLabel] = notes[label]; delete notes[label]; setNotesMap(notes); }
-        }
-      });
-      listEl.appendChild(row);
-    });
-    const addBtn = document.querySelector(`[data-add="${key}"]`);
-    const addInp = document.getElementById('add-'+key);
-    addBtn.onclick = ()=>{ const v=(addInp.value||'').trim(); if(!v) return; arr.push(v); save(K.foods[key],arr); addInp.value=''; buildManageLists(); };
-  });
-}
-
-document.getElementById('btnManage').onclick = ()=>{
-  // Optional PIN gate if Family PIN is set
-  const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
-  if (hasPin && window.Family && Family.verifyPin){
-    const pin = prompt('Enter Admin PIN'); if (pin===null) return;
-    if (!Family.verifyPin(pin)){ alert('Incorrect PIN'); return; }
-  }
-  openManage();
-};
-
-/* ===== UI: Notes editor ===== */
-const notesModal = document.getElementById('notesModal');
-const fnItem = document.getElementById('fn-item');
-const fnGlobal = document.getElementById('fn-global');
-const fnKidsWrap = document.getElementById('fn-kids');
-document.querySelectorAll('#notesModal [data-close]').forEach(b=> b.onclick = ()=> notesModal.style.display='none');
-
-function openNotesEditor(label, onSaveLabelChanged){
-  const notes = getNotesMap();
-  const entry = notes[label] || { global:'', perKid:{} };
-  fnItem.textContent = label;
-  fnGlobal.value = entry.global || '';
-  fnKidsWrap.innerHTML = '';
-  const kids = getKidList();
-  kids.forEach(k=>{
-    const wrap = document.createElement('div');
-    wrap.innerHTML = `
-      <div class="badge" style="margin:8px 0 6px 0">${escapeHtml(k.name)}</div>
-      <textarea class="btn" data-kid="${k.id}" style="width:100%;min-height:60px" placeholder="Notes for ${escapeHtml(k.name)}…"></textarea>`;
-    wrap.querySelector('textarea').value = entry.perKid?.[k.id] || '';
-    fnKidsWrap.appendChild(wrap);
-  });
-  notesModal.style.display='flex';
-
-  document.getElementById('fn-save').onclick = ()=>{
-    const n = getNotesMap();
-    const perKid = {};
-    $$(`#fn-kids textarea`).forEach(t=>{ const v=t.value.trim(); if(v) perKid[t.dataset.kid]=v; });
-    n[label] = { global: fnGlobal.value.trim(), perKid };
-    setNotesMap(n);
-    if (onSaveLabelChanged) onSaveLabelChanged(fnItem.textContent);
-    notesModal.style.display='none';
-  };
-}
-
-/* ===== UI: Notes viewer ===== */
-const notesView = document.getElementById('notesView');
-const notesViewBody = document.getElementById('notesViewBody');
-$$('#notesView [data-close]').forEach(b=> b.onclick = ()=> notesView.style.display='none');
-
-function showNotes(label){
-  const entry = getNotesMap()[label];
-  if (!entry || (!entry.global && !Object.keys(entry.perKid||{}).length)){
-    alert('No notes yet for this item.'); return;
-  }
-  notesViewBody.innerHTML = '';
-  const sec = (title, text) => {
-    const d=document.createElement('div');
-    d.innerHTML = `<div class="badge" style="margin-top:6px">${title}</div><div class="btn" style="white-space:pre-wrap">${escapeHtml(text)}</div>`;
-    notesViewBody.appendChild(d);
-  };
-  if (entry.global) sec('Global', entry.global);
-  const kids = getKidList();
-  kids.forEach(k=>{
-    const v = entry.perKid?.[k.id];
-    if (v) sec(k.name, v);
-  });
-  document.getElementById('notesViewTitle').textContent = `Notes · ${label}`;
-  notesView.style.display='flex';
-}
-
-/* ===== Render week ===== */
-const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-function renderWeek(){
-  updateWeekLabel();
-  const root = document.getElementById('days'); root.innerHTML='';
-  const plan = loadPlan();
-  for (let i=0;i<7;i++){
-    const d = new Date(currentMonday); d.setDate(d.getDate()+i);
-    const p = plan.days[i];
-
-    const el = document.createElement('div');
-    el.className='card';
-    el.innerHTML = `
+  <!-- Templates Modal -->
+  <div class="modal-backdrop" id="tplModal" aria-hidden="true" role="dialog" aria-labelledby="tplTitle">
+    <div class="modal">
       <header>
-        <h3>${dayNames[i]}, ${fmtDate(d)}</h3>
-        ${i===4 ? '<span class="badge">🍕 Pizza Night</span>' : ''}
+        <div id="tplTitle" style="font-weight:800">Templates</div>
+        <button id="tplClose" class="btn">✖</button>
       </header>
+      <div class="body">
+        <div class="badge">Built-ins</div>
+        <div class="list" id="tplBuiltins"></div>
+        <div class="badge">Your Templates</div>
+        <div class="list" id="tplUser"></div>
+        <div class="add-line">
+          <input id="tplName" type="text" placeholder="Template name (e.g., Week: Pizza Friday)"/>
+          <button id="tplSave" class="btn-primary">Save Current as Template</button>
+        </div>
+      </div>
+      <div class="footer">
+        <button id="tplApplyDone" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Groceries Modal -->
+  <div class="modal-backdrop" id="groModal" aria-hidden="true" role="dialog" aria-labelledby="groTitle">
+    <div class="modal">
+      <header>
+        <div id="groTitle" style="font-weight:800">Grocery List</div>
+        <button id="groClose" class="btn">✖</button>
+      </header>
+      <div class="body" id="groBody"></div>
+      <div class="footer">
+        <button id="groCopy" class="btn">Copy</button>
+        <button id="groDownload" class="btn-primary">Download .txt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day Notes Modal -->
+  <div class="modal-backdrop" id="dayNotesModal" aria-hidden="true" role="dialog" aria-labelledby="dayNotesTitle">
+    <div class="modal">
+      <header>
+        <div id="dayNotesTitle" style="font-weight:800">Food Notes</div>
+        <button id="dayNotesClose" class="btn">✖</button>
+      </header>
+      <div class="body" id="dayNotesBody">
+        <!-- rows injected -->
+      </div>
+      <div class="footer">
+        <button id="dayNotesDone" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Food Notes Editor Modal -->
+  <div class="modal-backdrop" id="notesEditModal" aria-hidden="true" role="dialog" aria-labelledby="notesEditTitle">
+    <div class="modal">
+      <header>
+        <div id="notesEditTitle" style="font-weight:800">Edit Notes</div>
+        <button id="notesEditClose" class="btn">✖</button>
+      </header>
+      <div class="body">
+        <div class="badge">Item</div>
+        <div id="fnLabel" class="smallmuted"></div>
+
+        <div class="badge">Global notes</div>
+        <textarea id="fnGlobal"></textarea>
+
+        <div class="badge">Kid-specific notes</div>
+        <div id="fnKids"></div>
+      </div>
+      <div class="footer">
+        <button id="fnSave" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIN Modal -->
+  <div class="modal-backdrop" id="pinModal" aria-hidden="true" role="dialog" aria-labelledby="pinTitle">
+    <div class="modal" style="max-width:420px">
+      <header>
+        <div id="pinTitle" style="font-weight:800">Enter Admin PIN</div>
+        <button id="pinClose" class="btn">✖</button>
+      </header>
+      <div class="body" style="gap:12px">
+        <input id="pinInputModal" class="pin-input" inputmode="numeric" pattern="\\d*" placeholder="PIN (numbers only)" autofocus />
+      </div>
+      <div class="footer">
+        <button id="pinOk" class="btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Family store -->
+  <script src="family.js?v=3.3.6"></script>
+
+  <script>
+  // Share helper (native share → SMS deeplink → clipboard)
+  async function shareText(content){
+    try{ if(navigator.share){ await navigator.share({text:content}); return; } }catch{}
+    const encoded=encodeURIComponent(content);
+    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+    const href=isIOS?`sms:&body=${encoded}`:`sms:?body=${encoded}`;
+    try{ location.href=href; return; }catch{}
+    try{ await navigator.clipboard.writeText(content); alert('Copied to clipboard.'); }
+    catch{ alert('Share unavailable. Copy/paste this:\n\n'+content); }
+  }
+  </script>
+
+  <script>
+/* ---------- Base storage/seed (unchanged) ---------- */
+const LS={foods:'dp:foods:list',desserts:'dp:desserts:list',week:(m)=>`dp:plan:${m}`,templates:'dp:tpls',pantry:'dp:pantry',pizzaFri:'dp:pizzaFri', notes:'dp:food:notes'};
+const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
+const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const uid=()=>Math.random().toString(36).slice(2,10);
+function startOfWeekMonday(d=new Date()){const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=(dt.getUTCDay()+6)%7;dt.setUTCDate(dt.getUTCDate()-day);return dt;}
+function isoDateUTC(d){return d.toISOString().slice(0,10)} function thisMondayISO(){return isoDateUTC(startOfWeekMonday(new Date()))}
+function weekLabelText(mISO){const m=new Date(mISO+'T00:00:00Z');const e=new Date(m);e.setUTCDate(e.getUTCDate()+6);const f=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});return `${f(m)} – ${f(e)}`}
+function seedFoodsIfNeeded(){let foods=load(LS.foods,null);if(!Array.isArray(foods)||foods.length<10){foods=["🍕 Pizza","🌮 Tacos","🍝 Spaghetti","🍗 Chicken Nuggets","🥪 Sandwiches","🌭 Hot Dogs","🍔 Burgers","🥗 Caesar Salad","🍛 Curry & Rice","🥟 Potstickers","🍤 Shrimp Stir-Fry","🥞 Breakfast for Dinner","🥔 Baked Potatoes","🍣 Sushi Night","🌯 Burritos","🥘 Chili","🍜 Ramen","🥙 Pita & Hummus","🍖 BBQ Chicken","🥦 Veggie Stir-Fry","🧆 Meatballs","🥩 Steak & Veg","🥧 Pot Pie","🍚 Fried Rice","🧀 Mac & Cheese","🐟 Baked Fish","🥚 Omelets","🍲 Chicken Noodle Soup","🥒 Snack Plate","🥬 Tacos (Veggie)","🌮 Taco Salad","🌯 Quesadillas","🍝 Penne & Marinara","🥗 Greek Salad","🍖 Pulled Pork","🍗 Roasted Chicken","🍝 Alfredo Pasta","🥪 BLT","🌶️ Fajitas","🍖 Ribs","🍝 Lasagna","🥗 Cobb Salad","🍛 Butter Chicken","🥘 Paella","🍚 Teriyaki Bowls","🍠 Sweet Potatoes","🥨 Pretzel Dogs","🥪 Grilled Cheese","🍤 Popcorn Shrimp","🍕 Flatbreads"];save(LS.foods,foods)}let desserts=load(LS.desserts,null);if(!Array.isArray(desserts)||desserts.length<3){desserts=["🍪 Cookies","🍨 Ice Cream","🍰 Cake","🍓 Berries & Cream","🥧 Pie","🍫 Brownies","🍮 Pudding","🍎 Apple Slices & PB"];save(LS.desserts,desserts)}if(load(LS.pantry,null)==null){save(LS.pantry,["salt","pepper","ketchup","mustard","olive oil","butter"])}if(load(LS.pizzaFri,null)==null){save(LS.pizzaFri,false)}}
+
+/* ---------- Plan model (unchanged) ---------- */
+const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+function emptyDay(){return {kids:{main:"",side:""},parents:{main:"",side:""},dessert:"",rating:0}}
+function loadWeekPlan(mISO){let plan=load(LS.week(mISO),null);if(!plan){plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay());save(LS.week(mISO),plan)}if(load(LS.pizzaFri,false)){const fri=plan.days["Fri"];if(fri&&!fri.kids.main&&!fri.parents.main){fri.kids.main="🍕 Pizza";fri.parents.main="🍕 Pizza";save(LS.week(mISO),plan)}}return plan}
+function saveWeekPlan(mISO,plan){save(LS.week(mISO),plan)}
+
+/* ---------- Food Notes store ---------- */
+function getNotes(){ return load(LS.notes, {}); }
+function setNotes(map){ save(LS.notes, map); }
+function getKids(){ return (window.Family && Family.getKids && Family.getKids()) || []; }
+
+/* ---------- Render ---------- */
+function render(){
+  const mISO=thisMondayISO();
+  $('#weekLabel').textContent=weekLabelText(mISO);
+  const plan=loadWeekPlan(mISO);
+  const foods=load(LS.foods,[]),desserts=load(LS.desserts,[]);
+  const cards=$('#cards'); cards.innerHTML='';
+
+  DAYS.forEach((day,i)=>{
+    const data=plan.days[day]||emptyDay();
+    const dt=new Date(mISO+'T00:00:00Z'); dt.setUTCDate(dt.getUTCDate()+i);
+    const nice=dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+
+    const el=document.createElement('div'); el.className='card'; el.dataset.day=day;
+
+    // rating dropdown
+    const rateSel = `
+      <select data-rate="${day}" title="How did dinner go?">
+        <option value="">— rating —</option>
+        <option value="1"${data.rating===1?' selected':''}>👍</option>
+        <option value="0"${data.rating===0?' selected':''}>😐</option>
+        <option value="-1"${data.rating===-1?' selected':''}>👎</option>
+      </select>`;
+
+    // notes button + indicator
+    const hasAnyNotes = dayHasAnyNotes(data);
+    const notesBtn = `<button class="btn btn-badge" data-notes="${day}" ${hasAnyNotes?'data-hasnotes="true"':''}>Notes</button>`;
+
+    el.innerHTML = `
+      <div class="head">
+        <div class="day">${day}</div>
+        <div class="right">
+          <span class="badge">${nice}</span>
+          ${rateSel}
+          ${notesBtn}
+        </div>
+      </div>
 
       <div class="row">
         <div class="label">Kids</div>
-        <div class="sel">
-          <select data-k="kids.main"></select>
-          <button class="btn noteBtn" title="Notes" data-info="kids.main">ℹ️</button>
-          <select data-k="kids.side"></select>
-          <button class="btn noteBtn" title="Notes" data-info="kids.side">ℹ️</button>
-        </div>
-        <div></div>
+        <select data-k="${day}" data-field="kids.main">${options(foods,data.kids.main)}</select>
+        <select data-k="${day}" data-field="kids.side">${options(foods,data.kids.side)}</select>
       </div>
-
       <div class="row">
         <div class="label">Parents</div>
-        <div class="sel">
-          <select data-k="parents.main"></select>
-          <button class="btn noteBtn" title="Notes" data-info="parents.main">ℹ️</button>
-          <select data-k="parents.side"></select>
-          <button class="btn noteBtn" title="Notes" data-info="parents.side">ℹ️</button>
-        </div>
-        <div></div>
+        <select data-k="${day}" data-field="parents.main">${options(foods,data.parents.main)}</select>
+        <select data-k="${day}" data-field="parents.side">${options(foods,data.parents.side)}</select>
       </div>
-
       <div class="row">
         <div class="label">Dessert</div>
-        <div class="sel">
-          <select data-k="kids.dessert"></select>
-          <button class="btn noteBtn" title="Notes" data-info="kids.dessert">ℹ️</button>
+        <div class="actions">
+          <select data-k="${day}" data-field="dessert" ${data.dessert?'':'style="display:none"'}>${options(desserts,data.dessert,true)}</select>
+          <button class="btn" data-dess="${day}">${data.dessert?'Remove dessert':'Add dessert'}</button>
         </div>
-        <div></div>
       </div>
     `;
-    root.appendChild(el);
-
-    // Populate selects
-    const fill = (sel, items, value)=> {
-      sel.innerHTML = `<option value="">Choose item…</option>` + items.map(v=>`<option>${escapeHtml(v)}</option>`).join('');
-      sel.value = value || '';
-    };
-    const foods = {
-      'kids.main': load(K.foods.kidsMain, []),
-      'kids.side': load(K.foods.kidsSide, []),
-      'parents.main': load(K.foods.parentMain, []),
-      'parents.side': load(K.foods.parentSide, []),
-      'kids.dessert': load(K.foods.desserts, [])
-    };
-    $$('select', el).forEach(sel=>{
-      const key = sel.dataset.k;
-      fill(sel, foods[key], getByPath(p, key));
-      sel.onchange = ()=>{ setByPath(p, key, sel.value); savePlan(plan); };
-    });
-
-    // Notes viewers
-    $$('[data-info]', el).forEach(btn=>{
-      btn.onclick = ()=>{
-        const sel = btn.previousElementSibling && btn.previousElementSibling.tagName==='SELECT'
-          ? btn.previousElementSibling : btn.parentElement.querySelector('select');
-        const label = sel && sel.value;
-        if (!label) { alert('No item selected.'); return; }
-        showNotes(label);
-      };
-    });
-
-    // Friday pizza autofill for convenience (does not overwrite if already set)
-    if (i===4 && !p.kids.main) { p.kids.main = '🍕 Pizza'; savePlan(plan); $$('select[data-k="kids.main"]', el)[0].value = p.kids.main; }
-  }
-}
-function getByPath(obj, path){
-  return path.split('.').reduce((o,k)=> o&&o[k], obj);
-}
-function setByPath(obj, path, val){
-  const ks = path.split('.'); const last = ks.pop();
-  const tgt = ks.reduce((o,k)=> (o[k] ??= {}), obj);
-  tgt[last] = val;
-}
-
-/* ===== Manage button & groceries ===== */
-document.getElementById('btnGroceries').onclick = ()=>{
-  const p = loadPlan();
-  const items = [];
-  p.days.forEach(day=>{
-    if (day.kids.main) items.push(day.kids.main);
-    if (day.kids.side) items.push(day.kids.side);
-    if (day.parents.main) items.push(day.parents.main);
-    if (day.parents.side) items.push(day.parents.side);
-    if (day.kids.dessert) items.push(day.kids.dessert);
+    cards.appendChild(el);
   });
-  const text = [...new Set(items)].join('\n');
-  try{
-    navigator.clipboard.writeText(text);
-    alert('Grocery list copied to clipboard.');
-  }catch{
-    alert(text || 'No items picked yet.');
+
+  // selects change
+  $$('#cards select[data-k]').forEach(sel=>{
+    sel.onchange=()=>{const day=sel.dataset.k,field=sel.dataset.field;const plan=loadWeekPlan(thisMondayISO());setByPath(plan.days[day],field,sel.value);saveWeekPlan(thisMondayISO(),plan); updateNotesBadgesFor(day);};
+  });
+
+  // dessert toggle
+  $$('[data-dess]').forEach(btn=>{
+    btn.onclick=()=>{
+      const day=btn.dataset.dess;
+      const plan=loadWeekPlan(thisMondayISO());
+      const row=btn.closest('.row'); const sel=row.querySelector('select');
+      if(plan.days[day].dessert){ plan.days[day].dessert=""; sel.style.display='none'; btn.textContent='Add dessert'; }
+      else { plan.days[day].dessert=""; sel.style.display=''; btn.textContent='Remove dessert'; }
+      saveWeekPlan(thisMondayISO(),plan); updateNotesBadgesFor(day);
+    };
+  });
+
+  // rating dropdown
+  $$('select[data-rate]').forEach(r=>{
+    r.onchange=()=>{
+      const day=r.dataset.rate, val=r.value===''?null:parseInt(r.value,10);
+      const plan=loadWeekPlan(thisMondayISO());
+      plan.days[day].rating = (val===null?0:val);
+      saveWeekPlan(thisMondayISO(),plan);
+    };
+  });
+
+  // notes per day
+  $$('[data-notes]').forEach(b=>{
+    b.onclick=()=> openDayNotes(b.dataset.notes);
+  });
+
+  $('#pizzaState').textContent=load(LS.pizzaFri,false)?'on':'off';
+}
+
+// helper to set options
+function options(list,selected,allowBlank=false){
+  const placeholder='— Choose item —';
+  const arr=allowBlank?[placeholder,...list]:[placeholder,...list];
+  return arr.map(v=>{
+    const isPH=v===placeholder; const val=isPH?'':v;
+    const sel=(val===selected)||(isPH&&!selected)?' selected':'';
+    return `<option value="${escapeHtml(val)}"${sel}>${escapeHtml(v)}</option>`;
+  }).join('');
+}
+function escapeHtml(s){return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function setByPath(o,p,val){const parts=p.split('.');for(let i=0;i<parts.length-1;i++)o=o[parts[i]];o[parts[parts.length-1]]=val}
+
+/* ---------- Manage modal + lists (unchanged) ---------- */
+const manageModal=$('#manageModal');$('#manageClose').onclick=()=>hide(manageModal);$('#manageSave').onclick=()=>{const list=($('#pantryBox').value||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);save(LS.pantry,list);hide(manageModal);}
+$('#btnManage').onclick=()=>{const hasPin=(localStorage.getItem('hub:family:pin')??'null')!=='null';if(hasPin)requestPinUI(openManage);else openManage();};
+function openManage(){buildFoodList();buildDessertList();$('#pantryBox').value=load(LS.pantry,[]).join(', ');show(manageModal);}
+function buildFoodList(){const wrap=$('#foodList');wrap.innerHTML='';const foods=load(LS.foods,[]);foods.forEach((f,idx)=>{const row=document.createElement('div');row.className='item';row.innerHTML=`<input class="btn" value="${escapeHtml(f)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;wrap.appendChild(row);row.querySelector('[data-notes]').onclick=()=>openNotesEditor(f);row.querySelector('input').oninput=e=>{foods[idx]=e.target.value;save(LS.foods,foods);render();};row.querySelector('[data-rm]').onclick=()=>{foods.splice(idx,1);save(LS.foods,foods);buildFoodList();render();};});$('#addFood').onclick=()=>{const v=($('#newFood').value||'').trim();if(!v)return;const list=load(LS.foods,[]);list.push(v);save(LS.foods,list);$('#newFood').value='';buildFoodList();render();};}
+function buildDessertList(){const wrap=$('#dessertList');wrap.innerHTML='';const ds=load(LS.desserts,[]);ds.forEach((d,idx)=>{const row=document.createElement('div');row.className='item';row.innerHTML=`<input class="btn" value="${escapeHtml(d)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;wrap.appendChild(row);row.querySelector('[data-notes]').onclick=()=>openNotesEditor(d);row.querySelector('input').oninput=e=>{ds[idx]=e.target.value;save(LS.desserts,ds);render();};row.querySelector('[data-rm]').onclick=()=>{ds.splice(idx,1);save(LS.desserts,ds);buildDessertList();render();};});$('#addDessert').onclick=()=>{const v=($('#newDessert').value||'').trim();if(!v)return;const list=load(LS.desserts,[]);list.push(v);save(LS.desserts,list);$('#newDessert').value='';buildDessertList();render();};}
+function show(m){m.style.display='flex';m.setAttribute('aria-hidden','false')}
+function hide(m){m.style.display='none';m.setAttribute('aria-hidden','true')}
+
+/* ---------- Day Notes modal ---------- */
+const dayNotesModal = $('#dayNotesModal');
+$('#dayNotesClose').onclick = ()=> hide(dayNotesModal);
+$('#dayNotesDone').onclick  = ()=> hide(dayNotesModal);
+
+function openDayNotes(day){
+  const mISO=thisMondayISO();
+  const plan=loadWeekPlan(mISO);
+  const x=plan.days[day];
+  const items = [
+    {label:x.kids.main, role:'Kids main'},
+    {label:x.kids.side, role:'Kids side'},
+    {label:x.parents.main, role:'Parents main'},
+    {label:x.parents.side, role:'Parents side'},
+    ...(x.dessert?[{label:x.dessert, role:'Dessert'}]:[])
+  ].filter(it=>it.label);
+
+  const body = $('#dayNotesBody');
+  body.innerHTML = items.length ? '' : '<div class="smallmuted">No items selected yet for this day.</div>';
+
+  const notes = getNotes();
+  items.forEach(it=>{
+    const has = !!notes[it.label];
+    const row = document.createElement('div');
+    row.className='noteRow';
+    row.innerHTML = `
+      <div><div style="font-weight:700">${escapeHtml(it.label)}</div><div class="smallmuted">${it.role}</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${has?'<span class="badge">has notes</span>':''}
+        <button class="btn" data-edit>Edit</button>
+      </div>`;
+    row.querySelector('[data-edit]').onclick = ()=> openNotesEditor(it.label, ()=>{ openDayNotes(day); updateNotesBadgesFor(day); });
+    body.appendChild(row);
+  });
+
+  $('#dayNotesTitle').textContent = `Food Notes · ${day}`;
+  show(dayNotesModal);
+}
+
+function dayHasAnyNotes(dayData){
+  const n=getNotes();
+  return [dayData?.kids?.main, dayData?.kids?.side, dayData?.parents?.main, dayData?.parents?.side, dayData?.dessert]
+    .filter(Boolean).some(lab => !!n[lab]);
+}
+function updateNotesBadgesFor(day){
+  const mISO=thisMondayISO(); const plan=loadWeekPlan(mISO); const data=plan.days[day];
+  const btn = document.querySelector(`[data-notes="${day}"]`);
+  if (btn) btn.setAttribute('data-hasnotes', String( dayHasAnyNotes(data) ));
+}
+
+/* ---------- Notes editor (global + per-kid) ---------- */
+const notesEditModal = $('#notesEditModal');
+$('#notesEditClose').onclick = ()=> hide(notesEditModal);
+$('#fnSave').onclick = saveNotesFromEditor;
+
+let _editingLabel = '';
+function openNotesEditor(label, onSaved){
+  _editingLabel = label;
+  $('#fnLabel').textContent = label;
+
+  const map = getNotes();
+  const entry = map[label] || { global:'', perKid:{} };
+  $('#fnGlobal').value = entry.global || '';
+
+  const kidsWrap = $('#fnKids'); kidsWrap.innerHTML='';
+  const kids = getKids();
+  if (!kids.length) {
+    const p=document.createElement('div');
+    p.className='smallmuted';
+    p.textContent='(Optional: add kids in Admin on Home to save kid-specific notes.)';
+    kidsWrap.appendChild(p);
+  } else {
+    kids.forEach(k=>{
+      const div=document.createElement('div');
+      div.innerHTML = `
+        <div class="smallmuted" style="margin:.4rem 0 .2rem 0">${escapeHtml(k.name)}</div>
+        <textarea data-kid="${k.id}" class="btn" style="width:100%;min-height:60px"></textarea>`;
+      div.querySelector('textarea').value = entry.perKid?.[k.id] || '';
+      kidsWrap.appendChild(div);
+    });
   }
-};
 
-/* ===== Wire up manage open ===== */
-document.getElementById('btnManage').addEventListener('click', ()=>{});
+  notesEditModal.dataset.onsaved = onSaved ? '1' : '';
+  notesEditModal._onSavedCb = onSaved || null;
+  show(notesEditModal);
+}
+function saveNotesFromEditor(){
+  const label = _editingLabel;
+  const map = getNotes();
+  const perKid = {};
+  $$('#fnKids textarea').forEach(t=>{ const v=t.value.trim(); if(v) perKid[t.dataset.kid]=v; });
+  map[label] = { global: $('#fnGlobal').value.trim(), perKid };
+  setNotes(map);
+  hide(notesEditModal);
+  if (notesEditModal._onSavedCb) notesEditModal._onSavedCb();
+}
 
-/* ===== Start ===== */
-updateWeekLabel();
-renderWeek();
+/* ---------- Templates / Groceries / Share (unchanged) ---------- */
+const tplModal=$('#tplModal');$('#tplClose').onclick=()=>hide(tplModal);$('#tplApplyDone').onclick=()=>hide(tplModal);$('#btnTemplates').onclick=()=>openTemplates();
+$('#tplSave').onclick=()=>{const name=($('#tplName').value||'').trim();if(!name)return alert('Name your template');const plan=loadWeekPlan(thisMondayISO());const t=load(LS.templates,[]);t.push({id:uid(),name,plan});save(LS.templates,t);$('#tplName').value='';buildTplLists();}
+function openTemplates(){buildTplLists();show(tplModal)}
+function buildTplLists(){const built=$('#tplBuiltins');built.innerHTML='';const pizza=document.createElement('div');pizza.className='item';pizza.innerHTML=`<div>🍕 Pizza Friday</div><button class="btn" data-apply>Apply</button>`;pizza.querySelector('[data-apply]').onclick=()=>{applyPizzaFriday();};built.appendChild(pizza);const wrap=$('#tplUser');wrap.innerHTML='';const tpls=load(LS.templates,[]);if(!tpls.length){const empty=document.createElement('div');empty.className='item';empty.innerHTML='<div>No saved templates yet.</div>';wrap.appendChild(empty);}else{tpls.forEach(t=>{const row=document.createElement('div');row.className='item';row.innerHTML=`<div>${escapeHtml(t.name)}</div><div style="display:flex;gap:8px"><button class="btn" data-apply>Apply</button><button class="btn-warn" data-del>Delete</button></div>`;wrap.appendChild(row);row.querySelector('[data-apply]').onclick=()=>{save(LS.week(thisMondayISO()),t.plan);render();};row.querySelector('[data-del]').onclick=()=>{const arr=load(LS.templates,[]).filter(x=>x!==t);save(LS.templates,arr);buildTplLists();};});}}
+function applyPizzaFriday(){const plan=loadWeekPlan(thisMondayISO());plan.days["Fri"].kids.main="🍕 Pizza";plan.days["Fri"].parents.main="🍕 Pizza";saveWeekPlan(thisMondayISO(),plan);render();}
+$('#btnPizzaFri').onclick=()=>{const now=!load(LS.pizzaFri,false);save(LS.pizzaFri,now);$('#pizzaState').textContent=now?'on':'off';render();}
 
-/* ===== Helpers ===== */
-function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]).replace('&','&amp;')) }
-</script>
+const groModal=$('#groModal');$('#groClose').onclick=()=>hide(groModal);
+$('#btnGroceries').onclick=()=>openGroceries();
+$('#groCopy').onclick=()=>navigator.clipboard.writeText(groceryText()).then(()=>alert('Grocery list copied.'));
+$('#groDownload').onclick=()=>{const blob=new Blob([groceryText()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fambam-Groceries-${thisMondayISO()}.txt`;a.click();URL.revokeObjectURL(a.href);}
+$('#btnShareGro').onclick=()=>shareText(groceryText());
+$('#btnSharePlan').onclick=()=>shareText(planSummaryText());
+
+function openGroceries(){const pre=document.createElement('pre');pre.style.whiteSpace='pre-wrap';pre.style.margin='0';pre.textContent=groceryText();const body=$('#groBody');body.innerHTML='';body.appendChild(pre);show(groModal);}
+function groceryText(){const plan=loadWeekPlan(thisMondayISO());const pantry=new Set(load(LS.pantry,[]).map(s=>s.toLowerCase()));const buckets={"Kids mains":{}, "Kids sides":{}, "Parents mains":{}, "Parents sides":{}, "Desserts":{}};const bump=(b,name)=>{if(!name)return;const clean=name.replace(/^[^\w]+/,'').trim();if(!clean)return;if(pantry.has(clean.toLowerCase()))return;buckets[b][clean]=(buckets[b][clean]||0)+1;};DAYS.forEach(d=>{const x=plan.days[d]||emptyDay();bump("Kids mains",x.kids.main);bump("Kids sides",x.kids.side);bump("Parents mains",x.parents.main);bump("Parents sides",x.parents.side);bump("Desserts",x.dessert);});const lines=[`🛒 Fambam Groceries — ${$('#weekLabel').textContent}`];for(const [section,items] of Object.entries(buckets)){const names=Object.keys(items).sort((a,b)=>a.localeCompare(b));if(!names.length)continue;lines.push(`\n${section}`);names.forEach(n=>lines.push(`- ${n}${items[n]>1?` ×${items[n]}`:''}`));}if(pantry.size){lines.push(`\n(Excluded pantry: ${[...pantry].join(', ')})`);}return lines.join('\n');}
+function planSummaryText(){const plan=loadWeekPlan(thisMondayISO());const lines=[`🍽️ Fambam Dinner Plan — ${$('#weekLabel').textContent}`];DAYS.forEach(d=>{const x=plan.days[d];const r=x.rating===1?'👍':(x.rating===-1?'👎':'😐');const kids=[x.kids.main,x.kids.side].filter(Boolean).join(' + ');const pars=[x.parents.main,x.parents.side].filter(Boolean).join(' + ');const des=x.dessert?` • Dessert: ${x.dessert}`:'';lines.push(`${d}: Kids ${kids||'—'} | Parents ${pars||'—'} ${des} ${r}`)});return lines.join('\n');}
+
+/* Reset/Copy/Admin */
+$('#btnReset').onclick=()=>{if(!confirm('Clear all entries for this week?'))return;const plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay());save(LS.week(thisMondayISO()),plan);render();}
+$('#btnCopy').onclick=()=>navigator.clipboard.writeText(planSummaryText()).then(()=>alert('Summary copied.'));
+$('#btnAdmin').onclick=()=>location.href='./index.html#admin';
+
+/* PIN modal */
+function requestPinUI(onSuccess){
+  const m=$('#pinModal'),input=$('#pinInputModal'),ok=$('#pinOk'),x=$('#pinClose');
+  function close(){m.style.display='none';m.setAttribute('aria-hidden','true');input.value='';ok.onclick=x.onclick=null;}
+  function open(){m.style.display='flex';m.setAttribute('aria-hidden','false');setTimeout(()=>{input.focus();input.setSelectionRange(input.value.length,input.value.length);},50);}
+  ok.onclick=()=>{const pin=input.value.trim();if(!/^\d{1,8}$/.test(pin))return alert('PIN must be 1–8 digits.'); if(Family.verifyPin(pin)){close();onSuccess();}else{alert('Incorrect PIN.');input.focus();input.select();}}
+  x.onclick=close; m.onclick=e=>{if(e.target===m)close();}; document.addEventListener('keydown',function esc(ev){if(ev.key==='Escape'){close();document.removeEventListener('keydown',esc)}}); open();
+}
+
+/* ---------- Boot ---------- */
+seedFoodsIfNeeded(); render();
+if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  </script>
 </body>
 </html>
