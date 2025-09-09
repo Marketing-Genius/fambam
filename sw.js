@@ -1,5 +1,5 @@
 // Family Hub + Breakfast v3.3.0 SW
-const CACHE = "family-hub-v0-6-1"; // bump
+const CACHE = "family-hub-v0-6-2"; // bump
 const ASSETS = [
   "./",
   "./index.html",
