@@ -25,34 +25,28 @@ body{
 .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
 .panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
 
-/* Header (unified with Home/Breakfast) */
-header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.left{display:flex;align-items:center;gap:14px;min-width:0}
-.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
-.brand img{height:38px;display:block}
-.title{min-width:0}
-.title .big{font-weight:800;font-size:1.4rem;letter-spacing:.2px}
-.title .small{font-weight:600;font-size:.9rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Header: logo + title on left, hamburger on right */
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.h-left{display:flex;align-items:center;gap:14px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:38px;display:block;cursor:pointer}
+.title{font-weight:800;letter-spacing:.2px}
+.title .small{font-weight:600;font-size:.85rem;color:var(--muted)}
+.h-right{display:flex;align-items:center;gap:10px}
 
-.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.menu-wrap{position:relative; z-index: 9001; overflow:visible}
-.hamburger{font:inherit;cursor:pointer;background:rgba(11,18,36,.6);color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:10px 12px}
+/* Hamburger dropdown (text-only items) */
+.menu-wrap{position:relative}
+.hamburger{font:inherit;cursor:pointer;background:#0b1224;border:1px solid #334155;border-radius:12px;color:#e5e7eb;padding:10px 12px}
 .menu-dropdown{
-  position:absolute;right:0;top:110%;min-width:240px;z-index:9002 !important;
-  background:#111827;border:1px solid #1f2937;border-radius:12px;
-  box-shadow:0 10px 30px rgba(0,0,0,.35);padding:6px;display:none
+  position:absolute; right:0; top:110%; min-width:220px; z-index:20;
+  background:#111827; border:1px solid #1f2937; border-radius:12px;
+  box-shadow:var(--shadow); padding:6px; display:none;
 }
 .menu-dropdown.open{display:block}
-.menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
+.menu-item{display:block; width:100%; text-align:left; padding:10px 12px; border:none; background:transparent; color:#e5e7eb; border-radius:10px; cursor:pointer}
 .menu-item:hover{background:#0b1224}
 
-/* Inputs & UI */
-input,button,select,textarea{font:inherit;color:var(--text)}
-select, input[type="text"], textarea{background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 12px;min-width:140px;color:var(--text)}
-textarea{min-height:88px;resize:vertical}
-button{cursor:pointer}
-.btn{background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px}
-.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
+/* Content */
 .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1224;border:1px solid #334155;color:#cbd5e1}
 
 .grid{display:grid;gap:14px}
@@ -64,9 +58,18 @@ button{cursor:pointer}
 .row{display:grid;gap:8px;grid-template-columns:92px 1fr 1fr}
 .row .label{color:#cbd5e1;align-self:center}
 .row .actions{display:flex;gap:8px;align-items:center}
-.add-line{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
-/* Modal (scroll-safe) */
+select, input[type="text"], textarea{background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 12px;min-width:140px;color:var(--text);font:inherit}
+textarea{min-height:88px;resize:vertical}
+button{cursor:pointer}
+.btn{background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;color:var(--text);font:inherit}
+.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
+.btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
+
+.hint{opacity:.8;font-size:.9rem;text-align:center}
+.version{opacity:.6;font-size:.8rem;margin-top:6px}
+
+/* Modals (scroll-safe) */
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal{width:min(900px,100%);max-height:90vh;display:flex;flex-direction:column;
        background:var(--panel);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
@@ -75,7 +78,7 @@ button{cursor:pointer}
 @supports (-webkit-touch-callout: none) { .modal .body{ -webkit-overflow-scrolling: touch; } }
 .modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:inherit}
 
-/* Lists in Manage */
+/* Manage lists */
 .list{display:grid;gap:10px}
 .item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
 
@@ -85,39 +88,32 @@ button{cursor:pointer}
   content:""; position:absolute; right:8px; top:8px; width:8px; height:8px; border-radius:50%;
   background:#22d3ee; box-shadow:0 0 0 2px rgba(11,18,36,.8);
 }
-
-/* Footer hint */
-.hint{opacity:.8;font-size:.9rem;text-align:center}
-.version{opacity:.6;font-size:.8rem;margin-top:6px}
-
-.pin-input{font:inherit;color:var(--text);background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px 16px;letter-spacing:2px;text-align:center}
 .smallmuted{color:#94a3b8;font-size:.9rem}
 .noteRow{display:flex;align-items:center;justify-content:space-between;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
 </style>
 </head>
 <body>
   <div class="app">
-    <!-- Unified header -->
     <header class="panel">
-      <div class="left">
-        <a class="brand" href="./index.html" title="Home">
+      <div class="h-left">
+        <a href="./index.html" class="brand" title="Home">
           <img src="fambam.png" alt="Fambam">
         </a>
         <div class="title">
-          <div class="big">Dinner Planner</div>
+          <div style="font-size:1.6rem">Dinner Planner</div>
           <div class="small">Plan dinners for the week. Templates, groceries & sharing included.</div>
         </div>
       </div>
-      <div class="controls">
+      <div class="h-right">
         <div class="menu-wrap">
-          <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
+          <button id="btnHamburger" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown">☰</button>
           <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
-            <button class="menu-item" data-action="reset"     role="menuitem">Reset Week</button>
-            <button class="menu-item" data-action="templates" role="menuitem">Templates</button>
-            <button class="menu-item" data-action="groceries" role="menuitem">Groceries</button>
-            <button class="menu-item" data-action="shareGro"  role="menuitem">Share Groceries</button>
-            <button class="menu-item" data-action="sharePlan" role="menuitem">Share Plan</button>
-            <button class="menu-item" data-action="manage"    role="menuitem">Manage</button>
+            <button class="menu-item" data-action="reset">Reset Week</button>
+            <button class="menu-item" data-action="templates">Templates</button>
+            <button class="menu-item" data-action="groceries">Groceries</button>
+            <button class="menu-item" data-action="shareGro">Share Groceries</button>
+            <button class="menu-item" data-action="sharePlan">Share Plan</button>
+            <button class="menu-item" data-action="manage">Manage</button>
           </div>
         </div>
       </div>
@@ -131,7 +127,7 @@ button{cursor:pointer}
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Dinner Planner v1.4.0 (unified header • hamburger)</div>
+      <div class="version">Dinner Planner v1.4.0 (unified menu, no PIN on Manage)</div>
     </div>
   </div>
 
@@ -145,14 +141,14 @@ button{cursor:pointer}
       <div class="body">
         <div class="badge">Food Options (for Main & Side)</div>
         <div id="foodList" class="list"></div>
-        <div class="add-line">
+        <div class="add-line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <input id="newFood" type="text" placeholder="Add food (e.g., 🍕 Pizza)"/>
           <button id="addFood" class="btn-primary">Add</button>
         </div>
 
         <div class="badge">Dessert Options</div>
         <div id="dessertList" class="list"></div>
-        <div class="add-line">
+        <div class="add-line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <input id="newDessert" type="text" placeholder="Add dessert (e.g., 🍨 Ice Cream)"/>
           <button id="addDessert" class="btn-primary">Add</button>
         </div>
@@ -178,7 +174,7 @@ button{cursor:pointer}
         <div class="list" id="tplBuiltins"></div>
         <div class="badge">Your Templates</div>
         <div class="list" id="tplUser"></div>
-        <div class="add-line">
+        <div class="add-line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <input id="tplName" type="text" placeholder="Template name (e.g., Week: Pizza Friday)"/>
           <button id="tplSave" class="btn-primary">Save Current as Template</button>
         </div>
@@ -241,27 +237,8 @@ button{cursor:pointer}
     </div>
   </div>
 
-  <!-- PIN Modal -->
-  <div class="modal-backdrop" id="pinModal" aria-hidden="true" role="dialog" aria-labelledby="pinTitle">
-    <div class="modal" style="max-width:420px">
-      <header>
-        <div id="pinTitle" style="font-weight:800">Enter Admin PIN</div>
-        <button id="pinClose" class="btn">✖</button>
-      </header>
-      <div class="body" style="gap:12px">
-        <input id="pinInputModal" class="pin-input" inputmode="numeric" pattern="\\d*" placeholder="PIN (numbers only)" autofocus />
-      </div>
-      <div class="footer">
-        <button id="pinOk" class="btn-primary">OK</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Family store -->
-  <script src="family.js?v=3.3.6"></script>
-
   <script>
-  // Share helper
+  // Share helper (native share → SMS deeplink → clipboard)
   async function shareText(content){
     try{ if(navigator.share){ await navigator.share({text:content}); return; } }catch{}
     const encoded=encodeURIComponent(content);
@@ -274,21 +251,40 @@ button{cursor:pointer}
   </script>
 
   <script>
-/* ---------- Base storage/seed ---------- */
-const LS={foods:'dp:foods:list',desserts:'dp:desserts:list',week:(m)=>`dp:plan:${m}`,templates:'dp:tpls',pantry:'dp:pantry',pizzaFri:'dp:pizzaFri', notes:'dp:food:notes'};
+/* ---------- Storage / seed ---------- */
+const LS={foods:'dp:foods:list',desserts:'dp:desserts:list',week:(m)=>`dp:plan:${m}`,templates:'dp:tpls',pantry:'dp:pantry', notes:'dp:food:notes'};
 const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
 const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const uid=()=>Math.random().toString(36).slice(2,10);
+
 function startOfWeekMonday(d=new Date()){const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=(dt.getUTCDay()+6)%7;dt.setUTCDate(dt.getUTCDate()-day);return dt;}
-function isoDateUTC(d){return d.toISOString().slice(0,10)} function thisMondayISO(){return isoDateUTC(startOfWeekMonday(new Date()))}
+function isoDateUTC(d){return d.toISOString().slice(0,10)}
+function thisMondayISO(){return isoDateUTC(startOfWeekMonday(new Date()))}
 function weekLabelText(mISO){const m=new Date(mISO+'T00:00:00Z');const e=new Date(m);e.setUTCDate(e.getUTCDate()+6);const f=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});return `${f(m)} – ${f(e)}`}
-function seedFoodsIfNeeded(){let foods=load(LS.foods,null);if(!Array.isArray(foods)||foods.length<10){foods=["🍕 Pizza","🌮 Tacos","🍝 Spaghetti","🍗 Chicken Nuggets","🥪 Sandwiches","🌭 Hot Dogs","🍔 Burgers","🥗 Caesar Salad","🍛 Curry & Rice","🥟 Potstickers","🍤 Shrimp Stir-Fry","🥞 Breakfast for Dinner","🥔 Baked Potatoes","🍣 Sushi Night","🌯 Burritos","🥘 Chili","🍜 Ramen","🥙 Pita & Hummus","🍖 BBQ Chicken","🥦 Veggie Stir-Fry","🧆 Meatballs","🥩 Steak & Veg","🥧 Pot Pie","🍚 Fried Rice","🧀 Mac & Cheese","🐟 Baked Fish","🥚 Omelets","🍲 Chicken Noodle Soup","🥒 Snack Plate","🥬 Tacos (Veggie)","🌮 Taco Salad","🌯 Quesadillas","🍝 Penne & Marinara","🥗 Greek Salad","🍖 Pulled Pork","🍗 Roasted Chicken","🍝 Alfredo Pasta","🥪 BLT","🌶️ Fajitas","🍖 Ribs","🍝 Lasagna","🥗 Cobb Salad","🍛 Butter Chicken","🥘 Paella","🍚 Teriyaki Bowls","🍠 Sweet Potatoes","🥨 Pretzel Dogs","🥪 Grilled Cheese","🍤 Popcorn Shrimp","🍕 Flatbreads"];save(LS.foods,foods)}let desserts=load(LS.desserts,null);if(!Array.isArray(desserts)||desserts.length<3){desserts=["🍪 Cookies","🍨 Ice Cream","🍰 Cake","🍓 Berries & Cream","🥧 Pie","🍫 Brownies","🍮 Pudding","🍎 Apple Slices & PB"];save(LS.desserts,desserts)}if(load(LS.pantry,null)==null){save(LS.pantry,["salt","pepper","ketchup","mustard","olive oil","butter"])}if(load(LS.pizzaFri,null)==null){save(LS.pizzaFri,false)}}
+
+function seedFoodsIfNeeded(){
+  let foods=load(LS.foods,null);
+  if(!Array.isArray(foods)||foods.length<10){
+    foods=["🍕 Pizza","🌮 Tacos","🍝 Spaghetti","🍗 Chicken Nuggets","🥪 Sandwiches","🌭 Hot Dogs","🍔 Burgers","🥗 Caesar Salad","🍛 Curry & Rice","🥟 Potstickers","🍤 Shrimp Stir-Fry","🥞 Breakfast for Dinner","🥔 Baked Potatoes","🍣 Sushi Night","🌯 Burritos","🥘 Chili","🍜 Ramen","🥙 Pita & Hummus","🍖 BBQ Chicken","🥦 Veggie Stir-Fry","🧆 Meatballs","🥩 Steak & Veg","🥧 Pot Pie","🍚 Fried Rice","🧀 Mac & Cheese","🐟 Baked Fish","🥚 Omelets","🍲 Chicken Noodle Soup","🥒 Snack Plate","🌮 Taco Salad","🌯 Quesadillas","🍝 Penne & Marinara","🥗 Greek Salad","🍖 Pulled Pork","🍗 Roasted Chicken","🍝 Alfredo Pasta","🥪 BLT","🌶️ Fajitas","🍖 Ribs","🍝 Lasagna","🥗 Cobb Salad","🍛 Butter Chicken","🥘 Paella","🍚 Teriyaki Bowls","🍠 Sweet Potatoes","🥨 Pretzel Dogs","🥪 Grilled Cheese","🍤 Popcorn Shrimp","🍕 Flatbreads"];
+    save(LS.foods,foods)
+  }
+  let desserts=load(LS.desserts,null);
+  if(!Array.isArray(desserts)||desserts.length<3){
+    desserts=["🍪 Cookies","🍨 Ice Cream","🍰 Cake","🍓 Berries & Cream","🥧 Pie","🍫 Brownies","🍮 Pudding","🍎 Apple Slices & PB"];
+    save(LS.desserts,desserts)
+  }
+  if(load(LS.pantry,null)==null){ save(LS.pantry,["salt","pepper","ketchup","mustard","olive oil","butter"]); }
+}
 
 /* ---------- Plan model ---------- */
 const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 function emptyDay(){return {kids:{main:"",side:""},parents:{main:"",side:""},dessert:"",rating:null}}
-function loadWeekPlan(mISO){let plan=load(LS.week(mISO),null);if(!plan){plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay());save(LS.week(mISO),plan)}if(load(LS.pizzaFri,false)){const fri=plan.days["Fri"];if(fri&&!fri.kids.main&&!fri.parents.main){fri.kids.main="🍕 Pizza";fri.parents.main="🍕 Pizza";save(LS.week(mISO),plan)}}return plan}
+function loadWeekPlan(mISO){
+  let plan=load(LS.week(mISO),null);
+  if(!plan){ plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay()); save(LS.week(mISO),plan); }
+  return plan;
+}
 function saveWeekPlan(mISO,plan){save(LS.week(mISO),plan)}
 
 /* ---------- Food Notes store ---------- */
@@ -352,10 +348,12 @@ function render(){
     cards.appendChild(el);
   });
 
+  // selects change
   $$('#cards select[data-k]').forEach(sel=>{
     sel.onchange=()=>{const day=sel.dataset.k,field=sel.dataset.field;const plan=loadWeekPlan(thisMondayISO());setByPath(plan.days[day],field,sel.value);saveWeekPlan(thisMondayISO(),plan); updateNotesBadgesFor(day);};
   });
 
+  // dessert toggle
   $$('[data-dess]').forEach(btn=>{
     btn.onclick=()=>{
       const day=btn.dataset.dess;
@@ -367,6 +365,7 @@ function render(){
     };
   });
 
+  // rating save
   $$('select[data-rate]').forEach(r=>{
     r.onchange=()=>{
       const day=r.dataset.rate;
@@ -376,6 +375,7 @@ function render(){
     };
   });
 
+  // notes per day
   $$('[data-notes]').forEach(b=>{
     b.onclick=()=> openDayNotes(b.dataset.notes);
   });
@@ -394,10 +394,37 @@ function escapeHtml(s){return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&
 function setByPath(o,p,val){const parts=p.split('.');for(let i=0;i<parts.length-1;i++)o=o[parts[i]];o[parts[parts.length-1]]=val}
 
 /* ---------- Manage modal ---------- */
-const manageModal=$('#manageModal');$('#manageClose').onclick=()=>hide(manageModal);$('#manageSave').onclick=()=>{const list=($('#pantryBox').value||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);save(LS.pantry,list);hide(manageModal);}
+const manageModal=$('#manageModal');
+$('#manageClose').onclick=()=>hide(manageModal);
+$('#manageSave').onclick=()=>{const list=($('#pantryBox').value||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);save(LS.pantry,list);hide(manageModal);}
+
 function openManage(){buildFoodList();buildDessertList();$('#pantryBox').value=load(LS.pantry,[]).join(', ');show(manageModal);}
-function buildFoodList(){const wrap=$('#foodList');wrap.innerHTML='';const foods=load(LS.foods,[]);foods.forEach((f,idx)=>{const row=document.createElement('div');row.className='item';row.innerHTML=`<input class="btn" value="${escapeHtml(f)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;wrap.appendChild(row);row.querySelector('[data-notes]').onclick=()=>openNotesEditor(f);row.querySelector('input').oninput=e=>{foods[idx]=e.target.value;save(LS.foods,foods);render();};row.querySelector('[data-rm]').onclick=()=>{foods.splice(idx,1);save(LS.foods,foods);buildFoodList();render();};});$('#addFood').onclick=()=>{const v=($('#newFood').value||'').trim();if(!v)return;const list=load(LS.foods,[]);list.push(v);save(LS.foods,list);$('#newFood').value='';buildFoodList();render();};}
-function buildDessertList(){const wrap=$('#dessertList');wrap.innerHTML='';const ds=load(LS.desserts,[]);ds.forEach((d,idx)=>{const row=document.createElement('div');row.className='item';row.innerHTML=`<input class="btn" value="${escapeHtml(d)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;wrap.appendChild(row);row.querySelector('[data-notes]').onclick=()=>openNotesEditor(d);row.querySelector('input').oninput=e=>{ds[idx]=e.target.value;save(LS.desserts,ds);render();};row.querySelector('[data-rm]').onclick=()=>{ds.splice(idx,1);save(LS.desserts,ds);buildDessertList();render();};});$('#addDessert').onclick=()=>{const v=($('#newDessert').value||'').trim();if(!v)return;const list=load(LS.desserts,[]);list.push(v);save(LS.desserts,list);$('#newDessert').value='';buildDessertList();render();};}
+function buildFoodList(){
+  const wrap=$('#foodList');wrap.innerHTML='';
+  const foods=load(LS.foods,[]);
+  foods.forEach((f,idx)=>{
+    const row=document.createElement('div');row.className='item';
+    row.innerHTML=`<input class="btn" value="${escapeHtml(f)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;
+    wrap.appendChild(row);
+    row.querySelector('[data-notes]').onclick=()=>openNotesEditor(f);
+    row.querySelector('input').oninput=e=>{foods[idx]=e.target.value;save(LS.foods,foods);render();};
+    row.querySelector('[data-rm]').onclick=()=>{foods.splice(idx,1);save(LS.foods,foods);buildFoodList();render();};
+  });
+  $('#addFood').onclick=()=>{const v=($('#newFood').value||'').trim();if(!v)return;const list=load(LS.foods,[]);list.push(v);save(LS.foods,list);$('#newFood').value='';buildFoodList();render();};
+}
+function buildDessertList(){
+  const wrap=$('#dessertList');wrap.innerHTML='';
+  const ds=load(LS.desserts,[]);
+  ds.forEach((d,idx)=>{
+    const row=document.createElement('div');row.className='item';
+    row.innerHTML=`<input class="btn" value="${escapeHtml(d)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;
+    wrap.appendChild(row);
+    row.querySelector('[data-notes]').onclick=()=>openNotesEditor(d);
+    row.querySelector('input').oninput=e=>{ds[idx]=e.target.value;save(LS.desserts,ds);render();};
+    row.querySelector('[data-rm]').onclick=()=>{ds.splice(idx,1);save(LS.desserts,ds);buildDessertList();render();};
+  });
+  $('#addDessert').onclick=()=>{const v=($('#newDessert').value||'').trim();if(!v)return;const list=load(LS.desserts,[]);list.push(v);save(LS.desserts,list);$('#newDessert').value='';buildDessertList();render();};
+}
 function show(m){m.style.display='flex';m.setAttribute('aria-hidden','false')}
 function hide(m){m.style.display='none';m.setAttribute('aria-hidden','true')}
 
@@ -451,7 +478,7 @@ function updateNotesBadgesFor(day){
   if (btn) btn.setAttribute('data-hasnotes', String( dayHasAnyNotes(data) ));
 }
 
-/* ---------- Notes editor (global only) ---------- */
+/* ---------- Notes editor ---------- */
 const notesEditModal = $('#notesEditModal');
 $('#notesEditClose').onclick = ()=> hide(notesEditModal);
 $('#fnSave').onclick = saveNotesFromEditor;
@@ -487,43 +514,93 @@ function saveNotesFromEditor(){
 const tplModal=$('#tplModal');$('#tplClose').onclick=()=>hide(tplModal);$('#tplApplyDone').onclick=()=>hide(tplModal);
 $('#tplSave').onclick=()=>{const name=($('#tplName').value||'').trim();if(!name)return alert('Name your template');const plan=loadWeekPlan(thisMondayISO());const t=load(LS.templates,[]);t.push({id:uid(),name,plan});save(LS.templates,t);$('#tplName').value='';buildTplLists();}
 function openTemplates(){buildTplLists();show(tplModal)}
-function buildTplLists(){const built=$('#tplBuiltins');built.innerHTML='';const pizza=document.createElement('div');pizza.className='item';pizza.innerHTML=`<div>🍕 Pizza Friday</div><button class="btn" data-apply>Apply</button>`;pizza.querySelector('[data-apply]').onclick=()=>{applyPizzaFriday();};built.appendChild(pizza);const wrap=$('#tplUser');wrap.innerHTML='';const tpls=load(LS.templates,[]);if(!tpls.length){const empty=document.createElement('div');empty.className='item';empty.innerHTML='<div>No saved templates yet.</div>';wrap.appendChild(empty);}else{tpls.forEach(t=>{const row=document.createElement('div');row.className='item';row.innerHTML=`<div>${escapeHtml(t.name)}</div><div style="display:flex;gap:8px"><button class="btn" data-apply>Apply</button><button class="btn-warn" data-del>Delete</button></div>`;wrap.appendChild(row);row.querySelector('[data-apply]').onclick=()=>{save(LS.week(thisMondayISO()),t.plan);render();};row.querySelector('[data-del]').onclick=()=>{const arr=load(LS.templates,[]).filter(x=>x!==t);save(LS.templates,arr);buildTplLists();};});}}
-function applyPizzaFriday(){const plan=loadWeekPlan(thisMondayISO());plan.days["Fri"].kids.main="🍕 Pizza";plan.days["Fri"].parents.main="🍕 Pizza";saveWeekPlan(thisMondayISO(),plan);render();}
+function buildTplLists(){
+  const built=$('#tplBuiltins');built.innerHTML='';
+  const pizza=document.createElement('div');pizza.className='item';
+  pizza.innerHTML=`<div>🍕 Pizza Friday</div><button class="btn" data-apply>Apply</button>`;
+  pizza.querySelector('[data-apply]').onclick=()=>{applyPizzaFriday();};
+  built.appendChild(pizza);
 
-const groModal=$('#groModal');$('#groClose').onclick=()=>hide(groModal);
-function openGroceries(){const pre=document.createElement('pre');pre.style.whiteSpace='pre-wrap';pre.style.margin='0';pre.textContent=groceryText();const body=$('#groBody');body.innerHTML='';body.appendChild(pre);show(groModal);}
-function groceryText(){const plan=loadWeekPlan(thisMondayISO());const pantry=new Set(load(LS.pantry,[]).map(s=>s.toLowerCase()));const buckets={"Kids mains":{}, "Kids sides":{}, "Parents mains":{}, "Parents sides":{}, "Desserts":{}};const bump=(b,name)=>{if(!name)return;const clean=name.replace(/^[^\w]+/,'').trim();if(!clean)return;if(pantry.has(clean.toLowerCase()))return;buckets[b][clean]=(buckets[b][clean]||0)+1;};DAYS.forEach(d=>{const x=plan.days[d]||emptyDay();bump("Kids mains",x.kids.main);bump("Kids sides",x.kids.side);bump("Parents mains",x.parents.main);bump("Parents sides",x.parents.side);bump("Desserts",x.dessert);});const lines=[`🛒 Fambam Groceries — ${$('#weekLabel').textContent}`];for(const [section,items] of Object.entries(buckets)){const names=Object.keys(items).sort((a,b)=>a.localeCompare(b));if(!names.length)continue;lines.push(`\n${section}`);names.forEach(n=>lines.push(`- ${n}${items[n]>1?` ×${items[n]}`:''}`));}if(pantry.size){lines.push(`\n(Excluded pantry: ${[...pantry].join(', ')})`);}return lines.join('\n');}
-function planSummaryText(){const plan=loadWeekPlan(thisMondayISO());const lines=[`🍽️ Fambam Dinner Plan — ${$('#weekLabel').textContent}`];DAYS.forEach(d=>{const x=plan.days[d];const r=(x.rating==null)?'':(x.rating===1?' 👍':(x.rating===-1?' 👎':' 😐'));const kids=[x.kids.main,x.kids.side].filter(Boolean).join(' + ');const pars=[x.parents.main,x.parents.side].filter(Boolean).join(' + ');const des=x.dessert?` • Dessert: ${x.dessert}`:'';lines.push(`${d}: Kids ${kids||'—'} | Parents ${pars||'—'}${des}${r}`)});return lines.join('\n');}
-
-/* ---------- Hamburger (actions) ---------- */
-(function menu(){
-  const btn = document.getElementById('btnMenu');
-  const dd  = document.getElementById('menuDropdown');
-  const openDD = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
-  const closeDD= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
-
-  btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?closeDD():openDD(); });
-  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) closeDD(); });
-
-  dd?.addEventListener('click', async (e)=>{
-    const el = e.target.closest('.menu-item'); if (!el) return;
-    const action = el.dataset.action;
-    closeDD();
-    if (action==='reset'){
-      if(!confirm('Clear all entries for this week?')) return;
-      const plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay());save(LS.week(thisMondayISO()),plan);render();
-    } else if (action==='templates'){
-      openTemplates();
-    } else if (action==='groceries'){
-      openGroceries();
-    } else if (action==='shareGro'){
-      shareText(groceryText());
-    } else if (action==='sharePlan'){
-      shareText(planSummaryText());
-    else if (action==='manage'){
-  openManage();
+  const wrap=$('#tplUser');wrap.innerHTML='';
+  const tpls=load(LS.templates,[]);
+  if(!tpls.length){
+    const empty=document.createElement('div');empty.className='item';empty.innerHTML='<div>No saved templates yet.</div>';
+    wrap.appendChild(empty);
+  }else{
+    tpls.forEach(t=>{
+      const row=document.createElement('div');row.className='item';
+      row.innerHTML=`<div>${escapeHtml(t.name)}</div><div style="display:flex;gap:8px"><button class="btn" data-apply>Apply</button><button class="btn-warn" data-del>Delete</button></div>`;
+      wrap.appendChild(row);
+      row.querySelector('[data-apply]').onclick=()=>{save(LS.week(thisMondayISO()),t.plan);render();};
+      row.querySelector('[data-del]').onclick=()=>{const arr=load(LS.templates,[]).filter(x=>x!==t);save(LS.templates,arr);buildTplLists();};
+    });
+  }
+}
+function applyPizzaFriday(){
+  const plan=loadWeekPlan(thisMondayISO());
+  plan.days["Fri"].kids.main="🍕 Pizza";
+  plan.days["Fri"].parents.main="🍕 Pizza";
+  saveWeekPlan(thisMondayISO(),plan); render();
 }
 
+const groModal=$('#groModal');$('#groClose').onclick=()=>hide(groModal);
+function openGroceries(){
+  const pre=document.createElement('pre');pre.style.whiteSpace='pre-wrap';pre.style.margin='0';pre.textContent=groceryText();
+  const body=$('#groBody');body.innerHTML='';body.appendChild(pre);show(groModal);
+}
+$('#groCopy').onclick=()=>navigator.clipboard.writeText(groceryText()).then(()=>alert('Grocery list copied.'));
+$('#groDownload').onclick=()=>{const blob=new Blob([groceryText()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fambam-Groceries-${thisMondayISO()}.txt`;a.click();URL.revokeObjectURL(a.href);}
+
+function groceryText(){
+  const plan=loadWeekPlan(thisMondayISO());
+  const pantry=new Set(load(LS.pantry,[]).map(s=>s.toLowerCase()));
+  const buckets={"Kids mains":{}, "Kids sides":{}, "Parents mains":{}, "Parents sides":{}, "Desserts":{}};
+  const bump=(b,name)=>{if(!name)return;const clean=name.replace(/^[^\w]+/,'').trim();if(!clean)return;if(pantry.has(clean.toLowerCase()))return;buckets[b][clean]=(buckets[b][clean]||0)+1;};
+  DAYS.forEach(d=>{const x=plan.days[d]||emptyDay();bump("Kids mains",x.kids.main);bump("Kids sides",x.kids.side);bump("Parents mains",x.parents.main);bump("Parents sides",x.parents.side);bump("Desserts",x.dessert);});
+  const lines=[`🛒 Fambam Groceries — ${$('#weekLabel').textContent}`];
+  for(const [section,items] of Object.entries(buckets)){
+    const names=Object.keys(items).sort((a,b)=>a.localeCompare(b));
+    if(!names.length)continue;
+    lines.push(`\n${section}`);
+    names.forEach(n=>lines.push(`- ${n}${items[n]>1?` ×${items[n]}`:''}`));
+  }
+  if(pantry.size){lines.push(`\n(Excluded pantry: ${[...pantry].join(', ')})`);}
+  return lines.join('\n');
+}
+function planSummaryText(){
+  const plan=loadWeekPlan(thisMondayISO());
+  const lines=[`🍽️ Fambam Dinner Plan — ${$('#weekLabel').textContent}`];
+  DAYS.forEach(d=>{
+    const x=plan.days[d];
+    const r=(x.rating==null)?'':(x.rating===1?' 👍':(x.rating===-1?' 👎':' 😐'));
+    const kids=[x.kids.main,x.kids.side].filter(Boolean).join(' + ');
+    const pars=[x.parents.main,x.parents.side].filter(Boolean).join(' + ');
+    const des=x.dessert?` • Dessert: ${x.dessert}`:'';
+    lines.push(`${d}: Kids ${kids||'—'} | Parents ${pars||'—'}${des}${r}`)
+  });
+  return lines.join('\n');
+}
+
+/* ---------- Header hamburger ---------- */
+(function hamburger(){
+  const btn = $('#btnHamburger');
+  const dd  = $('#menuDropdown');
+  const open = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
+  const close= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
+
+  btn.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?close():open(); });
+  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) close(); });
+
+  dd.addEventListener('click', (e)=>{
+    const a = e.target.closest('.menu-item'); if(!a) return;
+    close();
+    const act = a.dataset.action;
+    if (act==='reset'){ if(confirm('Clear all entries for this week?')){ const plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay());save(LS.week(thisMondayISO()),plan);render(); } }
+    else if (act==='templates'){ openTemplates(); }
+    else if (act==='groceries'){ openGroceries(); }
+    else if (act==='shareGro'){ shareText(groceryText()); }
+    else if (act==='sharePlan'){ shareText(planSummaryText()); }
+    else if (act==='manage'){ openManage(); } // ← no PIN
   });
 })();
 
