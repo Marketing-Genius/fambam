@@ -47,7 +47,19 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 .viewer img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .5s}
 
 /* List (scrollable) */
-.list{display:grid;gap:10px;max-height:60vh;overflow:auto;padding-right:4px}
+/* Scrollable list (fix iPad scroll chaining) */
+.list {
+  display: grid;
+  gap: 10px;
+  max-height: 60vh;
+  overflow: auto;
+  padding-right: 4px;
+
+  /* 👇 iPad fixes */
+  -webkit-overflow-scrolling: touch;  /* smooth momentum scroll */
+  overscroll-behavior: contain;       /* prevent scroll chaining */
+}
+;padding-right:4px}
 .row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:8px 10px;cursor:pointer}
 .row:hover{background:#1e293b}
 .row.active{outline:2px solid var(--accent)}
