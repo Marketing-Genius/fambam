@@ -113,6 +113,7 @@ header{
   position:absolute; right:8px; bottom:8px; width:36px; height:36px;
   display:none; place-items:center; font-weight:800;
   background:#3f1620; border:1px solid #7f1d1d; color:#fecaca; border-radius:999px;
+  user-select:none; -webkit-user-select:none;
 }
 .editing .tile .minus{ display:grid; cursor:pointer; }
 .tile.selecting{ outline:2px solid var(--accent); }
@@ -128,40 +129,28 @@ header{
 }
 .photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; }
 
-  /* Photos tile: edge-to-edge image, no overlay/tint */
+/* Photos tile: edge-to-edge image, no overlay/tint */
 .tile.photos-card{
-  background: transparent;      /* remove blue card backdrop */
-  border: none;                 /* no border over photo */
-  padding: 0;                   /* image fills the tile */
+  background: transparent;
+  border: none;
+  padding: 0;
 }
-
-/* Show the image at full strength */
 .tile.photos-card .photo-prev{ opacity: 1; }
-
-/* Hide emoji/labels on the Photos tile in normal mode */
 .tile.photos-card .emoji,
 .tile.photos-card .label,
 .tile.photos-card .hint{ display: none; }
-
-/* Keep the minus button invisible normally… */
 .tile.photos-card .minus{ display:none; }
-/* …but visible in Edit Mode so you can remove the card */
 .editing .tile.photos-card .minus{
   display:grid;
   background: rgba(0,0,0,.4);
   border-color:#000;
 }
-
-/* Give the photo a soft outer shadow while keeping rounded corners */
 .tile.photos-card::before{
-  content:"";
-  position:absolute; inset:0;
-  border-radius:16px;
-  box-shadow: var(--shadow);
-  pointer-events:none;
+  content:""; position:absolute; inset:0; border-radius:16px;
+  box-shadow: var(--shadow); pointer-events:none;
 }
 
-/* Modal + form UI (Admin & PIN & About & AddCard) */
+/* Modal + form UI (Admin & PIN & About & Add/Remove) */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal{width:min(900px,100%);background:rgba(17,24,39,.98);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
@@ -179,6 +168,7 @@ header{
 .face img{width:100%;height:100%;object-fit:cover}
 .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:6px 0;}
 .btn{font:inherit;color:#e5e7eb;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;cursor:pointer}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
 .btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
 .btn-lg{padding:12px 16px;border-radius:14px;font-weight:800}
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
@@ -213,9 +203,9 @@ header{
 
     <!-- Edit bar -->
     <div id="editBar">
-      <div>Tap a card, then tap a slot to move it. Use “+” to add. Tap “−” on a card to remove.</div>
+      <div>Tap a card, then tap a slot to move it. Use “+” on empty slots to add. Or use **Add/Remove Card**.</div>
       <div style="display:flex;gap:10px">
-        <button id="btnAddAnywhere" class="btn">Add Card</button>
+        <button id="btnManageCards" class="btn">Add/Remove Card</button>
         <button id="btnDoneEdit" class="btn-primary">Done</button>
       </div>
     </div>
@@ -285,16 +275,16 @@ header{
     </div>
   </div>
 
-  <!-- Add Card Modal -->
-  <div id="addCardModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="addCardTitle">
+  <!-- Manage Cards Modal (Add/Remove) -->
+  <div id="manageCardsModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="manageCardsTitle">
     <div class="modal" style="max-width:560px">
       <header>
-        <div id="addCardTitle" style="font-weight:800">Add a Card</div>
-        <button id="addCardClose" class="btn">✖</button>
+        <div id="manageCardsTitle" style="font-weight:800">Add / Remove Cards</div>
+        <button id="manageCardsClose" class="btn">✖</button>
       </header>
-      <div class="body" id="addCardBody"></div>
+      <div class="body" id="manageCardsBody"></div>
       <div class="footer">
-        <button id="addCardDone" class="btn-primary">Done</button>
+        <button id="manageCardsDone" class="btn-primary">Done</button>
       </div>
     </div>
   </div>
@@ -635,7 +625,6 @@ function renderGrid(){
         t.addEventListener('click', (ev)=>{
           ev.preventDefault(); ev.stopPropagation();
           if(selectedCardId===id){ selectedCardId=null; selectedFromSlot=-1; t.classList.remove('selecting'); return; }
-          // selecting new source
           $$('.tile').forEach(x=>x.classList.remove('selecting'));
           selectedCardId = id; selectedFromSlot = i; t.classList.add('selecting');
         });
@@ -647,7 +636,7 @@ function renderGrid(){
         const add = document.createElement('button');
         add.className='add-btn'; add.textContent='+';
         add.title='Add card';
-        add.onclick=(ev)=>{ ev.stopPropagation(); openAddCard(i); };
+        add.onclick=(ev)=>{ ev.stopPropagation(); openManageCards(i); };
         div.appendChild(add);
       }
     }
@@ -670,56 +659,48 @@ function renderGrid(){
 function renderTile(c, slotIndex){
   const a = document.createElement('a');
   a.href = c.href; a.className='tile';
-   if (c.id === 'photos') a.classList.add('photos-card');
+  if (c.id === 'photos') a.classList.add('photos-card');
 
   // Photos tile logic
   if(c.id === 'photos'){
     const list = safelyGetPhotoList();
     if(list.length){
-      // photo-only mode: no chrome, just image slideshow
       a.classList.add('photo-only');
-      a.innerHTML = `<div class="photo-prev"><img alt=""></div><button class="minus" type="button">−</button>`;
+      a.innerHTML = `<div class="photo-prev"><img alt=""></div><button class="minus" type="button" tabindex="-1">−</button>`;
       const img = a.querySelector('img');
       let idx = 0;
       img.src = list[0];
       const cadence = Number(localStorage.getItem('photos:cadence_ms')) || 10000; // 10s default
       const timer = setInterval(()=>{ idx=(idx+1)%list.length; img.src=list[idx]; }, cadence);
-      // stop timer if user navigates away via this tile
       a.addEventListener('click',()=>clearInterval(timer),{once:true});
     } else {
-      // no photos yet: show normal card with subtle preview if any
       a.innerHTML = `
         <div class="emoji">${c.emoji}</div>
         <div class="label">${c.label}</div>
         <div class="hint">${c.hint||''}</div>
-        <button class="minus" type="button">−</button>
+        <button class="minus" type="button" tabindex="-1">−</button>
       `;
       const prev = document.createElement('div'); prev.className='photo-prev'; prev.innerHTML=`<img alt="">`;
       a.prepend(prev);
-      const img = prev.querySelector('img');
-      if(img && list.length){ img.src=list[0]; }
     }
   } else {
-    // normal tiles
     a.innerHTML = `
       <div class="emoji">${c.emoji}</div>
       <div class="label">${c.label}</div>
       <div class="hint">${c.hint||''}</div>
-      <button class="minus" type="button">−</button>
+      <button class="minus" type="button" tabindex="-1">−</button>
     `;
   }
 
   // In edit mode disable navigation
   if(isEditing){ a.addEventListener('click', (e)=>e.preventDefault()); }
 
-  // Prevent minus from navigating on iPad (Safari)
+  // Robust minus handler (prevents link navigation on iPad Safari)
   const minus = a.querySelector('.minus');
   if(minus){
-    ['click','pointerdown','touchstart','mousedown'].forEach(evt=>{
-      minus.addEventListener(evt, (ev)=>{
-        ev.preventDefault();
-        ev.stopPropagation();
-      }, {passive:false});
+    const kill = (ev)=>{ ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation(); };
+    ['pointerdown','touchstart','mousedown','click'].forEach(evt=>{
+      minus.addEventListener(evt, kill, {capture:true, passive:false});
     });
     minus.addEventListener('click', ()=>{
       slots[slotIndex]=null; selectedCardId=null; selectedFromSlot=-1; saveSlots(slots); renderGrid();
@@ -738,31 +719,49 @@ function toggleEdit(on){
 }
 $('#btnDoneEdit').onclick = ()=> toggleEdit(false);
 
-// Add Card modal
-function openAddCard(targetIndex){
+/* ----- Manage Cards (Add/Remove) ----- */
+function openManageCards(targetIndex=null){
+  const body = $('#manageCardsBody'); body.innerHTML='';
   const placed = new Set(slots.filter(Boolean));
-  const avail = CARDS.filter(c=> !placed.has(c.id));
-  const body = $('#addCardBody'); body.innerHTML='';
-  if(!avail.length){ body.textContent='All cards are already on the home screen.'; }
-  else{
-    avail.forEach(c=>{
-      const row=document.createElement('div');
-      row.className='item';
-      row.innerHTML=`<div class="grow">${c.emoji} <b>${c.label}</b><div style="opacity:.8">${c.hint||''}</div></div><button class="btn">Add</button>`;
-      row.querySelector('button').onclick=()=>{
-        slots[targetIndex]=c.id; saveSlots(slots); showModal('addCardModal', false); renderGrid();
-      };
-      body.appendChild(row);
-    });
-  }
-  showModal('addCardModal', true);
+  CARDS.forEach(c=>{
+    const isPlaced = placed.has(c.id);
+    const row=document.createElement('div');
+    row.className='item';
+    row.innerHTML=`
+      <div class="grow">${c.emoji} <b>${c.label}</b><div style="opacity:.8">${c.hint||''}</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" data-add>Add</button>
+        <button class="btn-warn" data-remove>Remove</button>
+      </div>`;
+    const btnAdd = row.querySelector('[data-add]');
+    const btnRem = row.querySelector('[data-remove]');
+
+    // Disable appropriately
+    btnAdd.disabled = isPlaced && slots.every(s=>s!==null); // placed somewhere & no empty slots
+    btnRem.disabled = !isPlaced;
+
+    btnAdd.onclick = ()=>{
+      let idx = targetIndex!=null ? targetIndex : slots.findIndex(x=>!x);
+      if(idx<0){ alert('No empty slots available. Remove a card first.'); return; }
+      // if already placed and we had a specific target, move it
+      if(placed.has(c.id) && targetIndex!=null){
+        const from = slots.findIndex(x=>x===c.id);
+        if(from>=0){ slots[from]=null; }
+      }
+      slots[idx]=c.id; saveSlots(slots); renderGrid(); openManageCards(targetIndex); // refresh states
+    };
+    btnRem.onclick = ()=>{
+      let changed=false;
+      for(let i=0;i<slots.length;i++){ if(slots[i]===c.id){ slots[i]=null; changed=true; } }
+      if(changed){ saveSlots(slots); renderGrid(); openManageCards(targetIndex); }
+    };
+    body.appendChild(row);
+  });
+  showModal('manageCardsModal', true);
 }
-$('#addCardDone').onclick=()=>showModal('addCardModal', false);
-$('#addCardClose').onclick=()=>showModal('addCardModal', false);
-$('#btnAddAnywhere').onclick=()=>{
-  const firstEmpty = slots.findIndex(x=>!x);
-  openAddCard(firstEmpty<0?0:firstEmpty);
-};
+$('#manageCardsDone').onclick=()=>showModal('manageCardsModal', false);
+$('#manageCardsClose').onclick=()=>showModal('manageCardsModal', false);
+document.getElementById('btnManageCards').onclick=()=>openManageCards();
 
 /* ----- About modal wires ----- */
 function showModal(id, show){
