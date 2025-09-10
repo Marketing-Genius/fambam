@@ -12,20 +12,23 @@
 <link rel="manifest" href="manifest.webmanifest">
 
 <style>
+/* --- layout sanity: prevent overflow math --- */
+*, *::before, *::after { box-sizing: border-box; }
+
 :root{
   --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
   --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
-  --wallpaper:url('');
-  --wallpaper-shift: 40%;
-  /* >>> You can adjust the slot height here <<< */
-  --slotH: 240px;
+  --wallpaper:url('');               /* set at runtime */
+  --wallpaper-shift: 40%;            /* upward crop focus */
+  --slotH: 220px;                    /* <— change this to adjust card height */
 }
 html,body{height:100%}
 body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
   color:var(--text); background:#0f172a; overflow-x:hidden;
 }
-/* Wallpaper + heavy neutral overlay (cards pop) */
+
+/* Wallpaper layer */
 body::before{
   content:""; position:fixed; inset:0; z-index:-2;
   background-image: var(--wallpaper);
@@ -33,6 +36,7 @@ body::before{
   background-position: center var(--wallpaper-shift);
   transform: translateZ(0);
 }
+/* Heavier neutral overlay (90%) so cards pop */
 body::after{
   content:""; position:fixed; inset:0; z-index:-1;
   background: rgba(18,24,38,.9);
@@ -67,20 +71,12 @@ header{
 .menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
 .menu-item:hover{background:#0b1224}
 
-/* Edit bar */
-#editBar{
-  display:none; align-items:center; justify-content:space-between;
-  margin-top:6px; padding:10px 12px; border-radius:12px;
-  background:rgba(17,24,39,.65); border:1px solid #1f2937;
-}
-#editBar.show{display:flex}
-
-/* Grid: fixed 4×4 */
+/* Grid slots (fixed 4×4) */
 #slots{
   margin-top:12px;
   display:grid; gap:16px;
   grid-template-columns:repeat(4, minmax(0,1fr));
-  grid-auto-rows: var(--slotH: 200px;);
+  grid-auto-rows: var(--slotH);
 }
 @media(max-width:860px){ #slots{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
 .slot{
@@ -105,7 +101,8 @@ header{
   background:rgba(31,41,55,.9);border:1px solid rgba(31,41,55,.95);
   border-radius:16px;padding:16px;text-decoration:none;color:var(--text);
   box-shadow:var(--shadow);backdrop-filter: blur(4px);
-  height:100%; /* fit the slot */
+  height:100%;              /* matches slot height exactly (box-sizing:border-box) */
+  overflow:hidden;
 }
 .tile .emoji{font-size:36px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .tile .label{font-weight:800}
@@ -120,17 +117,18 @@ header{
 .editing .tile .minus{ display:grid; cursor:pointer; }
 .tile.selecting{ outline:2px solid var(--accent); }
 
-/* Photos */
-.photo-prev{ display:none; } /* hidden in normal card mode */
-.tile.photo-only{
-  padding:0; border:none; background:transparent; box-shadow:none;
-}
-.tile.photo-only .photo-prev{
-  display:block; position:absolute; inset:0; border-radius:16px; overflow:hidden;
+/* Photos-only presentation (when images exist) */
+.tile.photo-only{ padding:0; border:none; background:transparent; box-shadow:none; }
+.tile.photo-only .photo-prev{ position:absolute; inset:0; border-radius:16px; overflow:hidden; }
+.tile.photo-only .photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+/* Subtle preview (when no photos yet) */
+.photo-prev{
+  position:absolute; inset:0; border-radius:16px; overflow:hidden; z-index:0; opacity:.22;
 }
 .photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; }
 
-/* Modals (Admin / AddCard / About) */
+/* Modal + form UI (Admin & PIN & About & AddCard) */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal{width:min(900px,100%);background:rgba(17,24,39,.98);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
@@ -152,6 +150,14 @@ header{
 .btn-lg{padding:12px 16px;border-radius:14px;font-weight:800}
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 .toggle{display:inline-flex;align-items:center;gap:8px}
+
+/* Edit bar */
+#editBar{
+  display:none; align-items:center; justify-content:space-between;
+  margin-top:6px; padding:10px 12px; border-radius:12px;
+  background:rgba(17,24,39,.65); border:1px solid #1f2937;
+}
+#editBar.show{display:flex}
 </style>
 </head>
 <body>
@@ -181,7 +187,7 @@ header{
       </div>
     </div>
 
-    <!-- Fixed grid -->
+    <!-- Fixed grid of 16 slots -->
     <main id="slots" aria-label="Home grid"></main>
   </div>
 
@@ -189,7 +195,7 @@ header{
   <input type="file" id="file-picker" accept="image/*" class="sr-only"/>
   <input type="file" id="wallpaper-picker" accept="image/*" class="sr-only"/>
 
-  <!-- Admin Modal (same as your working version) -->
+  <!-- Admin Modal -->
   <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
     <div class="modal">
       <header>
@@ -202,6 +208,7 @@ header{
           <button class="tab" data-tab="kids">Kids</button>
         </div>
 
+        <!-- Parents -->
         <section class="tab-panel" data-panel="parents">
           <div class="list" id="parentsList"></div>
           <div class="row">
@@ -214,6 +221,7 @@ header{
           </div>
         </section>
 
+        <!-- Kids -->
         <section class="tab-panel" data-panel="kids" style="display:none">
           <div class="list" id="kidsList"></div>
           <div class="row">
@@ -327,10 +335,13 @@ if (!window.Family) {
 <!-- Wallpaper utilities -->
 <script>
 const WP_KEY = 'hub:wallpaper:dataurl';
+
+// Apply wallpaper var on load
 (function applyWallpaper(){
   const data = localStorage.getItem(WP_KEY);
   if (data) document.documentElement.style.setProperty('--wallpaper', `url("${data}")`);
 })();
+
 function pickWallpaper(){
   const input = document.getElementById('wallpaper-picker');
   input.onchange = async (ev)=>{
@@ -417,6 +428,7 @@ function requestPinUI(onSuccess){
   open();
 }
 
+// Open Admin via #admin (from other pages)
 window.addEventListener('load', ()=>{
   if (location.hash === '#admin') {
     const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
@@ -425,7 +437,7 @@ window.addEventListener('load', ()=>{
 });
 </script>
 
-<!-- Admin modal logic (same as your working version) -->
+<!-- Admin modal logic -->
 <script>
 const modal = document.getElementById('adminModal');
 document.getElementById('adminClose')?.addEventListener('click', closeAdmin);
@@ -539,9 +551,9 @@ function compress(file, maxSide=256, quality=0.8){
 }
 </script>
 
-<!-- Home grid logic -->
+<!-- Home grid logic (slots + editing + Photos) -->
 <script>
-const SLOT_KEY = 'hub:home:slots:v2';
+const SLOT_KEY = 'hub:home:slots:v2';        // Array(16) of card ids or null
 const SLOTS_TOTAL = 16;
 
 const CARDS = [
@@ -558,6 +570,7 @@ function loadSlots(){
     const v=JSON.parse(localStorage.getItem(SLOT_KEY));
     if(Array.isArray(v)) return v.slice(0,SLOTS_TOTAL).concat(Array(SLOTS_TOTAL).fill(null)).slice(0,SLOTS_TOTAL);
   }catch{}
+  // seed: first row
   const seed = ['breakfast','dinner','chores','calendar'];
   return seed.concat(Array(SLOTS_TOTAL-seed.length).fill(null));
 }
@@ -571,6 +584,11 @@ let selectedFromSlot = -1;
 const $ = (s,e=document)=>e.querySelector(s);
 const $$= (s,e=document)=>[...e.querySelectorAll(s)];
 
+function safelyGetPhotoList(){
+  try{ const arr = JSON.parse(localStorage.getItem('photos:list')) || []; return Array.isArray(arr)?arr:[]; }
+  catch{ return []; }
+}
+
 function renderGrid(){
   const wrap = $('#slots'); wrap.innerHTML='';
   for(let i=0;i<SLOTS_TOTAL;i++){
@@ -578,36 +596,33 @@ function renderGrid(){
     div.className = 'slot' + (isEditing?' editing':'');
     div.dataset.pos = i;
     const id = slots[i];
-
     if(id && byId[id]){
-      const t = renderTile(byId[id]);
-      // select source for move (only in edit)
+      const t = renderTile(byId[id], i);
       if(isEditing){
         t.addEventListener('click', (ev)=>{
           ev.preventDefault(); ev.stopPropagation();
           if(selectedCardId===id){ selectedCardId=null; selectedFromSlot=-1; t.classList.remove('selecting'); return; }
+          // selecting new source
           $$('.tile').forEach(x=>x.classList.remove('selecting'));
           selectedCardId = id; selectedFromSlot = i; t.classList.add('selecting');
         });
-        // remove without navigating
-        t.querySelector('.minus').addEventListener('click',(ev)=>{
-          ev.preventDefault(); ev.stopPropagation();
-          slots[i]=null; selectedCardId=null; selectedFromSlot=-1; saveSlots(slots); renderGrid();
-        });
       }
       div.appendChild(t);
-    } else if(isEditing) {
-      const add = document.createElement('button');
-      add.className='add-btn'; add.textContent='+';
-      add.title='Add card';
-      add.onclick=(ev)=>{ ev.stopPropagation(); openAddCard(i); };
-      div.appendChild(add);
+    } else {
+      // empty slot
+      if(isEditing){
+        const add = document.createElement('button');
+        add.className='add-btn'; add.textContent='+';
+        add.title='Add card';
+        add.onclick=(ev)=>{ ev.stopPropagation(); openAddCard(i); };
+        div.appendChild(add);
+      }
     }
-
-    // slot click performs move/swap
+    // clicking any slot performs move/swap when in editing & a source selected
     div.addEventListener('click', ()=>{
       if(!isEditing || selectedCardId==null) return;
-      const to = i, from = selectedFromSlot;
+      const to = i;
+      const from = selectedFromSlot;
       if(from===to) return;
       const idB = slots[to];
       slots[to] = selectedCardId;
@@ -615,48 +630,69 @@ function renderGrid(){
       selectedCardId=null; selectedFromSlot=-1;
       saveSlots(slots); renderGrid();
     });
-
     wrap.appendChild(div);
   }
 }
 
-function renderTile(c){
+function renderTile(c, slotIndex){
   const a = document.createElement('a');
   a.href = c.href; a.className='tile';
-  a.innerHTML = `
-    <div class="emoji">${c.emoji}</div>
-    <div class="label">${c.label}</div>
-    <div class="hint">${c.hint||''}</div>
-    <button class="minus" type="button">−</button>
-  `;
-  if(isEditing){ a.addEventListener('click', (e)=>e.preventDefault()); }
 
-  // Photos behavior
-  if(c.id==='photos'){
+  // Photos tile logic
+  if(c.id === 'photos'){
     const list = safelyGetPhotoList();
     if(list.length){
-      // photo-only tile
+      // photo-only mode: no chrome, just image slideshow
       a.classList.add('photo-only');
       a.innerHTML = `<div class="photo-prev"><img alt=""></div><button class="minus" type="button">−</button>`;
-      if(isEditing){ a.addEventListener('click', (e)=>e.preventDefault()); }
       const img = a.querySelector('img');
-      let idx=0; img.src=list[0];
-      let timer = setInterval(()=>{ idx=(idx+1)%list.length; img.src=list[idx]; }, 10000);
-      // stop timer on navigation away from page
-      window.addEventListener('beforeunload',()=>clearInterval(timer),{once:true});
-    }else{
-      // no photos yet: show normal card so you can tap through to set them up
+      let idx = 0;
+      img.src = list[0];
+      const cadence = Number(localStorage.getItem('photos:cadence_ms')) || 10000; // 10s default
+      const timer = setInterval(()=>{ idx=(idx+1)%list.length; img.src=list[idx]; }, cadence);
+      // stop timer if user navigates away via this tile
+      a.addEventListener('click',()=>clearInterval(timer),{once:true});
+    } else {
+      // no photos yet: show normal card with subtle preview if any
+      a.innerHTML = `
+        <div class="emoji">${c.emoji}</div>
+        <div class="label">${c.label}</div>
+        <div class="hint">${c.hint||''}</div>
+        <button class="minus" type="button">−</button>
+      `;
+      const prev = document.createElement('div'); prev.className='photo-prev'; prev.innerHTML=`<img alt="">`;
+      a.prepend(prev);
+      const img = prev.querySelector('img');
+      if(img && list.length){ img.src=list[0]; }
     }
+  } else {
+    // normal tiles
+    a.innerHTML = `
+      <div class="emoji">${c.emoji}</div>
+      <div class="label">${c.label}</div>
+      <div class="hint">${c.hint||''}</div>
+      <button class="minus" type="button">−</button>
+    `;
   }
-  return a;
-}
 
-function safelyGetPhotoList(){
-  try{
-    const raw = localStorage.getItem('photos:list');
-    const arr = raw? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr.filter(Boolean) : [];
-  }catch{ return []; }
+  // In edit mode disable navigation
+  if(isEditing){ a.addEventListener('click', (e)=>e.preventDefault()); }
+
+  // Prevent minus from navigating on iPad (Safari)
+  const minus = a.querySelector('.minus');
+  if(minus){
+    ['click','pointerdown','touchstart','mousedown'].forEach(evt=>{
+      minus.addEventListener(evt, (ev)=>{
+        ev.preventDefault();
+        ev.stopPropagation();
+      }, {passive:false});
+    });
+    minus.addEventListener('click', ()=>{
+      slots[slotIndex]=null; selectedCardId=null; selectedFromSlot=-1; saveSlots(slots); renderGrid();
+    });
+  }
+
+  return a;
 }
 
 /* ----- Edit mode controls ----- */
@@ -694,7 +730,7 @@ $('#btnAddAnywhere').onclick=()=>{
   openAddCard(firstEmpty<0?0:firstEmpty);
 };
 
-/* ----- Simple modal helpers ----- */
+/* ----- About modal wires ----- */
 function showModal(id, show){
   const m=document.getElementById(id);
   if(!m) return;
@@ -703,10 +739,12 @@ function showModal(id, show){
 }
 $('#aboutOk')?.addEventListener('click',()=>showModal('aboutModal',false));
 $('#aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
+</script>
 
-/* Boot */
+<!-- Boot + SW -->
+<script>
+// initial render
 renderGrid();
-
 // SW
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
