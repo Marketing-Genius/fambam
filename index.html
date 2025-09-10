@@ -128,6 +128,39 @@ header{
 }
 .photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; }
 
+  /* Photos tile: edge-to-edge image, no overlay/tint */
+.tile.photos-card{
+  background: transparent;      /* remove blue card backdrop */
+  border: none;                 /* no border over photo */
+  padding: 0;                   /* image fills the tile */
+}
+
+/* Show the image at full strength */
+.tile.photos-card .photo-prev{ opacity: 1; }
+
+/* Hide emoji/labels on the Photos tile in normal mode */
+.tile.photos-card .emoji,
+.tile.photos-card .label,
+.tile.photos-card .hint{ display: none; }
+
+/* Keep the minus button invisible normally… */
+.tile.photos-card .minus{ display:none; }
+/* …but visible in Edit Mode so you can remove the card */
+.editing .tile.photos-card .minus{
+  display:grid;
+  background: rgba(0,0,0,.4);
+  border-color:#000;
+}
+
+/* Give the photo a soft outer shadow while keeping rounded corners */
+.tile.photos-card::before{
+  content:"";
+  position:absolute; inset:0;
+  border-radius:16px;
+  box-shadow: var(--shadow);
+  pointer-events:none;
+}
+
 /* Modal + form UI (Admin & PIN & About & AddCard) */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
@@ -637,6 +670,7 @@ function renderGrid(){
 function renderTile(c, slotIndex){
   const a = document.createElement('a');
   a.href = c.href; a.className='tile';
+   if (c.id === 'photos') a.classList.add('photos-card');
 
   // Photos tile logic
   if(c.id === 'photos'){
