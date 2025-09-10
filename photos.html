@@ -4,20 +4,43 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Fambam · Photos</title>
+
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
+
 <style>
-:root{ --panel:#111827; --card:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --accent:#22d3ee; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px; }
+:root{
+  --panel:#111827; --card:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --accent:#22d3ee;
+  --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+}
 html,body{height:100%}
-body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%); color:var(--text);}
+body{
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%); color:var(--text);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
 .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto 1fr auto}
+
+/* Panels */
 .panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
+
+/* Header (consistent with other pages) */
 header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.btn{font:inherit;color:#e5e7eb;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;cursor:pointer}
-.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
+.head-left{display:flex;align-items:center;gap:10px}
+.head-left img{height:36px;display:block;cursor:pointer}
+.title{font-weight:800}
+.title .small{font-weight:600;font-size:.9rem;color:var(--muted)}
+.menu-wrap{position:relative}
+.hamburger{font:inherit;cursor:pointer;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;color:var(--text)}
+.menu-dd{position:absolute;right:0;top:110%;min-width:220px;background:#111827;border:1px solid #1f2937;border-radius:12px;box-shadow:var(--shadow);display:none;padding:6px;z-index:10}
+.menu-dd.open{display:block}
+.mi{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
+.mi:hover{background:#0b1224}
+
+/* Layout */
 .grid{display:grid;gap:14px;grid-template-columns:1fr 320px}
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
 .viewer{position:relative;height:60vh;min-height:360px;border-radius:16px;overflow:hidden;background:#0b1224;border:1px solid #334155}
@@ -25,18 +48,30 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 .list{display:grid;gap:10px;max-height:60vh;overflow:auto}
 .item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
 .small{font-size:.9rem;color:#cbd5e1}
+
+/* Tiny toast */
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#0b1224;border:1px solid #334155;color:#e5e7eb;padding:10px 12px;border-radius:10px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .25s}
+.toast.show{opacity:1}
 </style>
 </head>
 <body>
 <div class="app">
+  <!-- Header -->
   <header class="panel">
-    <div>
-      <div style="font-size:1.4rem;font-weight:800">Photos</div>
-      <div class="small">Pick images for the home slideshow card.</div>
+    <div class="head-left">
+      <img src="fambam.png" alt="Fambam" title="Home" onclick="location.href='./index.html'"/>
+      <div class="title">
+        <div style="font-size:1.4rem">Photos</div>
+        <div class="small">Pick images for the home slideshow card.</div>
+      </div>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a class="btn" href="./index.html">← Home</a>
-      <button id="btnAdd" class="btn-primary">Add Photos</button>
+    <div class="menu-wrap">
+      <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false">☰</button>
+      <div id="menuDD" class="menu-dd" role="menu" aria-hidden="true">
+        <button class="mi" data-mi="add">Add Photos</button>
+        <button class="mi" data-mi="clear">Clear All</button>
+        <button class="mi" data-mi="about">About Photos</button>
+      </div>
     </div>
   </header>
 
@@ -61,13 +96,37 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
   </footer>
 </div>
 
-<input id="picker" type="file" accept="image/*" multiple class="sr-only"/>
+<!-- Hidden picker -->
+<input id="picker" type="file" accept="image/*,.heic,.heif" multiple class="sr-only"/>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
-const LS_LIST='photos:list', LS_IV='photos:interval';
+const LS_LIST='photos:list';
+const LS_IV  ='photos:cadence_ms';     // <- matches Home card
 const $=(s,e=document)=>e.querySelector(s);
+
 const listEl=$('#list'), big=$('#big'), picker=$('#picker');
 
+/* ---------- Menu (hamburger) ---------- */
+(function menu(){
+  const btn=$('#btnMenu'), dd=$('#menuDD');
+  const open=()=>{dd.classList.add('open');btn.setAttribute('aria-expanded','true');dd.setAttribute('aria-hidden','false');};
+  const close=()=>{dd.classList.remove('open');btn.setAttribute('aria-expanded','false');dd.setAttribute('aria-hidden','true');};
+  btn.addEventListener('click',e=>{e.stopPropagation(); dd.classList.contains('open')?close():open();});
+  document.addEventListener('click',e=>{ if(!dd.contains(e.target) && e.target!==btn) close(); });
+  dd.addEventListener('click',e=>{
+    const el=e.target.closest('.mi'); if(!el) return; close();
+    const act=el.dataset.mi;
+    if(act==='add') picker.click();
+    if(act==='clear'){
+      if(confirm('Remove all photos?')){ imgs=[]; saveList(imgs); renderList(); startShow(); }
+    }
+    if(act==='about'){ showToast('JPEG/PNG/HEIC supported. Large photos are resized on import.'); }
+  });
+})();
+
+/* ---------- Storage + state ---------- */
 function loadList(){ try{const v=JSON.parse(localStorage.getItem(LS_LIST)); if(Array.isArray(v)) return v; }catch{} return []; }
 function saveList(a){ localStorage.setItem(LS_LIST, JSON.stringify(a)); }
 function loadIv(){ const v=+localStorage.getItem(LS_IV)||10000; return [10000,30000,60000].includes(v)?v:10000; }
@@ -75,9 +134,13 @@ function saveIv(v){ localStorage.setItem(LS_IV, v); }
 
 let imgs=loadList(); let iv=loadIv(); let idx=0; let timer=null;
 
+/* ---------- UI render ---------- */
 function renderList(){
   listEl.innerHTML='';
-  if(!imgs.length){ listEl.innerHTML='<div class="small" style="opacity:.8">No photos yet. Tap “Add Photos”.</div>'; big.removeAttribute('src'); return; }
+  if(!imgs.length){
+    listEl.innerHTML='<div class="small" style="opacity:.8">No photos yet. Tap “Add Photos”.</div>';
+    big.removeAttribute('src'); return;
+  }
   imgs.forEach((src,i)=>{
     const row=document.createElement('div'); row.className='item';
     row.innerHTML=`<div class="small">Photo ${i+1}</div><button class="btn">Remove</button>`;
@@ -85,45 +148,93 @@ function renderList(){
     listEl.appendChild(row);
   });
 }
-
 function startShow(){
   if(timer) clearInterval(timer);
   if(!imgs.length){ big.removeAttribute('src'); return; }
   idx=idx%imgs.length; big.src=imgs[idx];
   timer=setInterval(()=>{ idx=(idx+1)%imgs.length; big.style.opacity=0; setTimeout(()=>{ big.src=imgs[idx]; big.style.opacity=1; },150); }, iv);
 }
-
 document.querySelectorAll('input[name="iv"]').forEach(r=>{
   if(+r.value===iv) r.checked=true;
   r.onchange=()=>{ iv=+r.value; saveIv(iv); startShow(); };
 });
 
-document.getElementById('btnAdd').onclick=()=>{ picker.click(); };
-picker.onchange=async (e)=>{
+/* ---------- Import pipeline (robust) ---------- */
+/* Accepts big files, HEIC/HEIF, resizes to maxSide, exports JPEG to keep size small */
+document.getElementById('picker').onchange = async (e)=>{
   const files=[...e.target.files||[]];
+  if(!files.length) return;
+  let added=0, skipped=0;
+
   for(const f of files){
-    const data=await readAndShrink(f, 1800, .9);
-    imgs.push(data);
+    try{
+      const data=await readAndShrinkSmart(f, 1800, .9); // ~screens worth; good for performance
+      if(data){ imgs.push(data); added++; }
+      else skipped++;
+    }catch{ skipped++; }
   }
-  saveList(imgs); renderList(); startShow(); picker.value='';
+  saveList(imgs); renderList(); startShow(); e.target.value='';
+  if(added) showToast(`Added ${added} photo${added>1?'s':''}${skipped?` · Skipped ${skipped}`:''}`);
+  else showToast('No supported photos were added.');
 };
 
-function readAndShrink(file,maxSide=1800,quality=.9){
-  return new Promise(res=>{
-    const img=new Image();
-    img.onload=()=>{
-      const scale=Math.min(1, maxSide/Math.max(img.width,img.height));
-      const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
-      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
-      res(c.toDataURL('image/jpeg',quality));
-    };
-    const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
+/* Try createImageBitmap first (often decodes HEIC on iPad Safari).
+   Fallback to Image() + FileReader. Always output normalized JPEG. */
+async function readAndShrinkSmart(file, maxSide=1800, quality=.9){
+  const bitmap = await decodeToBitmap(file).catch(()=>null);
+  if(!bitmap) return null;
+
+  const scale = Math.min(1, maxSide/Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  // JPEG keeps storage small and is widely supported
+  return c.toDataURL('image/jpeg', quality);
+}
+
+function decodeToBitmap(file){
+  return new Promise((resolve, reject)=>{
+    // Prefer createImageBitmap when present (handles orientation & more types)
+    if ('createImageBitmap' in window) {
+      createImageBitmap(file).then(resolve).catch(()=>{
+        // fallback to classic Image + FileReader
+        const fr = new FileReader();
+        fr.onload = ()=>{
+          const img = new Image();
+          img.onload = ()=> resolve(img);
+          img.onerror = reject;
+          img.src = fr.result;
+        };
+        fr.onerror = reject;
+        fr.readAsDataURL(file);
+      });
+    } else {
+      const fr = new FileReader();
+      fr.onload = ()=>{
+        const img = new Image();
+        img.onload = ()=> resolve(img);
+        img.onerror = reject;
+        img.src = fr.result;
+      };
+      fr.onerror = reject;
+      fr.readAsDataURL(file);
+    }
   });
 }
 
+/* ---------- Toast ---------- */
+let toastTimer=null;
+function showToast(msg){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+/* ---------- Boot ---------- */
 renderList(); startShow();
 
-// SW
+/* SW */
 if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
