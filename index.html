@@ -534,10 +534,12 @@ function buildKids(){
 function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
 
+/* Clean photo picker: always show native sheet (Photo Library / Take Photo / Choose File) */
 function pickPhoto(kind, id){
   const input = document.getElementById('file-picker');
-  const useCamera = confirm('Use camera to take a new photo? (Cancel = choose from Photo Library/Files)');
-  if (useCamera) input.setAttribute('capture','environment'); else input.removeAttribute('capture');
+
+  // Ensure we always get the native chooser; no confirm dialog or capture toggling.
+  input.removeAttribute('capture');
 
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0]; if(!file) return;
@@ -547,7 +549,7 @@ function pickPhoto(kind, id){
       else Family.upsertParent({ id, photo:dataUrl });
       if (kind==='kid') buildKids(); else buildParents();
     }catch(_){ alert('Could not save photo.'); }
-    input.value=''; input.removeAttribute('capture');
+    input.value='';
   };
   input.click();
 }
