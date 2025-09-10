@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Chores</title>
+<title>Fambam · Chores</title>
 
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,18 +24,26 @@ body{
 }
 .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
 .panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
+
+/* Header: logo + title left, hamburger right */
 header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.h-left{display:flex;align-items:center;gap:14px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:38px;display:block;cursor:pointer}
 .title{font-weight:800;letter-spacing:.2px}
 .title .small{font-weight:600;font-size:.85rem;color:var(--muted)}
-.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-input[type="week"],button,select{font:inherit;color:var(--text);background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 14px}
-button{cursor:pointer}
-.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:700}
-.btn-ghost{background:transparent;border:1px dashed #334155;color:var(--muted)}
-.icon-btn{padding:6px 10px;border-radius:10px;border:1px solid #334155;background:#0b1224;cursor:pointer}
-.btn-back{display:inline-block;text-decoration:none;font-weight:800;background:#0b1224;color:#e5e7eb;border:1px solid #334155;padding:10px 12px;border-radius:12px}
-.btn-back:active{transform:translateY(1px)}
-.btn-icon{display:inline-grid;place-items:center;width:44px;height:44px;padding:0;border-radius:12px}
+
+/* Hamburger dropdown (text-only items) */
+.menu-wrap{position:relative}
+.hamburger{font:inherit;cursor:pointer;background:#0b1224;border:1px solid #334155;border-radius:12px;color:#e5e7eb;padding:10px 12px}
+.menu-dropdown{
+  position:absolute; right:0; top:110%; min-width:200px; z-index:20;
+  background:#111827; border:1px solid #1f2937; border-radius:12px;
+  box-shadow:var(--shadow); padding:6px; display:none;
+}
+.menu-dropdown.open{display:block}
+.menu-item{display:block; width:100%; text-align:left; padding:10px 12px; border:none; background:transparent; color:#e5e7eb; border-radius:10px; cursor:pointer}
+.menu-item:hover{background:#0b1224}
 
 /* Board */
 .board{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:14px}
@@ -63,9 +71,7 @@ button{cursor:pointer}
   cursor:pointer; user-select:none;
 }
 .dot.done{
-  background:#0f766e;            /* green-ish */
-  border-color:#0d9488;
-  color:#e6fffa;
+  background:#0f766e; border-color:#0d9488; color:#e6fffa;
   box-shadow: inset 0 0 0 2px rgba(0,0,0,.18);
 }
 .dot:active{transform:translateY(1px)}
@@ -83,20 +89,30 @@ button{cursor:pointer}
 @media(min-width:720px){.chklist{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .footer{text-align:center;opacity:.7;font-size:.85rem}
 .version{opacity:.6;font-size:.8rem;margin-top:6px}
+input[type="text"]{background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 12px;color:var(--text);font:inherit}
+.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:700}
+.btn-ghost{background:transparent;border:1px dashed #334155;color:var(--muted)}
+.icon-btn{padding:6px 10px;border-radius:10px;border:1px solid #334155;background:#0b1224;cursor:pointer}
 </style>
 </head>
 <body>
   <div class="app">
     <header class="panel">
-      <div class="title">
-        <div style="font-size:1.6rem">Chores</div>
-        <div class="small">Weekly rotation (Mon–Sun). Tap a card to swap or use the dropdown to reassign.</div>
+      <div class="h-left">
+        <a href="./index.html" class="brand" title="Home">
+          <img src="fambam.png" alt="Fambam">
+        </a>
+        <div class="title">
+          <div style="font-size:1.6rem">Chores</div>
+          <div class="small">Weekly rotation (Mon–Sun). Tap a card to swap or use the dropdown to reassign.</div>
+        </div>
       </div>
-      <div class="controls">
-        <a href="./index.html" class="btn-back" title="Back to Home">← Home</a>
-        <button id="btnManage" class="btn-primary">Manage</button>
-        <button id="btnAuto" class="icon-btn" title="Auto-rotate for this week">🔄</button>
-        <button id="btnAdmin" class="icon-btn" title="Admin">⚙️</button>
+      <div class="menu-wrap">
+        <button id="btnHamburger" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown">☰</button>
+        <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
+          <button class="menu-item" data-action="shuffle">Shuffle</button>
+          <button class="menu-item" data-action="manage">Manage</button>
+        </div>
       </div>
     </header>
 
@@ -110,11 +126,11 @@ button{cursor:pointer}
 
     <div class="footer">
       Works offline. Data stays on this device (local only).
-      <div class="version">Chores v1.1 (done circles)</div>
+      <div class="version">Chores v1.2 (unified header, no PIN)</div>
     </div>
   </div>
 
-  <!-- Manage Modal (PIN-gated) -->
+  <!-- Manage Modal -->
   <div class="modal-backdrop" id="manageModal" aria-hidden="true" role="dialog" aria-labelledby="manageTitle">
     <div class="modal">
       <header>
@@ -122,13 +138,13 @@ button{cursor:pointer}
         <button id="manageClose" class="icon-btn">✖</button>
       </header>
       <div class="body">
-        <div class="help">Parents can edit the chore list and which kids participate in the rotation.</div>
+        <div class="help">Edit the chore list and which kids participate in the rotation.</div>
 
         <div>
           <div class="badge">Chore List</div>
           <div class="list" id="choreList"></div>
           <div class="row">
-            <input id="newChore" placeholder="Add chore (e.g., Trash)" />
+            <input id="newChore" type="text" placeholder="Add chore (e.g., Trash)" />
             <button id="addChore" class="btn-primary">Add</button>
           </div>
         </div>
@@ -148,16 +164,15 @@ button{cursor:pointer}
 <!-- Family Store -->
 <script src="family.js?v=3.3.6"></script>
 <script>
-// If family.js failed (cache), shim minimal API so page still works
+// Minimal shim if family.js misses
 if (!window.Family) {
   console.warn('family.js not loaded — using fallback Family shim (Chores).');
   (function(){
-    const K={pin:'hub:family:pin', parents:'hub:family:parents', kids:'hub:family:kids'};
+    const K={parents:'hub:family:parents', kids:'hub:family:kids'};
     const uid=()=>Math.random().toString(36).slice(2,10);
     const load=(k,f)=>{ try{const v=JSON.parse(localStorage.getItem(k)); return v ?? f;}catch{ return f; } };
     const save=(k,v)=>localStorage.setItem(k, JSON.stringify(v));
     window.Family = {
-      verifyPin(p){ const real=load(K.pin,null); return real?String(real)===String(p):true; },
       getKids(){ return load(K.kids, []); },
       getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false); },
       upsertKid(k){ const a=this.getKids(); const i=a.findIndex(x=>x.id===k.id);
@@ -166,12 +181,6 @@ if (!window.Family) {
     };
   })();
 }
-
-// Route gear to Home Admin
-document.addEventListener('DOMContentLoaded',()=>{
-  const gear=document.getElementById('btnAdmin');
-  if(gear) gear.onclick=()=>{ location.href='./index.html#admin'; };
-});
 
 // ---------- Storage keys ----------
 const LS = {
@@ -187,7 +196,7 @@ const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const initials=n=>((n||'?').trim()[0]||'?').toUpperCase();
 
-function getKids(){ // active only
+function getKids(){
   try{
     if(Family && typeof Family.getActiveKids==='function'){
       const k=Family.getActiveKids(); if(Array.isArray(k)) return k;
@@ -204,9 +213,9 @@ function startOfWeekMonday(d=new Date()){
   const dt=new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const day = (dt.getUTCDay()+6)%7; // 0..6, Monday=0
   dt.setUTCDate(dt.getUTCDate()-day);
-  return dt; // UTC date object
+  return dt;
 }
-function isoDateUTC(d){ return d.toISOString().slice(0,10); } // YYYY-MM-DD
+function isoDateUTC(d){ return d.toISOString().slice(0,10); }
 function thisMondayISO(){ return isoDateUTC(startOfWeekMonday(new Date())); }
 
 // ---------- Defaults ----------
@@ -220,11 +229,11 @@ function ensureDefaults(){
     ];
     save(LS.chores, chores);
   }
+  // Default: ALL current kids eligible (and repair if elig isn't set yet)
   let elig = load(LS.elig, null);
-  if(!Array.isArray(elig)){
-    const kids = getKids();
-    const sorted = kids.slice().sort((a,b)=> (a.name||'').localeCompare(b.name||''));
-    elig = sorted.map(k=>k.id);
+  const kids = getKids().slice().sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+  if(!Array.isArray(elig) || elig.length===0){
+    elig = kids.map(k=>k.id);
     save(LS.elig, elig);
   }
 }
@@ -242,31 +251,11 @@ function rotateForWeek(mondayISO){
 
   let assignment = {};
   if(prevMap){
-    const order = chores.map(c=> prevMap[c.id]).filter(Boolean);
     const base = eligIds.slice();
-    const used = order.map(kidId => base.indexOf(kidId));
-    if(used.every(ix=>ix>=0)){
-      const rotated = used.map(ix => base[(ix+1)%base.length]);
-      chores.forEach((c,i)=> assignment[c.id] = base[rotated[i%rotated.length]]);
-    } else {
-      chores.forEach((c,i)=> assignment[c.id] = eligIds[i%eligIds.length]);
-    }
+    chores.forEach((c,i)=> assignment[c.id] = base[(i+1)%base.length]); // simple rotate
   } else {
     chores.forEach((c,i)=> assignment[c.id] = eligIds[i%eligIds.length]);
   }
-
-  if(prevMap){
-    chores.forEach(c=>{
-      if(prevMap[c.id] === assignment[c.id]){
-        const j = (chores.findIndex(x=>x.id===c.id)+1)%chores.length;
-        const cj = chores[j];
-        const tmp = assignment[c.id];
-        assignment[c.id] = assignment[cj.id];
-        assignment[cj.id] = tmp;
-      }
-    });
-  }
-
   save(LS.week(mondayISO), assignment);
   return assignment;
 }
@@ -275,12 +264,8 @@ function rotateForWeek(mondayISO){
 const DAY_KEYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const DAY_LABELS = ['M','T','W','T','F','S','S'];
 
-function loadWeekDone(){
-  return load(LS.done(thisMondayISO()), {}) || {};
-}
-function saveWeekDone(map){
-  save(LS.done(thisMondayISO()), map);
-}
+function loadWeekDone(){ return load(LS.done(thisMondayISO()), {}) || {}; }
+function saveWeekDone(map){ save(LS.done(thisMondayISO()), map); }
 
 // ---------- UI render ----------
 let selectedChoreId = null;
@@ -307,14 +292,14 @@ function renderBoard(){
     board.appendChild(n); return;
   }
   if(!kids.length){
-    const n=document.createElement('div'); n.className='panel'; n.textContent='No active kids. Add/enable kids in Admin.';
+    const n=document.createElement('div'); n.className='panel'; n.textContent='No active kids. Add/enable kids in Admin (on Home).';
     board.appendChild(n); return;
   }
 
   chores.forEach(c=>{
     const kidId = assigns[c.id];
     const kid = kids.find(k=>k.id===kidId) || null;
-    const done = doneMap[c.id] || {}; // {Mon:true,...}
+    const done = doneMap[c.id] || {};
 
     const dotsHTML = DAY_KEYS.map((k,idx)=>{
       const lbl = DAY_LABELS[idx];
@@ -329,7 +314,7 @@ function renderBoard(){
         <div class="badge">Weekly</div>
       </div>
       <div class="person">
-        <div class="face">${kid?.photo?`<img src="${kid.photo}">`:`<span>${initials(kid?.name||'?')}</span>`}</div>
+        <div class="face">${kid?.photo?`<img src="${kid.photo}" alt="">`:`<span>${initials(kid?.name||'?')}</span>`}</div>
         <div style="font-weight:800">${kid? kid.name : 'Unassigned'}</div>
       </div>
       <div class="selector">
@@ -344,7 +329,7 @@ function renderBoard(){
     board.appendChild(card);
   });
 
-  // wiring — assignment changes
+  // assignment changes
   $$('.card .select', board).forEach(sel=>{
     sel.onchange = (e)=>{
       const choreId = e.target.id.slice(4);
@@ -352,7 +337,7 @@ function renderBoard(){
     };
   });
 
-  // wiring — swap
+  // swap
   $$('.swapBtn', board).forEach(btn=>{
     btn.onclick = ()=>{
       const card = btn.closest('.card');
@@ -373,11 +358,11 @@ function renderBoard(){
     };
   });
 
-  // wiring — done toggles
+  // done toggles
   $$('.dot', board).forEach(dot=>{
     dot.onclick = ()=>{
       const choreId = dot.dataset.chore;
-      const dayKey  = dot.dataset.day; // Mon..Sun
+      const dayKey  = dot.dataset.day;
       const map = loadWeekDone();
       const entry = map[choreId] || {};
       entry[dayKey] = !entry[dayKey];
@@ -396,22 +381,15 @@ function kidOptions(selectedId){
 }
 
 // ---------- Assignments ----------
-function currentAssigns(){
-  return load(LS.week(thisMondayISO()), {}) || {};
-}
-function saveAssigns(a){
-  save(LS.week(thisMondayISO()), a);
-  renderBoard();
-}
-function assignKid(choreId, kidId){
-  const a = currentAssigns(); a[choreId]=kidId; saveAssigns(a);
-}
+function currentAssigns(){ return load(LS.week(thisMondayISO()), {}) || {}; }
+function saveAssigns(a){ save(LS.week(thisMondayISO()), a); renderBoard(); }
+function assignKid(choreId, kidId){ const a = currentAssigns(); a[choreId]=kidId; saveAssigns(a); }
 function swapAssignees(choreIdA, choreIdB){
   const a = currentAssigns();
   const x=a[choreIdA], y=a[choreIdB]; a[choreIdA]=y; a[choreIdB]=x; saveAssigns(a);
 }
 
-// ---------- Manage modal (PIN-gated) ----------
+// ---------- Manage modal ----------
 const manageModal = $('#manageModal');
 $('#manageClose').onclick = ()=> hide(manageModal);
 $('#manageSave').onclick = ()=>{
@@ -428,28 +406,14 @@ $('#addChore').onclick = ()=>{
   $('#newChore').value=''; buildManageLists();
 };
 
-$('#btnManage').onclick = ()=>{
-  const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
-  if (hasPin){
-    const pin = prompt('Enter Admin PIN (numbers only):','');
-    if(pin==null) return;
-    if(!/^\d{1,8}$/.test(pin)) return alert('PIN must be 1–8 digits.');
-    if(!Family.verifyPin(pin)) return alert('Incorrect PIN.');
-  }
-  openManage();
-};
-
-function openManage(){
-  buildManageLists();
-  show(manageModal);
-}
+function openManage(){ buildManageLists(); show(manageModal); }
 function buildManageLists(){
   const chores = load(LS.chores, []);
   const list = $('#choreList'); list.innerHTML='';
   chores.forEach(c=>{
     const row=document.createElement('div'); row.className='item'; row.dataset.id=c.id;
     row.innerHTML=`
-      <input class="lbl" value="${escapeHtml(c.label)}"/>
+      <input class="lbl" type="text" value="${escapeHtml(c.label)}"/>
       <button class="btn-ghost" data-remove>Remove</button>
     `;
     list.appendChild(row);
@@ -463,7 +427,6 @@ function buildManageLists(){
     row.querySelector('[data-remove]').onclick = ()=>{
       const chores = load(LS.chores, []).filter(x=>x.id!==id);
       save(LS.chores, chores);
-      // also drop assignment & done entries that referenced this chore
       const a = currentAssigns(); if(id in a){ delete a[id]; saveAssigns(a); }
       const d = loadWeekDone(); if(id in d){ delete d[id]; saveWeekDone(d); }
       buildManageLists(); renderBoard();
@@ -473,7 +436,9 @@ function buildManageLists(){
   // Eligible kids
   const wrap = $('#kidChecks'); wrap.innerHTML='';
   const kids = getKids();
-  const elig = load(LS.elig, []);
+  let elig = load(LS.elig, []);
+  // If elig was empty, treat as "all kids selected" and persist that.
+  if(!Array.isArray(elig) || elig.length===0){ elig = kids.map(k=>k.id); save(LS.elig, elig); }
   kids.forEach(k=>{
     const id=`k-${k.id}`;
     const div=document.createElement('label'); div.style.display='flex'; div.style.gap='8px'; div.style.alignItems='center';
@@ -504,31 +469,51 @@ function ensureAssignmentsForThisWeek(){
   } else {
     const chores = load(LS.chores, []);
     const eligIds = load(LS.elig, []);
+    const kids = getKids().filter(k=>eligIds.includes(k.id));
     chores.forEach((c,i)=>{
-      if(!a[c.id]){
-        const kids = getKids().filter(k=>eligIds.includes(k.id));
-        if(kids.length) a[c.id]=kids[i%kids.length].id;
-      }
+      if(!a[c.id] && kids.length){ a[c.id]=kids[i%kids.length].id; }
     });
     save(LS.week(mondayISO), a);
   }
 }
 
-$('#btnAuto').onclick = ()=>{
-  const mondayISO = thisMondayISO();
-  rotateForWeek(mondayISO);
-  renderBoard();
-};
+/* ----- Header hamburger actions ----- */
+(function hamburger(){
+  const btn = $('#btnHamburger');
+  const dd  = $('#menuDropdown');
+  const open = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
+  const close= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
 
-// Init
+  btn.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?close():open(); });
+  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) close(); });
+
+  dd.addEventListener('click', (e)=>{
+    const a = e.target.closest('.menu-item'); if(!a) return;
+    close();
+    const act = a.dataset.action;
+    if (act==='shuffle'){ rotateForWeek(thisMondayISO()); renderBoard(); }
+    else if (act==='manage'){ openManage(); }
+  });
+})();
+
+/* ----- Init & react to Family changes ----- */
 ensureDefaults();
 ensureAssignmentsForThisWeek();
 renderBoard();
 
-// Refresh board if Family store changes
-try { Family.onChange && Family.onChange(()=>{ ensureDefaults(); ensureAssignmentsForThisWeek(); renderBoard(); }); } catch(_){}
+try {
+  const onChange = Family.onChange && Family.onChange(()=> {
+    // Make all kids eligible if not set yet, then re-render
+    const kids = getKids();
+    let elig = load(LS.elig, []);
+    if(!Array.isArray(elig) || elig.length===0){
+      elig = kids.map(k=>k.id); save(LS.elig, elig);
+    }
+    ensureAssignmentsForThisWeek();
+    renderBoard();
+  });
+} catch(_){}
 
-// SW
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
