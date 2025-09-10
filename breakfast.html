@@ -24,18 +24,32 @@ body{
 }
 .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
 .panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:18px;padding:14px}
+
+/* Header */
 header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.title{font-weight:800}
-.title .small{font-weight:600;font-size:.85rem;color:var(--muted)}
+.left{display:flex;align-items:center;gap:14px;min-width:0}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+.brand img{height:38px;display:block}
+.title{min-width:0}
+.title .big{font-weight:800;font-size:1.4rem}
+.title .small{font-weight:600;font-size:.9rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .btn{background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;color:var(--text);font:inherit;cursor:pointer}
 .btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);border:none;color:#001018;font-weight:800}
-.btn-ghost{background:transparent;border:1px dashed #334155;color:var(--muted)}
 .btn-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;border:1px solid #334155;background:#0b1224}
-.btn-back{display:inline-block;text-decoration:none;font-weight:800;background:#0b1224;color:#e5e7eb;border:1px solid #334155;padding:10px 12px;border-radius:12px}
-.small{font-size:.9rem}
-.hint{opacity:.8;font-size:.9rem;text-align:center}
-.version{opacity:.6;font-size:.8rem;margin-top:6px}
+
+/* Hamburger (match index.html) */
+.menu-wrap{position:relative; z-index: 9001; overflow:visible}
+.hamburger{font:inherit;cursor:pointer;background:rgba(11,18,36,.6);color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:10px 12px}
+.menu-dropdown{
+  position:absolute;right:0;top:110%;min-width:220px;z-index:9002 !important;
+  background:#111827;border:1px solid #1f2937;border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);padding:6px;display:none
+}
+.menu-dropdown.open{display:block}
+.menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
+.menu-item:hover{background:#0b1224}
 
 /* Kids row */
 .kids{display:flex;gap:10px;flex-wrap:wrap}
@@ -63,29 +77,40 @@ header{display:flex;gap:12px;align-items:center;justify-content:space-between;fl
 .list{display:grid;gap:10px}
 .item{display:grid;grid-template-columns:120px 1fr auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
 input[type="text"]{background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 12px;color:var(--text);font:inherit}
+
+/* Footer hint */
+.hint{opacity:.8;font-size:.9rem;text-align:center}
+.version{opacity:.6;font-size:.8rem;margin-top:6px}
 </style>
 </head>
 <body>
   <div class="app">
     <header class="panel">
-      <div class="title">
-        <div style="font-size:1.6rem">Breakfast Chooser</div>
-        <div class="small">Tap a child, then tap a food card to choose.</div>
+      <div class="left">
+        <!-- Brand = Home button -->
+        <a class="brand" href="./index.html" title="Home">
+          <img src="fambam.png" alt="Fambam">
+        </a>
+        <div class="title">
+          <div class="big">Breakfast Chooser</div>
+          <div class="small">Tap a child, then tap a food card to choose.</div>
+        </div>
       </div>
-      <div class="controls">
-        <a href="./index.html" class="btn-back">← Home</a>
 
-        <label class="badge" for="theDate">Date</label>
+      <div class="controls">
+        <label for="theDate" class="small">Date</label>
         <input id="theDate" class="btn" type="date"/>
 
-        <button id="btnReset" class="btn">Reset</button>
-        <button id="btnRandom" class="btn-icon" title="Randomize">🎲</button>
-
-        <button id="btnCopy" class="btn-icon" title="Copy summary">📋</button>
-        <button id="btnShare" class="btn-icon" title="Share…">📤</button>
-
-        <button id="btnMenu" class="btn">Menu</button>
-        <button id="btnAdmin" class="btn-icon" title="Admin">⚙️</button>
+        <!-- Hamburger menu -->
+        <div class="menu-wrap">
+          <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
+          <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
+            <button class="menu-item" data-action="reset"  role="menuitem">Reset</button>
+            <button class="menu-item" data-action="random" role="menuitem">Random</button>
+            <button class="menu-item" data-action="share"  role="menuitem">Share</button>
+            <button class="menu-item" data-action="manage" role="menuitem">Manage</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -97,19 +122,19 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Breakfast v3.5.1</div>
+      <div class="version">Breakfast v3.6.0 (unified header • hamburger)</div>
     </div>
   </div>
 
-  <!-- Menu Modal -->
+  <!-- Manage (edit choices) Modal -->
   <div class="modal-backdrop" id="menuModal" aria-hidden="true" role="dialog" aria-labelledby="menuTitle">
     <div class="modal">
       <header>
-        <div id="menuTitle" style="font-weight:800">Breakfast Menu</div>
+        <div id="menuTitle" style="font-weight:800">Manage Breakfast Choices</div>
         <button id="menuClose" class="btn">✖</button>
       </header>
       <div class="body">
-        <div class="badge">Edit the 4 choices (emoji + name)</div>
+        <div class="small" style="opacity:.8">Edit the 4 choices (emoji + name)</div>
         <div id="menuList" class="list"></div>
       </div>
       <div class="footer">
@@ -247,11 +272,12 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
     return lines.join('\n');
   }
 
-  const menuModal=$('#menuModal');
-  const closeMenu=()=>{menuModal.style.display='none';menuModal.setAttribute('aria-hidden','true');};
-  const openMenu=()=>{buildMenuList();menuModal.style.display='flex';menuModal.setAttribute('aria-hidden','false');};
-  $('#menuClose').onclick=closeMenu;
-  $('#menuDone').onclick=closeMenu;
+  /* --- Manage modal wires --- */
+  const manageModal=$('#menuModal');
+  const closeManage=()=>{manageModal.style.display='none';manageModal.setAttribute('aria-hidden','true');};
+  const openManage=()=>{buildMenuList();manageModal.style.display='flex';manageModal.setAttribute('aria-hidden','false');};
+  $('#menuClose').onclick=closeManage;
+  $('#menuDone').onclick=closeManage;
 
   function buildMenuList(){
     const list=$('#menuList'); list.innerHTML='';
@@ -270,23 +296,35 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
     });
   }
 
-  $('#btnMenu').onclick=openMenu;
+  /* --- Hamburger logic (match index) --- */
+  (function menu(){
+    const btn = document.getElementById('btnMenu');
+    const dd  = document.getElementById('menuDropdown');
+    const openDD = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
+    const closeDD= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
 
-  $('#btnReset').onclick=()=>{ if(confirm('Clear choices for this date?')){ localStorage.removeItem(LS.day(todayISO())); renderChoices(); } };
+    btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?closeDD():openDD(); });
+    document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) closeDD(); });
 
-  $('#btnRandom').onclick=()=>{
-    const kids=(Family.getKids&&Family.getKids())||[];
-    if(!kids.length) return;
-    const menu=load(LS.menu,[]);
-    const map={};
-    kids.forEach(k=>{ map[k.id]=Math.floor(Math.random()*menu.length); });
-    save(LS.day(todayISO()),map); renderChoices();
-  };
-
-  $('#btnCopy').onclick=()=>{ const t=buildSummary(); navigator.clipboard.writeText(t).then(()=>alert('Summary copied.')); };
-  $('#btnShare').onclick=()=> shareText(buildSummary());
-
-  $('#btnAdmin').onclick=()=>location.href='./index.html#admin';
+    dd?.addEventListener('click', async (e)=>{
+      const el = e.target.closest('.menu-item'); if (!el) return;
+      const action = el.dataset.action;
+      closeDD();
+      if (action === 'reset') {
+        if(confirm('Clear choices for this date?')){ localStorage.removeItem(LS.day(todayISO())); renderChoices(); }
+      } else if (action === 'random') {
+        const kids=(Family.getKids&&Family.getKids())||[];
+        if(!kids.length) return;
+        const menu=load(LS.menu,[]);
+        const map={}; kids.forEach(k=>{ map[k.id]=Math.floor(Math.random()*menu.length); });
+        save(LS.day(todayISO()),map); renderChoices();
+      } else if (action === 'share') {
+        shareText(buildSummary());
+      } else if (action === 'manage') {
+        openManage();
+      }
+    });
+  })();
 
   (function initDate(){
     const d=new Date(); const off=d.getTimezoneOffset(); const local=new Date(d.getTime()-off*60000);
