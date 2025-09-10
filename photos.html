@@ -27,7 +27,7 @@ body{
 /* Panels */
 .panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
 
-/* Header (consistent with other pages) */
+/* Header (consistent) */
 header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .head-left{display:flex;align-items:center;gap:10px}
 .head-left img{height:36px;display:block;cursor:pointer}
@@ -41,15 +41,25 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 .mi:hover{background:#0b1224}
 
 /* Layout */
-.grid{display:grid;gap:14px;grid-template-columns:1fr 320px}
+.grid{display:grid;gap:14px;grid-template-columns:1fr 360px}
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
 .viewer{position:relative;height:60vh;min-height:360px;border-radius:16px;overflow:hidden;background:#0b1224;border:1px solid #334155}
 .viewer img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .5s}
-.list{display:grid;gap:10px;max-height:60vh;overflow:auto}
-.item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
+
+/* List (scrollable) */
+.list{display:grid;gap:10px;max-height:60vh;overflow:auto;padding-right:4px}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:8px 10px;cursor:pointer}
+.row:hover{background:#1e293b}
+.row.active{outline:2px solid var(--accent)}
+.thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;background:#0b1224;border:1px solid #334155}
+.row .name{font-size:.92rem;color:#e5e7eb}
+.btn{font:inherit;color:#e5e7eb;background:#0b1224;border:1px solid #334155;border-radius:10px;padding:8px 10px;cursor:pointer}
 .small{font-size:.9rem;color:#cbd5e1}
 
-/* Tiny toast */
+/* Hide file input completely (prevents iOS “Choose Files” pill) */
+input[type="file"].sr-only{ display:none !important; }
+
+/* Toast */
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#0b1224;border:1px solid #334155;color:#e5e7eb;padding:10px 12px;border-radius:10px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .25s}
 .toast.show{opacity:1}
 </style>
@@ -88,6 +98,7 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
       </div>
       <div class="small" style="margin-bottom:8px">Photos</div>
       <div id="list" class="list"></div>
+      <div class="small" style="opacity:.7;margin-top:6px">Up to 20 photos.</div>
     </div>
   </section>
 
@@ -96,19 +107,20 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
   </footer>
 </div>
 
-<!-- Hidden picker -->
+<!-- Hidden picker (truly hidden) -->
 <input id="picker" type="file" accept="image/*,.heic,.heif" multiple class="sr-only"/>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
 const LS_LIST='photos:list';
-const LS_IV  ='photos:cadence_ms';     // <- matches Home card
-const $=(s,e=document)=>e.querySelector(s);
+const LS_IV  ='photos:cadence_ms'; // same key Home tile uses
+const MAX_PHOTOS = 20;
 
+const $=(s,e=document)=>e.querySelector(s);
 const listEl=$('#list'), big=$('#big'), picker=$('#picker');
 
-/* ---------- Menu (hamburger) ---------- */
+/* ---------- Menu ---------- */
 (function menu(){
   const btn=$('#btnMenu'), dd=$('#menuDD');
   const open=()=>{dd.classList.add('open');btn.setAttribute('aria-expanded','true');dd.setAttribute('aria-hidden','false');};
@@ -126,12 +138,13 @@ const listEl=$('#list'), big=$('#big'), picker=$('#picker');
   });
 })();
 
-/* ---------- Storage + state ---------- */
+/* ---------- Storage ---------- */
 function loadList(){ try{const v=JSON.parse(localStorage.getItem(LS_LIST)); if(Array.isArray(v)) return v; }catch{} return []; }
 function saveList(a){ localStorage.setItem(LS_LIST, JSON.stringify(a)); }
 function loadIv(){ const v=+localStorage.getItem(LS_IV)||10000; return [10000,30000,60000].includes(v)?v:10000; }
 function saveIv(v){ localStorage.setItem(LS_IV, v); }
 
+/* ---------- State ---------- */
 let imgs=loadList(); let iv=loadIv(); let idx=0; let timer=null;
 
 /* ---------- UI render ---------- */
@@ -142,64 +155,91 @@ function renderList(){
     big.removeAttribute('src'); return;
   }
   imgs.forEach((src,i)=>{
-    const row=document.createElement('div'); row.className='item';
-    row.innerHTML=`<div class="small">Photo ${i+1}</div><button class="btn">Remove</button>`;
-    row.querySelector('button').onclick=()=>{ imgs.splice(i,1); saveList(imgs); renderList(); startShow(); };
+    const row=document.createElement('div'); row.className='row'; row.dataset.index=i;
+    row.innerHTML=`
+      <img class="thumb" alt="Photo ${i+1} thumbnail" src="${src}">
+      <div class="name">Photo ${i+1}</div>
+      <button class="btn" data-remove>Remove</button>
+    `;
+    row.onclick = (ev)=>{
+      if(ev.target.closest('[data-remove]')) return; // button handles its own click
+      jumpTo(i);
+    };
+    row.querySelector('[data-remove]').onclick=()=>{
+      const wasCurrent = i===idx;
+      imgs.splice(i,1);
+      saveList(imgs);
+      renderList();
+      if(wasCurrent) idx = Math.max(0, idx-1);
+      startShow();
+    };
     listEl.appendChild(row);
   });
+  // highlight current
+  highlightActive();
 }
+function highlightActive(){
+  listEl.querySelectorAll('.row').forEach(r=>r.classList.remove('active'));
+  const r = listEl.querySelector(`.row[data-index="${idx}"]`);
+  if(r) r.classList.add('active');
+}
+function jumpTo(i){
+  if(!imgs.length) return;
+  idx = Math.max(0, Math.min(i, imgs.length-1));
+  big.style.opacity=0; setTimeout(()=>{ big.src=imgs[idx]; big.style.opacity=1; },150);
+  highlightActive();
+}
+
+/* ---------- Slideshow ---------- */
 function startShow(){
   if(timer) clearInterval(timer);
   if(!imgs.length){ big.removeAttribute('src'); return; }
-  idx=idx%imgs.length; big.src=imgs[idx];
-  timer=setInterval(()=>{ idx=(idx+1)%imgs.length; big.style.opacity=0; setTimeout(()=>{ big.src=imgs[idx]; big.style.opacity=1; },150); }, iv);
+  idx=idx%imgs.length; big.src=imgs[idx]; highlightActive();
+  timer=setInterval(()=>{ idx=(idx+1)%imgs.length; big.style.opacity=0; setTimeout(()=>{ big.src=imgs[idx]; big.style.opacity=1; highlightActive(); },150); }, iv);
 }
 document.querySelectorAll('input[name="iv"]').forEach(r=>{
   if(+r.value===iv) r.checked=true;
   r.onchange=()=>{ iv=+r.value; saveIv(iv); startShow(); };
 });
 
-/* ---------- Import pipeline (robust) ---------- */
-/* Accepts big files, HEIC/HEIF, resizes to maxSide, exports JPEG to keep size small */
-document.getElementById('picker').onchange = async (e)=>{
-  const files=[...e.target.files||[]];
-  if(!files.length) return;
-  let added=0, skipped=0;
+/* ---------- Import pipeline (HEIC-friendly, resize, cap 20) ---------- */
+picker.onchange = async (e)=>{
+  const all=[...e.target.files||[]];
+  if(!all.length) return;
 
+  const slotsLeft = Math.max(0, MAX_PHOTOS - imgs.length);
+  const files = all.slice(0, slotsLeft);
+  const skippedForCap = all.length - files.length;
+
+  let added=0, failed=0;
   for(const f of files){
     try{
-      const data=await readAndShrinkSmart(f, 1800, .9); // ~screens worth; good for performance
-      if(data){ imgs.push(data); added++; }
-      else skipped++;
-    }catch{ skipped++; }
+      const data=await readAndShrinkSmart(f, 1800, .9);
+      if(data){ imgs.push(data); added++; } else { failed++; }
+    }catch{ failed++; }
   }
-  saveList(imgs); renderList(); startShow(); e.target.value='';
-  if(added) showToast(`Added ${added} photo${added>1?'s':''}${skipped?` · Skipped ${skipped}`:''}`);
+  saveList(imgs); renderList(); startShow(); picker.value='';
+  if(added) showToast(`Added ${added} photo${added>1?'s':''}${(failed||skippedForCap)?` · Skipped ${failed+skippedForCap}`:''}`);
   else showToast('No supported photos were added.');
 };
 
 /* Try createImageBitmap first (often decodes HEIC on iPad Safari).
-   Fallback to Image() + FileReader. Always output normalized JPEG. */
+   Fallback to Image + FileReader. Always output normalized JPEG. */
 async function readAndShrinkSmart(file, maxSide=1800, quality=.9){
   const bitmap = await decodeToBitmap(file).catch(()=>null);
   if(!bitmap) return null;
-
   const scale = Math.min(1, maxSide/Math.max(bitmap.width, bitmap.height));
   const w = Math.max(1, Math.round(bitmap.width * scale));
   const h = Math.max(1, Math.round(bitmap.height * scale));
   const c = document.createElement('canvas'); c.width=w; c.height=h;
   const ctx = c.getContext('2d');
   ctx.drawImage(bitmap, 0, 0, w, h);
-  // JPEG keeps storage small and is widely supported
   return c.toDataURL('image/jpeg', quality);
 }
-
 function decodeToBitmap(file){
   return new Promise((resolve, reject)=>{
-    // Prefer createImageBitmap when present (handles orientation & more types)
     if ('createImageBitmap' in window) {
       createImageBitmap(file).then(resolve).catch(()=>{
-        // fallback to classic Image + FileReader
         const fr = new FileReader();
         fr.onload = ()=>{
           const img = new Image();
