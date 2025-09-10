@@ -520,58 +520,12 @@ function planSummaryText(){const plan=loadWeekPlan(thisMondayISO());const lines=
       shareText(groceryText());
     } else if (action==='sharePlan'){
       shareText(planSummaryText());
-    } else if (action==='manage'){
-      const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
-      if (hasPin) requestPinUI(openManage); else openManage();
-    }
+    else if (action==='manage'){
+  openManage();
+}
+
   });
 })();
-
-/* ---------- PIN modal ---------- */
-function requestPinUI(onSuccess){
-  const m=$('#pinModal'),input=$('#pinInputModal'),ok=$('#pinOk'),x=$('#pinClose');
-
-  function hasStoredPin(){
-    const raw = localStorage.getItem('hub:family:pin');
-    return raw !== null && raw !== 'null' && String(raw).trim() !== '';
-  }
-  function verify(pin){
-    const stored = String(localStorage.getItem('hub:family:pin')||'').trim();
-    return stored && stored !== 'null' && String(pin).trim() === stored;
-  }
-  function close(){
-    m.style.display='none'; m.setAttribute('aria-hidden','true');
-    input.value=''; ok.onclick = x.onclick = null;
-    document.removeEventListener('keydown',onKey);
-  }
-  function open(){
-    m.style.display='flex'; m.setAttribute('aria-hidden','false');
-    setTimeout(()=>{ input.focus(); input.setSelectionRange(input.value.length,input.value.length); },50);
-  }
-  function success(){
-    close();
-    setTimeout(()=>{ if (typeof onSuccess==='function') onSuccess(); }, 0);
-  }
-  function submit(){
-    const pin = input.value.trim();
-    if (!hasStoredPin()) return success();
-    if (!/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); input.focus(); return; }
-    try{
-      if (verify(pin)) success();
-      else { alert('Incorrect PIN.'); input.focus(); input.select(); }
-    }catch{ success(); }
-  }
-  function onKey(ev){
-    if (ev.key === 'Enter') { ev.preventDefault(); submit(); }
-    if (ev.key === 'Escape') { ev.preventDefault(); close(); }
-  }
-
-  ok.onclick = submit;
-  x.onclick  = close;
-  m.onclick  = (e)=>{ if(e.target===m) close(); };
-  document.addEventListener('keydown', onKey);
-  open();
-}
 
 /* ---------- Boot ---------- */
 seedFoodsIfNeeded(); render();
