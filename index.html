@@ -367,11 +367,6 @@ if (!window.Family) {
 
 <!-- Wallpaper utilities -->
 <script>
-const WP_KEY = 'hub:wallpaper:dataurl';
-(function applyWallpaper(){
-  const data = localStorage.getItem(WP_KEY);
-  if (data) document.documentElement.style.setProperty('--wallpaper', `url("${data}")`);
-})();
 function pickWallpaper(){
   const input = document.getElementById('wallpaper-picker');
   input.onchange = async (ev)=>{
@@ -381,10 +376,14 @@ function pickWallpaper(){
     input.value='';
   };
   input.click();
-}
-function clearWallpaper(){
-  localStorage.removeItem(WP_KEY);
-  document.documentElement.style.setProperty('--wallpaper', `url('')`);
+  function clearWallpaper(){
+  if (window.Wallpaper && typeof Wallpaper.clear === 'function') {
+    Wallpaper.clear();
+  } else {
+    const KEY = 'hub:wallpaper:dataurl';
+    localStorage.removeItem(KEY);
+    document.documentElement.style.setProperty('--wallpaper', `url('')`);
+  }
 }
 function compressImage(file, maxSide=2400, quality=.85){
   return new Promise(resolve=>{
