@@ -1,0 +1,22 @@
+/* wallpaper.css — sitewide wallpaper layer */
+:root{
+  --wallpaper: url("");       /* set by JS */
+  --wallpaper-shift: 40%;     /* vertical focus point */
+  --wallpaper-dim: 0.90;      /* overlay opacity (0–1) */
+}
+
+/* Image behind everything */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background-image: var(--wallpaper);
+  background-size: cover; background-repeat:no-repeat;
+  background-position: center var(--wallpaper-shift);
+  transform: translateZ(0);
+}
+
+/* Dim overlay so content stays readable */
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background: rgba(64,76,105, var(--wallpaper-dim));
+  pointer-events:none;
+}
