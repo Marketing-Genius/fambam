@@ -12,23 +12,21 @@
 <link rel="manifest" href="manifest.webmanifest">
 
 <style>
-/* --- layout sanity: prevent overflow math --- */
+/* --- layout sanity --- */
 *, *::before, *::after { box-sizing: border-box; }
 
 :root{
   --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
   --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
-  --wallpaper:url('');               /* set at runtime */
-  --wallpaper-shift: 40%;            /* upward crop focus */
-  --slotH: 260px;                    /* ↑ taller so the 4×4 preview fits */
+  --wallpaper:url(''); --wallpaper-shift:40%;
+  --slotH: 220px;
 }
 html,body{height:100%}
 body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
   color:var(--text); background:#0f172a; overflow-x:hidden;
 }
-
-/* Wallpaper layer */
+/* Wallpaper */
 body::before{
   content:""; position:fixed; inset:0; z-index:-2;
   background-image: var(--wallpaper);
@@ -36,20 +34,17 @@ body::before{
   background-position: center var(--wallpaper-shift);
   transform: translateZ(0);
 }
-/* Heavier neutral overlay (90%) so cards pop */
 body::after{
   content:""; position:fixed; inset:0; z-index:-1;
   background: rgba(18,24,38,.9);
   pointer-events:none;
 }
-
-/* App layout */
+/* App */
 .app{
   min-height: 100svh;
   display:flex; flex-direction:column; gap:18px;
   padding:20px; max-width:1100px; margin:0 auto;
 }
-
 /* Header */
 header{
   position:relative; z-index: 9000; isolation:isolate;
@@ -73,21 +68,13 @@ header{
 
 /* Grid slots (fixed 4×4) */
 #slots{
-  margin-top:12px;
-  display:grid; gap:16px;
+  margin-top:12px; display:grid; gap:16px;
   grid-template-columns:repeat(4, minmax(0,1fr));
   grid-auto-rows: var(--slotH);
 }
 @media(max-width:860px){ #slots{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
-.slot{
-  height: var(--slotH);
-  border-radius:16px;
-  position:relative;
-}
-.slot.editing{
-  outline:2px dashed #334155;
-  background:rgba(2,6,23,.25);
-}
+.slot{ height: var(--slotH); border-radius:16px; position:relative; }
+.slot.editing{ outline:2px dashed #334155; background:rgba(2,6,23,.25); }
 .slot.editing .add-btn{
   position:absolute; inset:auto 10px 10px auto;
   background:#0b1224; border:1px dashed #334155; color:#cbd5e1;
@@ -101,43 +88,37 @@ header{
   background:rgba(31,41,55,.9);border:1px solid rgba(31,41,55,.95);
   border-radius:16px;padding:16px;text-decoration:none;color:var(--text);
   box-shadow:var(--shadow);backdrop-filter: blur(4px);
-  height:100%;
-  overflow:hidden;
+  height:100%; overflow:hidden;
 }
 .tile .emoji{font-size:36px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
 
-/* -------- Breakfast preview (bigger 4×4) -------- */
+/* Breakfast preview sub-card (bigger, 2×2) */
 .bf-box{
-  margin-top:6px;
-  width:100%;
-  background:#0b1224;
-  border:1px solid #334155;
-  border-radius:12px;
-  padding:10px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
+  margin-top:6px; width:100%;
+  background:#081228; border:1px solid #27324a;
+  border-radius:16px; padding:12px;
 }
 .bf-date{font-size:.9rem;font-weight:800}
-.bf-empty{opacity:.75;font-size:.95rem}
+.bf-empty{opacity:.8;font-size:.95rem;margin-top:8px}
 .bf-grid{
-  display:grid;
-  grid-template-columns:repeat(4, minmax(0,1fr));
-  gap:8px;
+  /* force 2×2 so avatars are large */
+  display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px;
+  margin-top:10px;
 }
 .bf-cell{
-  display:flex; align-items:center; gap:6px;
-  background:#0f172a; border:1px solid #1f2937; border-radius:12px;
-  padding:6px 8px;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; padding:10px 12px;
+  background:#0f172a; border:1px solid #1f2937; border-radius:16px;
 }
+.bf-left{display:flex;align-items:center;gap:8px}
 .bf-face{
-  width:22px;height:22px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
-  background:#334155;color:#e5e7eb;font-size:.8rem;font-weight:700
+  width:32px;height:32px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
+  background:#334155;color:#e5e7eb;font-size:.9rem;font-weight:800; flex:0 0 auto;
 }
 .bf-face img{width:100%;height:100%;object-fit:cover}
-.bf-emoji{font-size:20px;line-height:1}
+.bf-emoji{font-size:1.35rem; line-height:1}
 
 /* Edit affordances */
 .tile .minus{
@@ -148,40 +129,24 @@ header{
 .editing .tile .minus{ display:grid; cursor:pointer; }
 .tile.selecting{ outline:2px solid var(--accent); }
 
-/* Photos-only presentation (when images exist) */
+/* Photos tile (unchanged) */
 .tile.photo-only{ padding:0; border:none; background:transparent; box-shadow:none; }
-.tile.photo-only .photo-prev{ position:absolute; inset:0; border-radius:16px; overflow:hidden; }
-.tile.photo-only .photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; }
-
-/* Subtle preview (when no photos yet) */
-.photo-prev{
-  position:absolute; inset:0; border-radius:16px; overflow:hidden; z-index:0; opacity:.22;
-}
+.photo-prev{ position:absolute; inset:0; border-radius:16px; overflow:hidden; z-index:0; opacity:.22; }
 .photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; }
-
-/* Photos tile: edge-to-edge image, no overlay/tint (only when photos exist) */
 .tile.photos-card{ background: transparent; border: none; padding: 0; }
 .tile.photos-card .photo-prev{ opacity: 1; }
-.tile.photos-card .emoji,
-.tile.photos-card .label,
-.tile.photos-card .hint{ display: none; }
+.tile.photos-card .emoji, .tile.photos-card .label, .tile.photos-card .hint{ display: none; }
 .tile.photos-card .minus{ display:none; }
-.editing .tile.photos-card .minus{
-  display:grid; background: rgba(0,0,0,.4); border-color:#000;
-}
-.tile.photos-card::before{
-  content:""; position:absolute; inset:0; border-radius:16px;
-  box-shadow: var(--shadow); pointer-events:none;
-}
+.editing .tile.photos-card .minus{ display:grid; background: rgba(0,0,0,.4); border-color:#000; }
+.tile.photos-card::before{ content:""; position:absolute; inset:0; border-radius:16px; box-shadow: var(--shadow); pointer-events:none; }
 
-/* Modal + form UI */
+/* Modal + form bits (unchanged) */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal{width:min(900px,100%);background:rgba(17,24,39,.98);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
 .modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937}
 .modal .body{padding:14px 16px;display:grid;gap:18px;max-height:70vh;overflow:auto}
 .modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
-
 .tabs{display:flex;gap:8px;flex-wrap:wrap}
 .tab{padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer}
 .tab[aria-selected="true"]{outline:2px solid var(--accent)}
@@ -382,13 +347,10 @@ if (!window.Family) {
 <!-- Wallpaper utilities -->
 <script>
 const WP_KEY = 'hub:wallpaper:dataurl';
-
-// Apply wallpaper var on load
 (function applyWallpaper(){
   const data = localStorage.getItem(WP_KEY);
   if (data) document.documentElement.style.setProperty('--wallpaper', `url("${data}")`);
 })();
-
 function pickWallpaper(){
   const input = document.getElementById('wallpaper-picker');
   input.onchange = async (ev)=>{
@@ -475,7 +437,6 @@ function requestPinUI(onSuccess){
   open();
 }
 
-// Open Admin via #admin (from other pages)
 window.addEventListener('load', ()=>{
   if (location.hash === '#admin') {
     const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
@@ -565,13 +526,10 @@ function buildKids(){
 function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
 
-/* Clean photo picker: always show native sheet (Photo Library / Take Photo / Choose File) */
+/* Clean photo picker */
 function pickPhoto(kind, id){
   const input = document.getElementById('file-picker');
-
-  // Always show the standard iOS sheet
   input.removeAttribute('capture');
-
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0]; if(!file) return;
     const dataUrl = await compress(file, 256, 0.8);
@@ -601,15 +559,15 @@ function compress(file, maxSide=256, quality=0.8){
 
 <!-- Home grid logic (slots + editing + Photos) -->
 <script>
-const SLOT_KEY = 'hub:home:slots:v2';        // Array(16) of card ids or null
+const SLOT_KEY = 'hub:home:slots:v2';
 const SLOTS_TOTAL = 16;
 
 const CARDS = [
-  {id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast',        hint:''},
-  {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner',    hint:'Weekly plan'},
-  {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',            hint:'Weekly rotation'},
-  {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar',   hint:'Events & activities'},
-  {id:'photos',    href:'./photos.html',    emoji:'🖼️', label:'Photos',            hint:'Slideshow'}
+  {id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast', hint:''},
+  {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner', hint:'Weekly plan'},
+  {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',          hint:'Weekly rotation'},
+  {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar', hint:'Events & activities'},
+  {id:'photos',    href:'./photos.html',    emoji:'🖼️', label:'Photos',          hint:'Slideshow'}
 ];
 const byId = Object.fromEntries(CARDS.map(c=>[c.id,c]));
 
@@ -618,7 +576,6 @@ function loadSlots(){
     const v=JSON.parse(localStorage.getItem(SLOT_KEY));
     if(Array.isArray(v)) return v.slice(0,SLOTS_TOTAL).concat(Array(SLOTS_TOTAL).fill(null)).slice(0,SLOTS_TOTAL);
   }catch{}
-  // seed: first row
   const seed = ['breakfast','dinner','chores','calendar'];
   return seed.concat(Array(SLOTS_TOTAL-seed.length).fill(null));
 }
@@ -632,13 +589,12 @@ let selectedFromSlot = -1;
 const $ = (s,e=document)=>e.querySelector(s);
 const $$= (s,e=document)=>[...e.querySelectorAll(s)];
 
-/* Helpers for Photos */
 function safelyGetPhotoList(){
   try{ const arr = JSON.parse(localStorage.getItem('photos:list')) || []; return Array.isArray(arr)?arr:[]; }
   catch{ return []; }
 }
 
-/* Local-date helpers */
+/* Local-date helpers (strictly local, no UTC) */
 function todayISO(){
   const d=new Date();
   const y=d.getFullYear(), m=(d.getMonth()+1).toString().padStart(2,'0'), dd=d.getDate().toString().padStart(2,'0');
@@ -661,14 +617,12 @@ function renderGrid(){
         t.addEventListener('click', (ev)=>{
           ev.preventDefault(); ev.stopPropagation();
           if(selectedCardId===id){ selectedCardId=null; selectedFromSlot=-1; t.classList.remove('selecting'); return; }
-          // selecting new source
           $$('.tile').forEach(x=>x.classList.remove('selecting'));
           selectedCardId = id; selectedFromSlot = i; t.classList.add('selecting');
         });
       }
       div.appendChild(t);
     } else {
-      // empty slot
       if(isEditing){
         const add = document.createElement('button');
         add.className='add-btn'; add.textContent='+';
@@ -677,11 +631,9 @@ function renderGrid(){
         div.appendChild(add);
       }
     }
-    // clicking any slot performs move/swap when in editing & a source selected
     div.addEventListener('click', ()=>{
       if(!isEditing || selectedCardId==null) return;
-      const to = i;
-      const from = selectedFromSlot;
+      const to = i, from = selectedFromSlot;
       if(from===to) return;
       const idB = slots[to];
       slots[to] = selectedCardId;
@@ -700,7 +652,6 @@ function renderTile(c, slotIndex){
   if(c.id === 'photos'){
     const list = safelyGetPhotoList();
     if(list.length) a.classList.add('photos-card');
-
     if(list.length){
       a.classList.add('photo-only');
       a.innerHTML = `<div class="photo-prev"><img alt=""></div><button class="minus" type="button">−</button>`;
@@ -712,14 +663,13 @@ function renderTile(c, slotIndex){
       a.addEventListener('click',()=>clearInterval(timer),{once:true});
     } else {
       a.innerHTML = `
-        <div class="emoji">➕</div>
         <div class="label">${c.label}</div>
         <div class="hint">${c.hint||''}</div>
         <button class="minus" type="button">−</button>
       `;
     }
   } else if (c.id === 'breakfast') {
-    /* ---- Breakfast with live preview (today, avatars/initials, 4×4) ---- */
+    /* Breakfast tile with bigger 2×2 grid and avatars */
     a.innerHTML = `
       <div class="label">Breakfast</div>
       <div class="bf-box">
@@ -731,37 +681,42 @@ function renderTile(c, slotIndex){
     `;
     try{
       const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
-      const day  = JSON.parse(localStorage.getItem('bf:day:'+todayISO())||'{}');
-      const kids = (Family.getActiveKids?.() || Family.getKids?.() || []);
+      const key = 'bf:day:'+todayISO();                     // strictly today, local time
+      const day  = JSON.parse(localStorage.getItem(key)||'{}');
+      const kids = (Family.getKids?.() || []);
 
+      const entries = Object.entries(day); // [[kidId, choiceIndex], ...]
       const emptyMsg = a.querySelector('.bf-empty');
       const grid = a.querySelector('.bf-grid');
 
-      const entries = Object.entries(day);
       if (entries.length){
         emptyMsg.style.display='none';
         grid.style.display='grid';
 
-        for(const [kidId, idx] of entries){
+        // Sort by kid display name for stable order
+        const byName = (id)=> (kids.find(k=>k.id===id)?.name || '').toLowerCase();
+        entries.sort((a,b)=> byName(a[0]).localeCompare(byName(b[0])));
+
+        for(const [kidId, idx] of entries.slice(0,4)){      // show up to 4 (2×2)
           const kid = kids.find(k=>k.id===kidId);
           const choice = menu?.[idx];
           if(!choice) continue;
 
           const cell = document.createElement('div');
           cell.className='bf-cell';
-
-          const faceHTML = kid?.photo
+          const face = kid?.photo
             ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
             : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-
-          cell.innerHTML = `${faceHTML}<span class="bf-emoji">${choice.emoji||'❓'}</span>`;
+          cell.innerHTML = `
+            <div class="bf-left">${face}<div style="font-weight:700;opacity:.9">${escapeHtml(kid?.name||'')}</div></div>
+            <div class="bf-emoji">${choice.emoji||'❓'}</div>
+          `;
           grid.appendChild(cell);
         }
       }
     }catch(err){ console.warn('Breakfast preview error', err); }
 
   } else {
-    // normal tiles
     a.innerHTML = `
       <div class="emoji">${c.emoji}</div>
       <div class="label">${c.label}</div>
@@ -770,23 +725,19 @@ function renderTile(c, slotIndex){
     `;
   }
 
-  // In edit mode disable navigation
   if(isEditing){ a.addEventListener('click', (e)=>e.preventDefault()); }
 
-  // Robust minus handling on iPad
   const minus = a.querySelector('.minus');
   if(minus){
     ['click','pointerdown','touchstart','mousedown'].forEach(evt=>{
       minus.addEventListener(evt, (ev)=>{
-        ev.preventDefault();
-        ev.stopPropagation();
+        ev.preventDefault(); ev.stopPropagation();
       }, {passive:false});
     });
     minus.addEventListener('click', ()=>{
       slots[slotIndex]=null; selectedCardId=null; selectedFromSlot=-1; saveSlots(slots); renderGrid();
     });
   }
-
   return a;
 }
 
@@ -799,14 +750,12 @@ function toggleEdit(on){
 }
 $('#btnDoneEdit').onclick = ()=> toggleEdit(false);
 
-// Add/Remove modal (now shows ALL cards with Add & Remove; one is disabled based on state)
 function openAddRemove(targetIndex){
   const placed = new Set(slots.filter(Boolean));
   const body = $('#addCardBody'); body.innerHTML='';
   CARDS.forEach(c=>{
     const isOnHome = placed.has(c.id);
-    const row=document.createElement('div');
-    row.className='item';
+    const row=document.createElement('div'); row.className='item';
     row.innerHTML=`
       <div class="grow">${c.emoji} <b>${c.label}</b><div style="opacity:.8">${c.hint||''}</div></div>
       <div style="display:flex;gap:8px">
@@ -816,22 +765,17 @@ function openAddRemove(targetIndex){
     `;
     const btnAdd = row.querySelector('[data-add]');
     const btnRem = row.querySelector('[data-remove]');
-    if(isOnHome){ btnAdd.setAttribute('disabled',''); }
-    else { btnRem.setAttribute('disabled',''); }
-
+    if(isOnHome){ btnAdd.setAttribute('disabled',''); } else { btnRem.setAttribute('disabled',''); }
     btnAdd.onclick=()=>{
       const idx = (typeof targetIndex==='number') ? targetIndex : slots.findIndex(x=>!x);
       if(idx<0){ alert('No empty slot available. Remove a card first.'); return; }
-      slots[idx]=c.id; saveSlots(slots); renderGrid();
-      // refresh disabled states
-      openAddRemove(idx);
+      slots[idx]=c.id; saveSlots(slots); renderGrid(); openAddRemove(idx);
     };
     btnRem.onclick=()=>{
       const ix = slots.findIndex(x=>x===c.id);
       if(ix>=0){ slots[ix]=null; saveSlots(slots); renderGrid(); }
       openAddRemove(targetIndex);
     };
-
     body.appendChild(row);
   });
   showModal('addCardModal', true);
@@ -856,13 +800,8 @@ $('#aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
 
 <!-- Boot + SW -->
 <script>
-// initial render
 renderGrid();
-
-// Re-render if Family store changes (e.g., kids added, photos changed)
 try { Family.onChange && Family.onChange(()=>{ renderGrid(); }); } catch(_){}
-
-// SW
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
