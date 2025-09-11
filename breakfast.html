@@ -10,26 +10,48 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
+
+<!-- Shared wallpaper styles + logic -->
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
-
 
 <style>
 :root{
   --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
-  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px
+  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+  /* required for wallpaper */
+  --wallpaper:url('');
+  --wallpaper-shift:40%;
 }
+
 html,body{height:100%}
 body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  color:var(--text); background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%);
+  color:var(--text);
+  background:#404c69;              /* simple fallback (same as index) */
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  overflow-x:hidden;
 }
+
+/* Wallpaper layers (match index.html) */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background-image: var(--wallpaper);
+  background-size: cover; background-repeat:no-repeat;
+  background-position: center var(--wallpaper-shift);
+  transform: translateZ(0);
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background: rgba(64,76,105,.9);
+  pointer-events:none;
+}
+
 .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
 .panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:18px;padding:14px}
 
 /* Header */
-header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;position:relative;z-index:1}
 .left{display:flex;align-items:center;gap:14px;min-width:0}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
 .brand img{height:38px;display:block}
@@ -43,10 +65,10 @@ header{display:flex;gap:12px;align-items:center;justify-content:space-between;fl
 .btn-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;border:1px solid #334155;background:#0b1224}
 
 /* Hamburger (match index.html) */
-.menu-wrap{position:relative; z-index: 9001; overflow:visible}
+.menu-wrap{position:relative; z-index: 2; overflow:visible}
 .hamburger{font:inherit;cursor:pointer;background:rgba(11,18,36,.6);color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:10px 12px}
 .menu-dropdown{
-  position:absolute;right:0;top:110%;min-width:220px;z-index:9002 !important;
+  position:absolute;right:0;top:110%;min-width:220px;z-index:3 !important;
   background:#111827;border:1px solid #1f2937;border-radius:12px;
   box-shadow:0 10px 30px rgba(0,0,0,.35);padding:6px;display:none
 }
