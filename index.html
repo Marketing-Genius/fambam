@@ -20,7 +20,7 @@
   --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
   --wallpaper:url('');               /* set at runtime */
   --wallpaper-shift: 40%;            /* upward crop focus */
-  --slotH: 220px;                    /* <— change this to adjust card height */
+  --slotH: 260px;                    /* ↑ taller so the 4×4 preview fits */
 }
 html,body{height:100%}
 body{
@@ -108,7 +108,7 @@ header{
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
 
-/* Breakfast preview sub-card */
+/* -------- Breakfast preview (bigger 4×4) -------- */
 .bf-box{
   margin-top:6px;
   width:100%;
@@ -116,19 +116,28 @@ header{
   border:1px solid #334155;
   border-radius:12px;
   padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
 }
-.bf-date{font-size:.85rem;font-weight:700}
-.bf-empty{opacity:.75;font-size:.9rem}
+.bf-date{font-size:.9rem;font-weight:800}
+.bf-empty{opacity:.75;font-size:.95rem}
 .bf-grid{
-  display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px;
-  margin-top:8px;
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:8px;
 }
-.bf-cell{display:flex;align-items:center;gap:6px;background:#0f172a;border:1px solid #1f2937;border-radius:999px;padding:6px 8px}
+.bf-cell{
+  display:flex; align-items:center; gap:6px;
+  background:#0f172a; border:1px solid #1f2937; border-radius:12px;
+  padding:6px 8px;
+}
 .bf-face{
   width:22px;height:22px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
   background:#334155;color:#e5e7eb;font-size:.8rem;font-weight:700
 }
 .bf-face img{width:100%;height:100%;object-fit:cover}
+.bf-emoji{font-size:20px;line-height:1}
 
 /* Edit affordances */
 .tile .minus{
@@ -559,7 +568,10 @@ function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'
 /* Clean photo picker: always show native sheet (Photo Library / Take Photo / Choose File) */
 function pickPhoto(kind, id){
   const input = document.getElementById('file-picker');
+
+  // Always show the standard iOS sheet
   input.removeAttribute('capture');
+
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0]; if(!file) return;
     const dataUrl = await compress(file, 256, 0.8);
@@ -620,6 +632,7 @@ let selectedFromSlot = -1;
 const $ = (s,e=document)=>e.querySelector(s);
 const $$= (s,e=document)=>[...e.querySelectorAll(s)];
 
+/* Helpers for Photos */
 function safelyGetPhotoList(){
   try{ const arr = JSON.parse(localStorage.getItem('photos:list')) || []; return Array.isArray(arr)?arr:[]; }
   catch{ return []; }
@@ -706,9 +719,8 @@ function renderTile(c, slotIndex){
       `;
     }
   } else if (c.id === 'breakfast') {
-    // ---- Breakfast with live preview ----
+    /* ---- Breakfast with live preview (today, avatars/initials, 4×4) ---- */
     a.innerHTML = `
-      <div class="emoji">🍽️</div>
       <div class="label">Breakfast</div>
       <div class="bf-box">
         <div class="bf-date">Today · ${niceToday()}</div>
@@ -720,25 +732,29 @@ function renderTile(c, slotIndex){
     try{
       const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
       const day  = JSON.parse(localStorage.getItem('bf:day:'+todayISO())||'{}');
-      const kids = (Family.getKids?.() || []);
-      const entries = Object.entries(day);
+      const kids = (Family.getActiveKids?.() || Family.getKids?.() || []);
 
       const emptyMsg = a.querySelector('.bf-empty');
       const grid = a.querySelector('.bf-grid');
 
+      const entries = Object.entries(day);
       if (entries.length){
         emptyMsg.style.display='none';
         grid.style.display='grid';
+
         for(const [kidId, idx] of entries){
           const kid = kids.find(k=>k.id===kidId);
           const choice = menu?.[idx];
           if(!choice) continue;
+
           const cell = document.createElement('div');
           cell.className='bf-cell';
-          const face = kid?.photo
+
+          const faceHTML = kid?.photo
             ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
             : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-          cell.innerHTML = `${face}<span>${choice.emoji||'❓'}</span>`;
+
+          cell.innerHTML = `${faceHTML}<span class="bf-emoji">${choice.emoji||'❓'}</span>`;
           grid.appendChild(cell);
         }
       }
@@ -807,6 +823,7 @@ function openAddRemove(targetIndex){
       const idx = (typeof targetIndex==='number') ? targetIndex : slots.findIndex(x=>!x);
       if(idx<0){ alert('No empty slot available. Remove a card first.'); return; }
       slots[idx]=c.id; saveSlots(slots); renderGrid();
+      // refresh disabled states
       openAddRemove(idx);
     };
     btnRem.onclick=()=>{
@@ -842,7 +859,7 @@ $('#aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
 // initial render
 renderGrid();
 
-// Re-render if Family store changes (e.g., added photos or renamed kids)
+// Re-render if Family store changes (e.g., kids added, photos changed)
 try { Family.onChange && Family.onChange(()=>{ renderGrid(); }); } catch(_){}
 
 // SW
