@@ -174,6 +174,18 @@ header{
   background:rgba(17,24,39,.65); border:1px solid #1f2937;
 }
 #editBar.show{display:flex}
+
+/* --- Breakfast preview --- */
+.bf-prev{background:#0b1224;border:1px solid #334155;border-radius:14px;padding:10px;margin-top:6px}
+.bf-prev .row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.bf-prev .date{font-size:.85rem;color:#cbd5e1}
+.bf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media(min-width:860px){ .bf-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.bf-chip{display:flex;align-items:center;gap:8px;background:#0f172a;border:1px solid #334155;border-radius:12px;padding:6px 8px;min-width:0}
+.bf-face{width:28px;height:28px;border-radius:50%;background:#0b1224;border:1px solid #334155;display:grid;place-items:center;font-weight:800;font-size:.85rem;overflow:hidden}
+.bf-face img{width:100%;height:100%;object-fit:cover}
+.bf-food{font-size:1.1rem;flex:none}
+.bf-empty{font-size:.9rem;color:#94a3b8}
 </style>
 </head>
 <body>
@@ -569,7 +581,7 @@ function compress(file, maxSide=256, quality=0.8){
 }
 </script>
 
-<!-- Home grid logic (slots + editing + Photos) -->
+<!-- Home grid logic (slots + editing + Photos + Breakfast preview) -->
 <script>
 const SLOT_KEY = 'hub:home:slots:v2';        // Array(16) of card ids or null
 const SLOTS_TOTAL = 16;
@@ -607,6 +619,71 @@ function safelyGetPhotoList(){
   catch{ return []; }
 }
 
+/* ---------- Breakfast preview helpers ---------- */
+function todayISOforBreakfast(){
+  let d = new Date();
+  const off = d.getTimezoneOffset();
+  d = new Date(d.getTime() - off*60000);
+  return d.toISOString().slice(0,10);
+}
+function loadJSON(key, fallback){
+  try{ const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; }catch{ return fallback; }
+}
+function getActiveKidsSafe(){
+  try{
+    if(Family && typeof Family.getActiveKids==='function') return Family.getActiveKids();
+    if(Family && typeof Family.getKids==='function') return Family.getKids().filter(k=>k.enabled!==false);
+  }catch{}
+  return [];
+}
+function buildBreakfastPreview(){
+  const iso = todayISOforBreakfast();
+  const menu = loadJSON('bf:menu', []);           // [{emoji,label},...]
+  const choices = loadJSON(`bf:day:${iso}`, {});  // { kidId: index }
+  const kids = getActiveKidsSafe();
+
+  const wrap = document.createElement('div');
+  wrap.className = 'bf-prev';
+
+  const hdr = document.createElement('div'); hdr.className='row1';
+  const dateTxt = new Date().toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+  hdr.innerHTML = `<div class="date">Today · ${dateTxt}</div>`;
+  wrap.appendChild(hdr);
+
+  if(!kids.length){
+    wrap.innerHTML += `<div class="bf-empty">No kids yet. Add them in Admin.</div>`;
+    return wrap;
+  }
+
+  const grid = document.createElement('div'); grid.className='bf-grid';
+  let hasAny=false;
+  kids.forEach(k=>{
+    const idx = choices[k.id];
+    const food = (idx!=null && menu[idx]) ? (menu[idx].emoji || '🍳') : null;
+
+    const chip = document.createElement('div'); chip.className='bf-chip';
+
+    const face = document.createElement('div'); face.className='bf-face';
+    if(k.photo){ const img=new Image(); img.src=k.photo; img.alt=k.name; face.appendChild(img); }
+    else { face.textContent = (k.name||'?').slice(0,1).toUpperCase(); }
+    chip.appendChild(face);
+
+    const span = document.createElement('div'); span.className='bf-food';
+    span.textContent = food ? food : '—';
+    chip.appendChild(span);
+
+    if(food) hasAny=true;
+    grid.appendChild(chip);
+  });
+
+  if(!hasAny){
+    wrap.innerHTML += `<div class="bf-empty">No selections yet — tap Breakfast.</div>`;
+  }
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+/* ---------- Grid render ---------- */
 function renderGrid(){
   const wrap = $('#slots'); wrap.innerHTML='';
   for(let i=0;i<SLOTS_TOTAL;i++){
@@ -620,14 +697,12 @@ function renderGrid(){
         t.addEventListener('click', (ev)=>{
           ev.preventDefault(); ev.stopPropagation();
           if(selectedCardId===id){ selectedCardId=null; selectedFromSlot=-1; t.classList.remove('selecting'); return; }
-          // selecting new source
           $$('.tile').forEach(x=>x.classList.remove('selecting'));
           selectedCardId = id; selectedFromSlot = i; t.classList.add('selecting');
         });
       }
       div.appendChild(t);
     } else {
-      // empty slot
       if(isEditing){
         const add = document.createElement('button');
         add.className='add-btn'; add.textContent='+';
@@ -636,7 +711,6 @@ function renderGrid(){
         div.appendChild(add);
       }
     }
-    // clicking any slot performs move/swap when in editing & a source selected
     div.addEventListener('click', ()=>{
       if(!isEditing || selectedCardId==null) return;
       const to = i;
@@ -659,12 +733,9 @@ function renderTile(c, slotIndex){
   // Photos tile logic
   if(c.id === 'photos'){
     const list = safelyGetPhotoList();
-
-    // Only use photos-card (edge-to-edge image) when photos exist
     if(list.length) a.classList.add('photos-card');
 
     if(list.length){
-      // photo-only mode: no chrome, just image slideshow
       a.classList.add('photo-only');
       a.innerHTML = `<div class="photo-prev"><img alt=""></div><button class="minus" type="button">−</button>`;
       const img = a.querySelector('img');
@@ -674,7 +745,6 @@ function renderTile(c, slotIndex){
       const timer = setInterval(()=>{ idx=(idx+1)%list.length; img.src=list[idx]; }, cadence);
       a.addEventListener('click',()=>clearInterval(timer),{once:true});
     } else {
-      // No photos yet — show a normal card with guidance
       a.innerHTML = `
         <div class="emoji">➕</div>
         <div class="label">Add Photos</div>
@@ -690,6 +760,12 @@ function renderTile(c, slotIndex){
       <div class="hint">${c.hint||''}</div>
       <button class="minus" type="button">−</button>
     `;
+
+    // ★ Breakfast mini-preview
+    if(c.id === 'breakfast'){
+      const prev = buildBreakfastPreview();
+      a.appendChild(prev);
+    }
   }
 
   // In edit mode disable navigation
@@ -721,7 +797,7 @@ function toggleEdit(on){
 }
 $('#btnDoneEdit').onclick = ()=> toggleEdit(false);
 
-// Add/Remove modal (now shows ALL cards with Add & Remove; one is disabled based on state)
+// Add/Remove modal
 function openAddRemove(targetIndex){
   const placed = new Set(slots.filter(Boolean));
   const body = $('#addCardBody'); body.innerHTML='';
@@ -745,7 +821,6 @@ function openAddRemove(targetIndex){
       const idx = (typeof targetIndex==='number') ? targetIndex : slots.findIndex(x=>!x);
       if(idx<0){ alert('No empty slot available. Remove a card first.'); return; }
       slots[idx]=c.id; saveSlots(slots); renderGrid();
-      // refresh disabled states
       openAddRemove(idx);
     };
     btnRem.onclick=()=>{
@@ -774,6 +849,10 @@ function showModal(id, show){
 }
 $('#aboutOk')?.addEventListener('click',()=>showModal('aboutModal',false));
 $('#aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
+
+/* Re-render card previews when returning to Home */
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') renderGrid(); });
+window.addEventListener('focus', renderGrid);
 </script>
 
 <!-- Boot + SW -->
