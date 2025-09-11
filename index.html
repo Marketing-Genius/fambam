@@ -10,6 +10,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="wallpaper.css">
+<script src="wallpaper.js" defer></script>
+
 
 <style>
 /* --- layout sanity --- */
@@ -374,8 +377,7 @@ function pickWallpaper(){
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0]; if(!file) return;
     const dataUrl = await compressImage(file, 2400, 0.85);
-    localStorage.setItem(WP_KEY, dataUrl);
-    document.documentElement.style.setProperty('--wallpaper', `url("${dataUrl}")`);
+    Wallpaper.set(dataUrl);
     input.value='';
   };
   input.click();
