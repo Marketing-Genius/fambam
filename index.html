@@ -94,11 +94,14 @@ header{
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
 
-/* Breakfast preview (bigger, 2×2, avatar+emoji only) */
+/* Breakfast preview (2×2, avatar+emoji, never overflows) */
 .bf-box{
   margin-top:6px; width:100%;
   background:#081228; border:1px solid #27324a;
   border-radius:16px; padding:12px;
+  /* keep inside tile vertically on all orientations */
+  max-height: calc(var(--slotH) - 72px);
+  overflow:hidden;
 }
 .bf-date{font-size:.9rem;font-weight:800}
 .bf-empty{opacity:.8;font-size:.95rem;margin-top:10px}
@@ -110,6 +113,7 @@ header{
   display:flex; align-items:center; justify-content:space-between;
   gap:14px; padding:12px 14px;
   background:#0f172a; border:1px solid #1f2937; border-radius:16px;
+  min-height:48px;
 }
 .bf-face{
   width:34px;height:34px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
@@ -138,7 +142,7 @@ header{
 .editing .tile.photos-card .minus{ display:grid; background: rgba(0,0,0,.4); border-color:#000; }
 .tile.photos-card::before{ content:""; position:absolute; inset:0; border-radius:16px; box-shadow: var(--shadow); pointer-events:none; }
 
-/* Modal + form + edit bar (unchanged) */
+/* Modal + form + edit bar */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal{width:min(900px,100%);background:rgba(17,24,39,.98);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
@@ -431,7 +435,7 @@ window.addEventListener('load', ()=>{
 });
 </script>
 
-<!-- Admin modal logic (unchanged; omitted for brevity beyond core behavior) -->
+<!-- Admin modal logic -->
 <script>
 const modal = document.getElementById('adminModal');
 document.getElementById('adminClose')?.addEventListener('click', closeAdmin);
@@ -640,7 +644,7 @@ function renderTile(c, slotIndex){
       a.innerHTML = `<div class="label">${c.label}</div><div class="hint">${c.hint||''}</div><button class="minus" type="button">−</button>`;
     }
   } else if (c.id === 'breakfast') {
-    /* Breakfast tile — 2×2 grid, avatar + emoji only */
+    /* Breakfast tile — 2×2 grid, avatar + emoji only, local-today */
     a.innerHTML = `
       <div class="label">Breakfast</div>
       <div class="bf-box">
@@ -655,7 +659,6 @@ function renderTile(c, slotIndex){
       const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
       const key  = 'bf:day:'+todayISO();            // strictly today (local)
       const day  = JSON.parse(localStorage.getItem(key)||'{}');
-      console.log('[Breakfast card] reading key:', key, day);
 
       const kids = (Family.getKids?.() || []);
       const entries = Object.entries(day);
@@ -667,7 +670,7 @@ function renderTile(c, slotIndex){
         emptyMsg.style.display='none';
         grid.style.display='grid';
 
-        // stable order
+        // stable order by kid name for predictable layout
         const byName = (id)=> (kids.find(k=>k.id===id)?.name || '').toLowerCase();
         entries.sort((a,b)=> byName(a[0]).localeCompare(byName(b[0])));
 
@@ -712,7 +715,7 @@ function renderTile(c, slotIndex){
   return a;
 }
 
-/* ----- Edit controls / modal helpers (unchanged) ----- */
+/* ----- Edit controls / modal helpers ----- */
 function toggleEdit(on){
   isEditing = !!on;
   $('#editBar').classList.toggle('show', isEditing);
