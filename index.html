@@ -66,7 +66,7 @@ header{
 .menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
 .menu-item:hover{background:#0b1224}
 
-/* Grid slots (fixed 4×4) */
+/* Grid */
 #slots{
   margin-top:12px; display:grid; gap:16px;
   grid-template-columns:repeat(4, minmax(0,1fr));
@@ -94,31 +94,29 @@ header{
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
 
-/* Breakfast preview sub-card (bigger, 2×2) */
+/* Breakfast preview (bigger, 2×2, avatar+emoji only) */
 .bf-box{
   margin-top:6px; width:100%;
   background:#081228; border:1px solid #27324a;
   border-radius:16px; padding:12px;
 }
 .bf-date{font-size:.9rem;font-weight:800}
-.bf-empty{opacity:.8;font-size:.95rem;margin-top:8px}
+.bf-empty{opacity:.8;font-size:.95rem;margin-top:10px}
 .bf-grid{
-  /* force 2×2 so avatars are large */
   display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px;
-  margin-top:10px;
+  margin-top:12px;
 }
 .bf-cell{
   display:flex; align-items:center; justify-content:space-between;
-  gap:10px; padding:10px 12px;
+  gap:14px; padding:12px 14px;
   background:#0f172a; border:1px solid #1f2937; border-radius:16px;
 }
-.bf-left{display:flex;align-items:center;gap:8px}
 .bf-face{
-  width:32px;height:32px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
-  background:#334155;color:#e5e7eb;font-size:.9rem;font-weight:800; flex:0 0 auto;
+  width:34px;height:34px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
+  background:#334155;color:#e5e7eb;font-size:.95rem;font-weight:800; flex:0 0 auto;
 }
 .bf-face img{width:100%;height:100%;object-fit:cover}
-.bf-emoji{font-size:1.35rem; line-height:1}
+.bf-emoji{font-size:1.45rem; line-height:1}
 
 /* Edit affordances */
 .tile .minus{
@@ -129,7 +127,7 @@ header{
 .editing .tile .minus{ display:grid; cursor:pointer; }
 .tile.selecting{ outline:2px solid var(--accent); }
 
-/* Photos tile (unchanged) */
+/* Photos tile */
 .tile.photo-only{ padding:0; border:none; background:transparent; box-shadow:none; }
 .photo-prev{ position:absolute; inset:0; border-radius:16px; overflow:hidden; z-index:0; opacity:.22; }
 .photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; }
@@ -140,7 +138,7 @@ header{
 .editing .tile.photos-card .minus{ display:grid; background: rgba(0,0,0,.4); border-color:#000; }
 .tile.photos-card::before{ content:""; position:absolute; inset:0; border-radius:16px; box-shadow: var(--shadow); pointer-events:none; }
 
-/* Modal + form bits (unchanged) */
+/* Modal + form + edit bar (unchanged) */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal{width:min(900px,100%);background:rgba(17,24,39,.98);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
@@ -162,13 +160,7 @@ header{
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 .btn[disabled]{opacity:.5;filter:grayscale(1);pointer-events:none}
 .toggle{display:inline-flex;align-items:center;gap:8px}
-
-/* Edit bar */
-#editBar{
-  display:none; align-items:center; justify-content:space-between;
-  margin-top:6px; padding:10px 12px; border-radius:12px;
-  background:rgba(17,24,39,.65); border:1px solid #1f2937;
-}
+#editBar{display:none; align-items:center; justify-content:space-between;margin-top:6px; padding:10px 12px; border-radius:12px;background:rgba(17,24,39,.65); border:1px solid #1f2937;}
 #editBar.show{display:flex}
 </style>
 </head>
@@ -396,18 +388,13 @@ function compressImage(file, maxSide=2400, quality=.85){
     const el = e.target.closest('.menu-item'); if (!el) return;
     const action = el.dataset.action;
     closeDD();
-    if (action === 'edithome') {
-      toggleEdit(true);
-    } else if (action === 'admin') {
+    if (action === 'edithome') toggleEdit(true);
+    else if (action === 'admin') {
       const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
       if (hasPin) requestPinUI(openAdmin); else openAdmin();
-    } else if (action === 'wallpaper') {
-      pickWallpaper();
-    } else if (action === 'clearwp') {
-      clearWallpaper();
-    } else if (action === 'about') {
-      showModal('aboutModal', true);
-    }
+    } else if (action === 'wallpaper') pickWallpaper();
+    else if (action === 'clearwp') clearWallpaper();
+    else if (action === 'about') showModal('aboutModal', true);
   });
 })();
 </script>
@@ -436,7 +423,6 @@ function requestPinUI(onSuccess){
 
   open();
 }
-
 window.addEventListener('load', ()=>{
   if (location.hash === '#admin') {
     const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
@@ -445,7 +431,7 @@ window.addEventListener('load', ()=>{
 });
 </script>
 
-<!-- Admin modal logic -->
+<!-- Admin modal logic (unchanged; omitted for brevity beyond core behavior) -->
 <script>
 const modal = document.getElementById('adminModal');
 document.getElementById('adminClose')?.addEventListener('click', closeAdmin);
@@ -459,7 +445,6 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.querySelectorAll('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab?'':'none'));
   });
 });
-
 function openAdmin(){ buildParents(); buildKids(); showModal('adminModal', true); }
 function closeAdmin(){ showModal('adminModal', false); }
 
@@ -475,7 +460,6 @@ function buildParents(){
       <button class="btn-warn" data-remove>Remove</button>`;
     list.appendChild(row);
   });
-
   document.getElementById('addParent').onclick = ()=>{
     const name = (document.getElementById('newParentName').value||'').trim(); if(!name) return;
     Family.upsertParent({ name }); document.getElementById('newParentName').value=''; buildParents();
@@ -485,7 +469,6 @@ function buildParents(){
     if (pin && !/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
     Family.setPin(pin); alert(pin ? 'PIN saved.' : 'PIN cleared.');
   };
-
   list.querySelectorAll('.item').forEach(row=>{
     const id = row.dataset.id;
     row.querySelector('input').oninput = (e)=> Family.upsertParent({ id, name:e.target.value });
@@ -493,7 +476,6 @@ function buildParents(){
     row.querySelector('[data-remove]').onclick = ()=>{ Family.removeParent(id); buildParents(); };
   });
 }
-
 /* Kids UI */
 function buildKids(){
   const list = document.getElementById('kidsList'); list.innerHTML='';
@@ -507,12 +489,10 @@ function buildKids(){
       <button class="btn-warn" data-remove>Remove</button>`;
     list.appendChild(row);
   });
-
   document.getElementById('addKid').onclick = ()=>{
     const name = (document.getElementById('newKidName').value||'').trim(); if(!name) return;
     Family.upsertKid({ name }); document.getElementById('newKidName').value=''; buildKids();
   };
-
   list.querySelectorAll('.item').forEach(row=>{
     const id = row.dataset.id;
     row.querySelector('input').oninput = (e)=> Family.upsertKid({ id, name:e.target.value });
@@ -521,12 +501,9 @@ function buildKids(){
     row.querySelector('[data-remove]').onclick = ()=>{ Family.removeKid(id); buildKids(); };
   });
 }
-
-/* Shared helpers */
+/* helpers */
 function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
-
-/* Clean photo picker */
 function pickPhoto(kind, id){
   const input = document.getElementById('file-picker');
   input.removeAttribute('capture');
@@ -557,7 +534,7 @@ function compress(file, maxSide=256, quality=0.8){
 }
 </script>
 
-<!-- Home grid logic (slots + editing + Photos) -->
+<!-- Home grid logic (slots + editing + Photos + Breakfast preview) -->
 <script>
 const SLOT_KEY = 'hub:home:slots:v2';
 const SLOTS_TOTAL = 16;
@@ -594,15 +571,13 @@ function safelyGetPhotoList(){
   catch{ return []; }
 }
 
-/* Local-date helpers (strictly local, no UTC) */
+/* Local-date helpers (strictly local) */
 function todayISO(){
   const d=new Date();
   const y=d.getFullYear(), m=(d.getMonth()+1).toString().padStart(2,'0'), dd=d.getDate().toString().padStart(2,'0');
   return `${y}-${m}-${dd}`;
 }
-function niceToday(){
-  return new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
-}
+function niceToday(){ return new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
 
 function renderGrid(){
   const wrap = $('#slots'); wrap.innerHTML='';
@@ -662,14 +637,10 @@ function renderTile(c, slotIndex){
       const timer = setInterval(()=>{ idx=(idx+1)%list.length; img.src=list[idx]; }, cadence);
       a.addEventListener('click',()=>clearInterval(timer),{once:true});
     } else {
-      a.innerHTML = `
-        <div class="label">${c.label}</div>
-        <div class="hint">${c.hint||''}</div>
-        <button class="minus" type="button">−</button>
-      `;
+      a.innerHTML = `<div class="label">${c.label}</div><div class="hint">${c.hint||''}</div><button class="minus" type="button">−</button>`;
     }
   } else if (c.id === 'breakfast') {
-    /* Breakfast tile with bigger 2×2 grid and avatars */
+    /* Breakfast tile — 2×2 grid, avatar + emoji only */
     a.innerHTML = `
       <div class="label">Breakfast</div>
       <div class="bf-box">
@@ -679,13 +650,16 @@ function renderTile(c, slotIndex){
       </div>
       <button class="minus" type="button">−</button>
     `;
+
     try{
       const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
-      const key = 'bf:day:'+todayISO();                     // strictly today, local time
+      const key  = 'bf:day:'+todayISO();            // strictly today (local)
       const day  = JSON.parse(localStorage.getItem(key)||'{}');
-      const kids = (Family.getKids?.() || []);
+      console.log('[Breakfast card] reading key:', key, day);
 
-      const entries = Object.entries(day); // [[kidId, choiceIndex], ...]
+      const kids = (Family.getKids?.() || []);
+      const entries = Object.entries(day);
+
       const emptyMsg = a.querySelector('.bf-empty');
       const grid = a.querySelector('.bf-grid');
 
@@ -693,11 +667,11 @@ function renderTile(c, slotIndex){
         emptyMsg.style.display='none';
         grid.style.display='grid';
 
-        // Sort by kid display name for stable order
+        // stable order
         const byName = (id)=> (kids.find(k=>k.id===id)?.name || '').toLowerCase();
         entries.sort((a,b)=> byName(a[0]).localeCompare(byName(b[0])));
 
-        for(const [kidId, idx] of entries.slice(0,4)){      // show up to 4 (2×2)
+        for(const [kidId, idx] of entries.slice(0,4)){ // 2×2
           const kid = kids.find(k=>k.id===kidId);
           const choice = menu?.[idx];
           if(!choice) continue;
@@ -707,10 +681,7 @@ function renderTile(c, slotIndex){
           const face = kid?.photo
             ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
             : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-          cell.innerHTML = `
-            <div class="bf-left">${face}<div style="font-weight:700;opacity:.9">${escapeHtml(kid?.name||'')}</div></div>
-            <div class="bf-emoji">${choice.emoji||'❓'}</div>
-          `;
+          cell.innerHTML = `${face}<span class="bf-emoji">${choice.emoji||'❓'}</span>`;
           grid.appendChild(cell);
         }
       }
@@ -741,18 +712,18 @@ function renderTile(c, slotIndex){
   return a;
 }
 
-/* ----- Edit mode controls ----- */
+/* ----- Edit controls / modal helpers (unchanged) ----- */
 function toggleEdit(on){
   isEditing = !!on;
   $('#editBar').classList.toggle('show', isEditing);
   selectedCardId=null; selectedFromSlot=-1;
   renderGrid();
 }
-$('#btnDoneEdit').onclick = ()=> toggleEdit(false);
+document.getElementById('btnDoneEdit').onclick = ()=> toggleEdit(false);
 
 function openAddRemove(targetIndex){
   const placed = new Set(slots.filter(Boolean));
-  const body = $('#addCardBody'); body.innerHTML='';
+  const body = document.getElementById('addCardBody'); body.innerHTML='';
   CARDS.forEach(c=>{
     const isOnHome = placed.has(c.id);
     const row=document.createElement('div'); row.className='item';
@@ -780,22 +751,21 @@ function openAddRemove(targetIndex){
   });
   showModal('addCardModal', true);
 }
-$('#addCardDone').onclick=()=>showModal('addCardModal', false);
-$('#addCardClose').onclick=()=>showModal('addCardModal', false);
-$('#btnAddAnywhere').onclick=()=>{
+document.getElementById('addCardDone').onclick=()=>showModal('addCardModal', false);
+document.getElementById('addCardClose').onclick=()=>showModal('addCardModal', false);
+document.getElementById('btnAddAnywhere').onclick=()=>{
   const firstEmpty = slots.findIndex(x=>!x);
   openAddRemove(firstEmpty<0?0:firstEmpty);
 };
 
-/* ----- About modal wires ----- */
 function showModal(id, show){
   const m=document.getElementById(id);
   if(!m) return;
   if(show){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
   else    { m.style.display='none'; m.setAttribute('aria-hidden','true'); }
 }
-$('#aboutOk')?.addEventListener('click',()=>showModal('aboutModal',false));
-$('#aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
+document.getElementById('aboutOk')?.addEventListener('click',()=>showModal('aboutModal',false));
+document.getElementById('aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
 </script>
 
 <!-- Boot + SW -->
