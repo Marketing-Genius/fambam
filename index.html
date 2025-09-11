@@ -94,33 +94,41 @@ header{
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
 
-/* Breakfast preview (2×2, avatar+emoji, never overflows) */
+/* Breakfast preview (2×2, avatar+emoji only, compact) */
 .bf-box{
   margin-top:6px; width:100%;
   background:#081228; border:1px solid #27324a;
   border-radius:16px; padding:12px;
-  /* keep inside tile vertically on all orientations */
   max-height: calc(var(--slotH) - 72px);
   overflow:hidden;
 }
+
 .bf-date{font-size:.9rem;font-weight:800}
 .bf-empty{opacity:.8;font-size:.95rem;margin-top:10px}
+
+/* 2×2 grid, tighter gaps */
 .bf-grid{
-  display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px;
-  margin-top:12px;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px 12px;              /* row gap, column gap */
+  margin-top:10px;
 }
-.bf-cell{
-  display:flex; align-items:center; justify-content:space-between;
-  gap:14px; padding:12px 14px;
-  background:#0f172a; border:1px solid #1f2937; border-radius:16px;
-  min-height:48px;
+
+/* Single row: avatar + emoji (no background/border) */
+.bf-item{
+  display:flex; align-items:center; justify-content:flex-start;
+  gap:10px;                    /* space between avatar and emoji */
+  min-height:40px;             /* keep row height compact */
 }
+
 .bf-face{
-  width:34px;height:34px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
-  background:#334155;color:#e5e7eb;font-size:.95rem;font-weight:800; flex:0 0 auto;
+  width:34px; height:34px; border-radius:50%; overflow:hidden;
+  display:grid; place-items:center; flex:0 0 auto;
+  background:#334155; color:#e5e7eb; font-size:.95rem; font-weight:800;
 }
 .bf-face img{width:100%;height:100%;object-fit:cover}
-.bf-emoji{font-size:1.45rem; line-height:1}
+.bf-emoji{font-size:1.4rem; line-height:1}
+
 
 /* Edit affordances */
 .tile .minus{
@@ -680,7 +688,7 @@ function renderTile(c, slotIndex){
           if(!choice) continue;
 
           const cell = document.createElement('div');
-          cell.className='bf-cell';
+          cell.className='bf-item';
           const face = kid?.photo
             ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
             : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
