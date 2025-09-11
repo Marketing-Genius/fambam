@@ -62,7 +62,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 select, input[type="text"], textarea{background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 12px;min-width:140px;color:var(--text);font:inherit}
 textarea{min-height:88px;resize:vertical}
 button{cursor:pointer}
-.btn{background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;color:var(--text);font:inherit}
+.btn{background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;color:#e5e7eb;font:inherit}
 .btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 
@@ -127,7 +127,7 @@ button{cursor:pointer}
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Dinner Planner v1.4.0 (unified menu, no PIN on Manage)</div>
+      <div class="version">Dinner Planner v1.4.1 (local-date week keys + auto-refresh)</div>
     </div>
   </div>
 
@@ -258,10 +258,26 @@ const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const uid=()=>Math.random().toString(36).slice(2,10);
 
-function startOfWeekMonday(d=new Date()){const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=(dt.getUTCDay()+6)%7;dt.setUTCDate(dt.getUTCDate()-day);return dt;}
-function isoDateUTC(d){return d.toISOString().slice(0,10)}
-function thisMondayISO(){return isoDateUTC(startOfWeekMonday(new Date()))}
-function weekLabelText(mISO){const m=new Date(mISO+'T00:00:00Z');const e=new Date(m);e.setUTCDate(e.getUTCDate()+6);const f=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});return `${f(m)} – ${f(e)}`}
+/* ----- Local-date helpers (Mon–Sun week; no UTC conversions) ----- */
+function localISO(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function startOfWeekMondayLocal(d=new Date()){
+  const monday=new Date(d);
+  monday.setHours(0,0,0,0);
+  const offset=((monday.getDay()+6)%7); // Mon=0..Sun=6
+  monday.setDate(monday.getDate()-offset);
+  return monday;
+}
+function thisMondayISO(){ return localISO(startOfWeekMondayLocal(new Date())); }
+function weekLabelText(mISO){
+  const [Y,M,D]=mISO.split('-').map(n=>parseInt(n,10));
+  const m = new Date(Y, M-1, D, 0,0,0,0);
+  const e = new Date(m); e.setDate(e.getDate()+6);
+  const f = d => d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  return `${f(m)} – ${f(e)}`;
+}
 
 function seedFoodsIfNeeded(){
   let foods=load(LS.foods,null);
@@ -301,7 +317,7 @@ function render(){
 
   DAYS.forEach((day,i)=>{
     const data=plan.days[day]||emptyDay();
-    const dt=new Date(mISO+'T00:00:00Z'); dt.setUTCDate(dt.getUTCDate()+i);
+    const dt=new Date(mISO+'T00:00:00'); dt.setDate(dt.getDate()+i);
     const nice=dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
 
     const el=document.createElement('div'); el.className='card'; el.dataset.day=day;
@@ -606,6 +622,16 @@ function planSummaryText(){
 
 /* ---------- Boot ---------- */
 seedFoodsIfNeeded(); render();
+
+/* Auto-refresh when returning to page or when storage changes */
+window.addEventListener('pageshow', render);
+window.addEventListener('storage', (e)=>{
+  if (!e.key) return;
+  if (e.key.startsWith('dp:plan:') || e.key === 'dp:foods:list' || e.key === 'dp:desserts:list' || e.key === 'dp:pantry') {
+    render();
+  }
+});
+
 if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
   </script>
 </body>
