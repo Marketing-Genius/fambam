@@ -1,24 +1,33 @@
-<script>
-// wallpaper.js — read/apply the home wallpaper everywhere
-(function(){
+(() => {
   const KEY = 'hub:wallpaper:dataurl';
 
-  function apply(url){
-    document.documentElement.style.setProperty('--wallpaper', url ? `url("${url}")` : 'url("")');
+  function apply() {
+    try {
+      const data = localStorage.getItem(KEY);
+      const val = data ? `url("${data}")` : `url("")`;
+      document.documentElement.style.setProperty('--wallpaper', val);
+    } catch (e) {
+      // ignore
+    }
   }
 
-  // Apply on load
-  try { apply(localStorage.getItem(KEY)); } catch {}
+  function set(dataUrl) {
+    try { localStorage.setItem(KEY, dataUrl || ''); } catch {}
+    apply();
+  }
 
-  // If another tab/page updates the wallpaper, update this one too
-  window.addEventListener('storage', (e)=>{
-    if (e.key === KEY) apply(e.newValue);
-  });
+  function clear() {
+    try { localStorage.removeItem(KEY); } catch {}
+    apply();
+  }
 
-  // Optional helper you can call from any page that *sets* the wallpaper
-  window.Wallpaper = {
-    get(){ try { return localStorage.getItem(KEY); } catch { return null; } },
-    set(dataUrl){ try { localStorage.setItem(KEY, dataUrl || ''); apply(dataUrl); } catch {} }
-  };
+  // Export
+  window.Wallpaper = { apply, set, clear, KEY };
+
+  // Run on normal load…
+  document.addEventListener('DOMContentLoaded', apply, { once: true });
+  // …and when coming back via back/forward cache
+  window.addEventListener('pageshow', apply);
+  // keep pages in sync if storage changes elsewhere
+  window.addEventListener('storage', (e) => { if (e.key === KEY) apply(); });
 })();
-</script>
