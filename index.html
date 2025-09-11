@@ -13,7 +13,6 @@
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
-
 <style>
 /* --- layout sanity --- */
 *, *::before, *::after { box-sizing: border-box; }
@@ -105,25 +104,19 @@ header{
   max-height: calc(var(--slotH) - 72px);
   overflow:hidden;
 }
-
 .bf-date{font-size:.9rem;font-weight:800}
 .bf-empty{opacity:.8;font-size:.95rem;margin-top:10px}
-
-/* 2×2 grid, tighter gaps */
 .bf-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:10px 12px;
   margin-top:10px;
 }
-
-/* Single row: avatar + emoji (no background/border) */
 .bf-item{
   display:flex; align-items:center; justify-content:flex-start;
   gap:10px;
   min-height:40px;
 }
-
 .bf-face{
   width:34px; height:34px; border-radius:50%; overflow:hidden;
   display:grid; place-items:center; flex:0 0 auto;
@@ -133,7 +126,7 @@ header{
 .bf-emoji{font-size:1.4rem; line-height:1}
 
 /* Dinner preview */
-.dp-box{ /* same container look/feel as breakfast */
+.dp-box{
   margin-top:6px; width:100%;
   background:#081228; border:1px solid #27324a;
   border-radius:16px; padding:12px;
@@ -276,7 +269,7 @@ header{
         <div id="pinTitle" style="font-weight:800">Enter Admin PIN</div>
         <button id="pinClose" class="btn">✖</button>
       </header>
-        <div class="body" style="gap:12px">
+      <div class="body" style="gap:12px">
         <input id="pinInputModal" class="btn" inputmode="numeric" pattern="\\d*" placeholder="PIN (numbers only)" autofocus />
       </div>
       <div class="footer">
@@ -365,18 +358,26 @@ if (!window.Family) {
 })();
 </script>
 
-<!-- Wallpaper utilities -->
+<!-- Wallpaper utilities (shared helper + safe fallback) -->
 <script>
 function pickWallpaper(){
   const input = document.getElementById('wallpaper-picker');
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0]; if(!file) return;
     const dataUrl = await compressImage(file, 2400, 0.85);
-    Wallpaper.set(dataUrl);
+
+    if (window.Wallpaper && typeof Wallpaper.set === 'function') {
+      Wallpaper.set(dataUrl);             // shared helper applies + persists
+    } else {
+      const KEY = 'hub:wallpaper:dataurl'; // safe fallback
+      localStorage.setItem(KEY, dataUrl);
+      document.documentElement.style.setProperty('--wallpaper', `url("${dataUrl}")`);
+    }
     input.value='';
   };
   input.click();
-  function clearWallpaper(){
+}
+function clearWallpaper(){
   if (window.Wallpaper && typeof Wallpaper.clear === 'function') {
     Wallpaper.clear();
   } else {
@@ -408,6 +409,7 @@ function compressImage(file, maxSide=2400, quality=.85){
   const openDD = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
   const closeDD= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
 
+  btn?.addEventListener('click,', ()=>{}); // defensive: avoid passive capture mismatch
   btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?closeDD():openDD(); });
   document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) closeDD(); });
 
