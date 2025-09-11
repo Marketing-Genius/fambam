@@ -94,29 +94,59 @@ header{
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
 
-/* Breakfast preview (bigger, 2×2, avatar+emoji only) */
+/* Breakfast preview sub-card — compact to fit in slot */
 .bf-box{
-  margin-top:6px; width:100%;
-  background:#081228; border:1px solid #27324a;
-  border-radius:16px; padding:12px;
+  margin-top:8px;
+  width:100%;
+  background:#0b1224;
+  border:1px solid #334155;
+  border-radius:14px;
+  padding:10px 12px;
+  /* ensure it never overflows the card height */
+  max-height: calc(var(--slotH) - 72px);
+  overflow:hidden;
 }
-.bf-date{font-size:.9rem;font-weight:800}
-.bf-empty{opacity:.8;font-size:.95rem;margin-top:10px}
+.bf-date{
+  font-size:.9rem;
+  font-weight:800;
+  margin-bottom:8px;
+}
+
+/* 2×2 grid (landscape + portrait). If you ever add a 5th kid,
+   the extra rows will be hidden by the max-height above. */
 .bf-grid{
-  display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px;
-  margin-top:12px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap:10px 12px;
 }
+
+/* each kid “pill” */
 .bf-cell{
   display:flex; align-items:center; justify-content:space-between;
-  gap:14px; padding:12px 14px;
-  background:#0f172a; border:1px solid #1f2937; border-radius:16px;
+  gap:10px;
+  background:#0f172a;
+  border:1px solid #1f2937;
+  border-radius:18px;
+  padding:8px 10px;
+  min-height:48px;
 }
+
+/* avatar */
 .bf-face{
-  width:34px;height:34px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
-  background:#334155;color:#e5e7eb;font-size:.95rem;font-weight:800; flex:0 0 auto;
+  width:30px; height:30px;
+  border-radius:50%; overflow:hidden;
+  display:grid; place-items:center;
+  background:#334155; color:#e5e7eb; font-size:.9rem; font-weight:800;
+  flex: 0 0 auto;
 }
-.bf-face img{width:100%;height:100%;object-fit:cover}
-.bf-emoji{font-size:1.45rem; line-height:1}
+.bf-face img{ width:100%; height:100%; object-fit:cover; }
+
+/* emoji on the right, large enough but compact */
+.bf-emo{ font-size:22px; line-height:1; flex:0 0 auto; }
+
+/* “No selections yet” */
+.bf-empty{ opacity:.75; font-size:.9rem; }
+
 
 /* Edit affordances */
 .tile .minus{
@@ -640,77 +670,60 @@ function renderTile(c, slotIndex){
       a.innerHTML = `<div class="label">${c.label}</div><div class="hint">${c.hint||''}</div><button class="minus" type="button">−</button>`;
     }
   } else if (c.id === 'breakfast') {
-    /* Breakfast tile — 2×2 grid, avatar + emoji only */
-    a.innerHTML = `
-      <div class="label">Breakfast</div>
-      <div class="bf-box">
-        <div class="bf-date">Today · ${niceToday()}</div>
-        <div class="bf-empty">No selections yet — tap Breakfast.</div>
-        <div class="bf-grid" aria-label="Breakfast selections" style="display:none"></div>
-      </div>
-      <button class="minus" type="button">−</button>
-    `;
+  // ---- Breakfast with compact, always-fitting preview (2×2) ----
+  a.innerHTML = `
+    <div class="label">Breakfast</div>
+    <div class="bf-box">
+      <div class="bf-date">Today · ${niceToday()}</div>
+      <div class="bf-empty">No selections yet — tap Breakfast.</div>
+      <div class="bf-grid" aria-label="Breakfast selections" style="display:none"></div>
+    </div>
+    <button class="minus" type="button">−</button>
+  `;
 
-    try{
-      const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
-      const key  = 'bf:day:'+todayISO();            // strictly today (local)
-      const day  = JSON.parse(localStorage.getItem(key)||'{}');
-      console.log('[Breakfast card] reading key:', key, day);
+  try{
+    const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
 
-      const kids = (Family.getKids?.() || []);
-      const entries = Object.entries(day);
+    // Always use local "today" (no timezone drift)
+    const dayKey = 'bf:day:' + todayISO();
+    const day  = JSON.parse(localStorage.getItem(dayKey)||'{}');
 
-      const emptyMsg = a.querySelector('.bf-empty');
-      const grid = a.querySelector('.bf-grid');
+    const kids = (Family.getActiveKids?.() || Family.getKids?.() || []);
 
-      if (entries.length){
-        emptyMsg.style.display='none';
-        grid.style.display='grid';
+    // build entries in kid order so layout is predictable
+    const entries = kids
+      .map(k => [k.id, day[k.id]])
+      .filter(([_, choiceIndex]) => Number.isInteger(choiceIndex));
 
-        // stable order
-        const byName = (id)=> (kids.find(k=>k.id===id)?.name || '').toLowerCase();
-        entries.sort((a,b)=> byName(a[0]).localeCompare(byName(b[0])));
+    const emptyMsg = a.querySelector('.bf-empty');
+    const grid = a.querySelector('.bf-grid');
 
-        for(const [kidId, idx] of entries.slice(0,4)){ // 2×2
-          const kid = kids.find(k=>k.id===kidId);
-          const choice = menu?.[idx];
-          if(!choice) continue;
+    if (entries.length){
+      emptyMsg.style.display='none';
+      grid.style.display='grid';
 
-          const cell = document.createElement('div');
-          cell.className='bf-cell';
-          const face = kid?.photo
-            ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
-            : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-          cell.innerHTML = `${face}<span class="bf-emoji">${choice.emoji||'❓'}</span>`;
-          grid.appendChild(cell);
-        }
+      // strictly 2×2 visible (4 cells max), extra rows are clipped by max-height
+      const visible = entries.slice(0, 4);
+
+      for(const [kidId, idx] of visible){
+        const kid = kids.find(k=>k.id===kidId);
+        const choice = menu?.[idx];
+        if(!choice) continue;
+
+        const cell = document.createElement('div');
+        cell.className='bf-cell';
+
+        const faceHTML = kid?.photo
+          ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
+          : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
+
+        // avatar left, emoji right — no names
+        cell.innerHTML = `${faceHTML}<span class="bf-emo">${choice.emoji||'❓'}</span>`;
+        grid.appendChild(cell);
       }
-    }catch(err){ console.warn('Breakfast preview error', err); }
+    }
+  }catch(err){ console.warn('Breakfast preview error', err); }
 
-  } else {
-    a.innerHTML = `
-      <div class="emoji">${c.emoji}</div>
-      <div class="label">${c.label}</div>
-      <div class="hint">${c.hint||''}</div>
-      <button class="minus" type="button">−</button>
-    `;
-  }
-
-  if(isEditing){ a.addEventListener('click', (e)=>e.preventDefault()); }
-
-  const minus = a.querySelector('.minus');
-  if(minus){
-    ['click','pointerdown','touchstart','mousedown'].forEach(evt=>{
-      minus.addEventListener(evt, (ev)=>{
-        ev.preventDefault(); ev.stopPropagation();
-      }, {passive:false});
-    });
-    minus.addEventListener('click', ()=>{
-      slots[slotIndex]=null; selectedCardId=null; selectedFromSlot=-1; saveSlots(slots); renderGrid();
-    });
-  }
-  return a;
-}
 
 /* ----- Edit controls / modal helpers (unchanged) ----- */
 function toggleEdit(on){
