@@ -125,9 +125,8 @@ header{
 }
 .bf-cell{display:flex;align-items:center;gap:6px;background:#0f172a;border:1px solid #1f2937;border-radius:999px;padding:6px 8px}
 .bf-face{
-  width:28px;height:28px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
-  background:#334155;color:#e5e7eb;font-size:.9rem;font-weight:800;
-  border:2px solid #1f2937;
+  width:22px;height:22px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
+  background:#334155;color:#e5e7eb;font-size:.8rem;font-weight:700
 }
 .bf-face img{width:100%;height:100%;object-fit:cover}
 
@@ -588,7 +587,7 @@ function compress(file, maxSide=256, quality=0.8){
 }
 </script>
 
-<!-- Home grid logic (slots + editing + Photos + Breakfast preview) -->
+<!-- Home grid logic (slots + editing + Photos) -->
 <script>
 const SLOT_KEY = 'hub:home:slots:v2';        // Array(16) of card ids or null
 const SLOTS_TOTAL = 16;
@@ -626,10 +625,15 @@ function safelyGetPhotoList(){
   catch{ return []; }
 }
 
-/* Date helpers
-   IMPORTANT: breakfast page uses UTC-sliced ISO for keys, so we mirror that. */
-function todayISO_UTCslice(){ return new Date().toISOString().slice(0,10); }
-function niceToday(){ return new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
+/* Local-date helpers */
+function todayISO(){
+  const d=new Date();
+  const y=d.getFullYear(), m=(d.getMonth()+1).toString().padStart(2,'0'), dd=d.getDate().toString().padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function niceToday(){
+  return new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+}
 
 function renderGrid(){
   const wrap = $('#slots'); wrap.innerHTML='';
@@ -644,12 +648,14 @@ function renderGrid(){
         t.addEventListener('click', (ev)=>{
           ev.preventDefault(); ev.stopPropagation();
           if(selectedCardId===id){ selectedCardId=null; selectedFromSlot=-1; t.classList.remove('selecting'); return; }
+          // selecting new source
           $$('.tile').forEach(x=>x.classList.remove('selecting'));
           selectedCardId = id; selectedFromSlot = i; t.classList.add('selecting');
         });
       }
       div.appendChild(t);
     } else {
+      // empty slot
       if(isEditing){
         const add = document.createElement('button');
         add.className='add-btn'; add.textContent='+';
@@ -658,6 +664,7 @@ function renderGrid(){
         div.appendChild(add);
       }
     }
+    // clicking any slot performs move/swap when in editing & a source selected
     div.addEventListener('click', ()=>{
       if(!isEditing || selectedCardId==null) return;
       const to = i;
@@ -699,7 +706,7 @@ function renderTile(c, slotIndex){
       `;
     }
   } else if (c.id === 'breakfast') {
-    // ---- Breakfast with live preview (kid face + emoji) ----
+    // ---- Breakfast with live preview ----
     a.innerHTML = `
       <div class="emoji">🍽️</div>
       <div class="label">Breakfast</div>
@@ -711,33 +718,29 @@ function renderTile(c, slotIndex){
       <button class="minus" type="button">−</button>
     `;
     try{
-      const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]') || [];
-      const dayKey = 'bf:day:'+todayISO_UTCslice(); // match breakfast page storage
-      const day  = JSON.parse(localStorage.getItem(dayKey)||'{}') || {};
-      const kids = (Family.getKids?.() || []).filter(k=>k.enabled!==false);
-
-      // Build rows ONLY for kids who actually chose something today
-      const chosen = kids
-        .map(k=>({kid:k, idx: (day.hasOwnProperty(k.id)? day[k.id] : null)}))
-        .filter(x=> Number.isInteger(x.idx) && menu[x.idx]);
+      const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
+      const day  = JSON.parse(localStorage.getItem('bf:day:'+todayISO())||'{}');
+      const kids = (Family.getKids?.() || []);
+      const entries = Object.entries(day);
 
       const emptyMsg = a.querySelector('.bf-empty');
       const grid = a.querySelector('.bf-grid');
 
-      if (chosen.length){
+      if (entries.length){
         emptyMsg.style.display='none';
         grid.style.display='grid';
-
-        chosen.forEach(({kid, idx})=>{
-          const choice = menu[idx];
+        for(const [kidId, idx] of entries){
+          const kid = kids.find(k=>k.id===kidId);
+          const choice = menu?.[idx];
+          if(!choice) continue;
           const cell = document.createElement('div');
           cell.className='bf-cell';
           const face = kid?.photo
             ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
             : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-          cell.innerHTML = `${face}<span style="font-size:1.1rem">${choice.emoji||'❓'}</span>`;
+          cell.innerHTML = `${face}<span>${choice.emoji||'❓'}</span>`;
           grid.appendChild(cell);
-        });
+        }
       }
     }catch(err){ console.warn('Breakfast preview error', err); }
 
@@ -751,8 +754,10 @@ function renderTile(c, slotIndex){
     `;
   }
 
+  // In edit mode disable navigation
   if(isEditing){ a.addEventListener('click', (e)=>e.preventDefault()); }
 
+  // Robust minus handling on iPad
   const minus = a.querySelector('.minus');
   if(minus){
     ['click','pointerdown','touchstart','mousedown'].forEach(evt=>{
@@ -778,7 +783,7 @@ function toggleEdit(on){
 }
 $('#btnDoneEdit').onclick = ()=> toggleEdit(false);
 
-// Add/Remove modal
+// Add/Remove modal (now shows ALL cards with Add & Remove; one is disabled based on state)
 function openAddRemove(targetIndex){
   const placed = new Set(slots.filter(Boolean));
   const body = $('#addCardBody'); body.innerHTML='';
@@ -837,7 +842,7 @@ $('#aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
 // initial render
 renderGrid();
 
-// Re-render if Family store changes (e.g., renamed kids / photos updated)
+// Re-render if Family store changes (e.g., added photos or renamed kids)
 try { Family.onChange && Family.onChange(()=>{ renderGrid(); }); } catch(_){}
 
 // SW
