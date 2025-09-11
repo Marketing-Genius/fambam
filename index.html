@@ -102,11 +102,31 @@ header{
   border-radius:16px;padding:16px;text-decoration:none;color:var(--text);
   box-shadow:var(--shadow);backdrop-filter: blur(4px);
   height:100%;
-  overflow:hidden;
+  overflow:hidden;               /* keep previews inside */
 }
 .tile .emoji{font-size:36px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
+
+/* Breakfast mini preview box */
+.bf-mini{
+  margin-top:auto;               /* push to bottom inside tile */
+  width:100%;
+  background:rgba(2,6,23,.35);
+  border:1px solid #334155;
+  border-radius:14px;
+  padding:10px;
+}
+.bf-mini .bf-date{font-weight:700; font-size:.9rem; opacity:.9; margin-bottom:8px}
+.bf-mini .bf-empty{opacity:.75; font-size:.9rem}
+.bf-mini .bf-grid{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px}
+.bf-mini .kid{
+  display:flex; align-items:center; gap:6px;
+  background:rgba(31,41,55,.8); border:1px solid #1f2937; padding:6px 8px; border-radius:999px;
+}
+.kid .face{width:24px;height:24px;border-radius:50%;background:#0b1224;display:grid;place-items:center;font-weight:800;border:1px solid #334155;overflow:hidden}
+.kid .face img{width:100%;height:100%;object-fit:cover}
+.kid .pick{font-size:18px; line-height:1}
 
 /* Edit affordances */
 .tile .minus{
@@ -174,18 +194,6 @@ header{
   background:rgba(17,24,39,.65); border:1px solid #1f2937;
 }
 #editBar.show{display:flex}
-
-/* --- Breakfast preview --- */
-.bf-prev{background:#0b1224;border:1px solid #334155;border-radius:14px;padding:10px;margin-top:6px}
-.bf-prev .row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.bf-prev .date{font-size:.85rem;color:#cbd5e1}
-.bf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-@media(min-width:860px){ .bf-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.bf-chip{display:flex;align-items:center;gap:8px;background:#0f172a;border:1px solid #334155;border-radius:12px;padding:6px 8px;min-width:0}
-.bf-face{width:28px;height:28px;border-radius:50%;background:#0b1224;border:1px solid #334155;display:grid;place-items:center;font-weight:800;font-size:.85rem;overflow:hidden}
-.bf-face img{width:100%;height:100%;object-fit:cover}
-.bf-food{font-size:1.1rem;flex:none}
-.bf-empty{font-size:.9rem;color:#94a3b8}
 </style>
 </head>
 <body>
@@ -549,9 +557,7 @@ function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'
 /* Clean photo picker: always show native sheet (Photo Library / Take Photo / Choose File) */
 function pickPhoto(kind, id){
   const input = document.getElementById('file-picker');
-
-  // Ensure we always get the native chooser; no confirm dialog or capture toggling.
-  input.removeAttribute('capture');
+  input.removeAttribute('capture');   // always open the native sheet
 
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0]; if(!file) return;
@@ -587,7 +593,7 @@ const SLOT_KEY = 'hub:home:slots:v2';        // Array(16) of card ids or null
 const SLOTS_TOTAL = 16;
 
 const CARDS = [
-  {id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast Chooser', hint:'Tap to open'},
+  {id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast',        hint:''},
   {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner',    hint:'Weekly plan'},
   {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',            hint:'Weekly rotation'},
   {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar',   hint:'Events & activities'},
@@ -619,71 +625,58 @@ function safelyGetPhotoList(){
   catch{ return []; }
 }
 
-/* ---------- Breakfast preview helpers ---------- */
-function todayISOforBreakfast(){
-  let d = new Date();
-  const off = d.getTimezoneOffset();
-  d = new Date(d.getTime() - off*60000);
-  return d.toISOString().slice(0,10);
+/* ---- Breakfast preview data (heuristic readers) ---- */
+function todayISO(){
+  const d=new Date();
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
 }
-function loadJSON(key, fallback){
-  try{ const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; }catch{ return fallback; }
+function formatToday(){
+  return new Date().toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
 }
-function getActiveKidsSafe(){
+function getActiveKids(){
   try{
-    if(Family && typeof Family.getActiveKids==='function') return Family.getActiveKids();
-    if(Family && typeof Family.getKids==='function') return Family.getKids().filter(k=>k.enabled!==false);
+    if(Family && typeof Family.getActiveKids==='function'){ return Family.getActiveKids()||[]; }
+    if(Family && typeof Family.getKids==='function'){ return (Family.getKids()||[]).filter(k=>k.enabled!==false); }
   }catch{}
   return [];
 }
-function buildBreakfastPreview(){
-  const iso = todayISOforBreakfast();
-  const menu = loadJSON('bf:menu', []);           // [{emoji,label},...]
-  const choices = loadJSON(`bf:day:${iso}`, {});  // { kidId: index }
-  const kids = getActiveKidsSafe();
 
-  const wrap = document.createElement('div');
-  wrap.className = 'bf-prev';
+// Try several likely keys the Breakfast app might have stored.
+// Expected to return array of {kidId, emoji}
+function readBreakfastChoices(){
+  const iso=todayISO();
+  const out=[];
+  const kids=getActiveKids();
 
-  const hdr = document.createElement('div'); hdr.className='row1';
-  const dateTxt = new Date().toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
-  hdr.innerHTML = `<div class="date">Today · ${dateTxt}</div>`;
-  wrap.appendChild(hdr);
+  // 1) Snapshot used by some versions: hub:breakfast:preview:<ISO>  ->  [{id,emoji}]
+  try{
+    const snap = JSON.parse(localStorage.getItem(`hub:breakfast:preview:${iso}`)||'null');
+    if(Array.isArray(snap)) return snap.map(x=>({kidId:x.id, emoji:x.emoji||x.pick||''}));
+  }catch{}
 
-  if(!kids.length){
-    wrap.innerHTML += `<div class="bf-empty">No kids yet. Add them in Admin.</div>`;
-    return wrap;
-  }
+  // 2) Map keyed by kid id: bf:today:<ISO> -> { [kidId]: "🍓" }
+  try{
+    const map = JSON.parse(localStorage.getItem(`bf:today:${iso}`)||'null');
+    if(map && typeof map==='object'){
+      kids.forEach(k=>{ if(map[k.id]) out.push({kidId:k.id, emoji:map[k.id]}); });
+      if(out.length) return out;
+    }
+  }catch{}
 
-  const grid = document.createElement('div'); grid.className='bf-grid';
-  let hasAny=false;
-  kids.forEach(k=>{
-    const idx = choices[k.id];
-    const food = (idx!=null && menu[idx]) ? (menu[idx].emoji || '🍳') : null;
+  // 3) Per-kid key: bf:pick:<ISO>:<kidId> -> "🍓"
+  try{
+    kids.forEach(k=>{
+      const val = localStorage.getItem(`bf:pick:${iso}:${k.id}`);
+      if(val) out.push({kidId:k.id, emoji: val.replace(/^"(.*)"$/,'$1')});
+    });
+    if(out.length) return out;
+  }catch{}
 
-    const chip = document.createElement('div'); chip.className='bf-chip';
-
-    const face = document.createElement('div'); face.className='bf-face';
-    if(k.photo){ const img=new Image(); img.src=k.photo; img.alt=k.name; face.appendChild(img); }
-    else { face.textContent = (k.name||'?').slice(0,1).toUpperCase(); }
-    chip.appendChild(face);
-
-    const span = document.createElement('div'); span.className='bf-food';
-    span.textContent = food ? food : '—';
-    chip.appendChild(span);
-
-    if(food) hasAny=true;
-    grid.appendChild(chip);
-  });
-
-  if(!hasAny){
-    wrap.innerHTML += `<div class="bf-empty">No selections yet — tap Breakfast.</div>`;
-  }
-  wrap.appendChild(grid);
-  return wrap;
+  // 4) Nothing recognized
+  return [];
 }
 
-/* ---------- Grid render ---------- */
 function renderGrid(){
   const wrap = $('#slots'); wrap.innerHTML='';
   for(let i=0;i<SLOTS_TOTAL;i++){
@@ -697,12 +690,14 @@ function renderGrid(){
         t.addEventListener('click', (ev)=>{
           ev.preventDefault(); ev.stopPropagation();
           if(selectedCardId===id){ selectedCardId=null; selectedFromSlot=-1; t.classList.remove('selecting'); return; }
+          // selecting new source
           $$('.tile').forEach(x=>x.classList.remove('selecting'));
           selectedCardId = id; selectedFromSlot = i; t.classList.add('selecting');
         });
       }
       div.appendChild(t);
     } else {
+      // empty slot
       if(isEditing){
         const add = document.createElement('button');
         add.className='add-btn'; add.textContent='+';
@@ -711,6 +706,7 @@ function renderGrid(){
         div.appendChild(add);
       }
     }
+    // clicking any slot performs move/swap when in editing & a source selected
     div.addEventListener('click', ()=>{
       if(!isEditing || selectedCardId==null) return;
       const to = i;
@@ -730,13 +726,42 @@ function renderTile(c, slotIndex){
   const a = document.createElement('a');
   a.href = c.href; a.className='tile';
 
-  // Photos tile logic
-  if(c.id === 'photos'){
-    const list = safelyGetPhotoList();
-    if(list.length) a.classList.add('photos-card');
+  if(c.id === 'breakfast'){
+    a.innerHTML = `
+      <div class="emoji">${c.emoji}</div>
+      <div class="label">${c.label}</div>
+      <div class="bf-mini">
+        <div class="bf-date">Today · ${formatToday()}</div>
+        <div class="bf-empty">No selections yet — tap Breakfast.</div>
+        <div class="bf-grid"></div>
+      </div>
+      <button class="minus" type="button">−</button>
+    `;
 
+    // Fill preview
+    const picks = readBreakfastChoices();          // [{kidId, emoji}]
+    const grid = a.querySelector('.bf-grid');
+    const empty = a.querySelector('.bf-empty');
+    const kids = getActiveKids();
+
+    if(picks.length){
+      empty.style.display='none';
+      // make lookup
+      const byId={}; kids.forEach(k=>byId[k.id]=k);
+      picks.forEach(p=>{
+        const k=byId[p.kidId]; if(!k) return;
+        const face = k.photo? `<img src="${k.photo}" alt="${escapeHtml(k.name)}">` : `<span>${initials(k.name)}</span>`;
+        const el = document.createElement('div');
+        el.className='kid';
+        el.innerHTML = `<div class="face">${face}</div><div class="pick">${escapeHtml(p.emoji||'')}</div>`;
+        grid.appendChild(el);
+      });
+    }
+  }
+  else if(c.id === 'photos'){
+    const list = safelyGetPhotoList();
+    if(list.length) a.classList.add('photos-card','photo-only');
     if(list.length){
-      a.classList.add('photo-only');
       a.innerHTML = `<div class="photo-prev"><img alt=""></div><button class="minus" type="button">−</button>`;
       const img = a.querySelector('img');
       let idx = 0;
@@ -753,19 +778,12 @@ function renderTile(c, slotIndex){
       `;
     }
   } else {
-    // normal tiles
     a.innerHTML = `
       <div class="emoji">${c.emoji}</div>
       <div class="label">${c.label}</div>
       <div class="hint">${c.hint||''}</div>
       <button class="minus" type="button">−</button>
     `;
-
-    // ★ Breakfast mini-preview
-    if(c.id === 'breakfast'){
-      const prev = buildBreakfastPreview();
-      a.appendChild(prev);
-    }
   }
 
   // In edit mode disable navigation
@@ -797,7 +815,7 @@ function toggleEdit(on){
 }
 $('#btnDoneEdit').onclick = ()=> toggleEdit(false);
 
-// Add/Remove modal
+// Add/Remove modal (now shows ALL cards with Add & Remove; one is disabled based on state)
 function openAddRemove(targetIndex){
   const placed = new Set(slots.filter(Boolean));
   const body = $('#addCardBody'); body.innerHTML='';
@@ -849,16 +867,15 @@ function showModal(id, show){
 }
 $('#aboutOk')?.addEventListener('click',()=>showModal('aboutModal',false));
 $('#aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
-
-/* Re-render card previews when returning to Home */
-document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') renderGrid(); });
-window.addEventListener('focus', renderGrid);
 </script>
 
 <!-- Boot + SW -->
 <script>
 // initial render
 renderGrid();
+// Refresh breakfast preview when Family store changes (names/photos toggled)
+try{ Family.onChange && Family.onChange(()=>renderGrid()); }catch(_){}
+
 // SW
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
