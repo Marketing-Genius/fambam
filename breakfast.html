@@ -122,7 +122,7 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Breakfast v3.6.0 (unified header • hamburger)</div>
+      <div class="version">Breakfast v3.6.1 (local-date fix)</div>
     </div>
   </div>
 
@@ -169,11 +169,24 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
   const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
   const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 
+  /* ---------- LOCAL DATE HELPERS (FIX) ---------- */
+
+  // Use the date input's value directly when present, otherwise build local YYYY-MM-DD.
   function todayISO(){
-    let d = $('#theDate').value ? new Date($('#theDate').value) : new Date();
-    const off = d.getTimezoneOffset();
-    d = new Date(d.getTime() - off*60000);
-    return d.toISOString().slice(0,10);
+    const v = $('#theDate').value;
+    if (v) return v; // <input type="date"> provides a local YYYY-MM-DD string already
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const dd= String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+  }
+
+  // Pretty print from an ISO date without introducing UTC shifts.
+  function prettyFromISO(iso){
+    const [y,m,d] = iso.split('-').map(Number);
+    const local = new Date(y, m-1, d); // construct as local Y/M/D
+    return local.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});
   }
 
   function seedMenu(){
@@ -217,7 +230,8 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
   function renderChoices(){
     const grid=$('#choicesGrid'); grid.innerHTML='';
     const menu=load(LS.menu,[]);
-    const map=load(LS.day(todayISO()),{});
+    const iso = todayISO();                 // <-- single source of truth per render
+    const map=load(LS.day(iso),{});
     const kids=(Family.getKids&&Family.getKids())||[];
 
     menu.forEach((opt,idx)=>{
@@ -251,18 +265,20 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
       btn.onclick=()=>{
         if(!activeKidId){ alert('Tap a child first.'); return; }
         const idx=Number(btn.dataset.choose);
-        const map=load(LS.day(todayISO()),{});
-        map[activeKidId]=idx;
-        save(LS.day(todayISO()),map);
+        const iso = todayISO();             // <-- use same local key when saving
+        const m=load(LS.day(iso),{});
+        m[activeKidId]=idx;
+        save(LS.day(iso),m);
         renderChoices();
       };
     });
   }
 
   function buildSummary(){
-    const dateTxt = new Date($('#theDate').value||Date.now()).toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});
+    const iso = todayISO();
+    const dateTxt = prettyFromISO(iso);     // <-- safe pretty date
     const menu=load(LS.menu,[]);
-    const map=load(LS.day(todayISO()),{});
+    const map=load(LS.day(iso),{});
     const kids=(Family.getKids&&Family.getKids())||[];
     const lines=[`🍳 Fambam Breakfast — ${dateTxt}`];
     kids.forEach(k=>{
@@ -309,15 +325,21 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
     dd?.addEventListener('click', async (e)=>{
       const el = e.target.closest('.menu-item'); if (!el) return;
       const action = el.dataset.action;
+      const iso = todayISO();               // <-- one ISO for all actions
       closeDD();
+
       if (action === 'reset') {
-        if(confirm('Clear choices for this date?')){ localStorage.removeItem(LS.day(todayISO())); renderChoices(); }
+        if(confirm('Clear choices for this date?')){
+          localStorage.removeItem(LS.day(iso));
+          renderChoices();
+        }
       } else if (action === 'random') {
         const kids=(Family.getKids&&Family.getKids())||[];
         if(!kids.length) return;
         const menu=load(LS.menu,[]);
         const map={}; kids.forEach(k=>{ map[k.id]=Math.floor(Math.random()*menu.length); });
-        save(LS.day(todayISO()),map); renderChoices();
+        save(LS.day(iso),map);
+        renderChoices();
       } else if (action === 'share') {
         shareText(buildSummary());
       } else if (action === 'manage') {
@@ -327,8 +349,12 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
   })();
 
   (function initDate(){
-    const d=new Date(); const off=d.getTimezoneOffset(); const local=new Date(d.getTime()-off*60000);
-    $('#theDate').value=local.toISOString().slice(0,10);
+    // Initialize the date input to *local* YYYY-MM-DD (no UTC shift)
+    const d=new Date();
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,'0');
+    const dd=String(d.getDate()).padStart(2,'0');
+    $('#theDate').value=`${y}-${m}-${dd}`;
     $('#theDate').onchange=()=>renderChoices();
   })();
 
