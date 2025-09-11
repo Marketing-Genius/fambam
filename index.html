@@ -94,7 +94,7 @@ header{
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
 
-/* Shared preview box (Breakfast/Dinner) */
+/* Breakfast preview (2×2, avatar+emoji only, compact) */
 .bf-box{
   margin-top:6px; width:100%;
   background:#081228; border:1px solid #27324a;
@@ -102,6 +102,7 @@ header{
   max-height: calc(var(--slotH) - 72px);
   overflow:hidden;
 }
+
 .bf-date{font-size:.9rem;font-weight:800}
 .bf-empty{opacity:.8;font-size:.95rem;margin-top:10px}
 
@@ -113,12 +114,13 @@ header{
   margin-top:10px;
 }
 
-/* Single row */
+/* Single row: avatar + emoji (no background/border) */
 .bf-item{
   display:flex; align-items:center; justify-content:flex-start;
   gap:10px;
   min-height:40px;
 }
+
 .bf-face{
   width:34px; height:34px; border-radius:50%; overflow:hidden;
   display:grid; place-items:center; flex:0 0 auto;
@@ -126,6 +128,21 @@ header{
 }
 .bf-face img{width:100%;height:100%;object-fit:cover}
 .bf-emoji{font-size:1.4rem; line-height:1}
+
+/* Dinner preview */
+.dp-box{ /* same container look/feel as breakfast */
+  margin-top:6px; width:100%;
+  background:#081228; border:1px solid #27324a;
+  border-radius:16px; padding:12px;
+  max-height: calc(var(--slotH) - 72px);
+  overflow:hidden;
+}
+.dp-title{font-size:.95rem;font-weight:800}
+.dp-empty{opacity:.8;font-size:.95rem;margin-top:10px}
+.dp-rows{display:grid; gap:10px; margin-top:10px}
+.dp-row{display:flex; align-items:center; justify-content:space-between}
+.dp-row .who{font-weight:800}
+.dp-icons{display:flex; align-items:center; gap:10px; font-size:1.4rem; line-height:1}
 
 /* Edit affordances */
 .tile .minus{
@@ -256,7 +273,7 @@ header{
         <div id="pinTitle" style="font-weight:800">Enter Admin PIN</div>
         <button id="pinClose" class="btn">✖</button>
       </header>
-      <div class="body" style="gap:12px">
+        <div class="body" style="gap:12px">
         <input id="pinInputModal" class="btn" inputmode="numeric" pattern="\\d*" placeholder="PIN (numbers only)" autofocus />
       </div>
       <div class="footer">
@@ -543,7 +560,7 @@ function compress(file, maxSide=256, quality=0.8){
 }
 </script>
 
-<!-- Home grid logic (slots + editing + Photos + Breakfast & Dinner previews) -->
+<!-- Home grid logic (slots + editing + Photos + Breakfast + Dinner preview) -->
 <script>
 const SLOT_KEY = 'hub:home:slots:v2';
 const SLOTS_TOTAL = 16;
@@ -588,14 +605,22 @@ function todayISO(){
 }
 function niceToday(){ return new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
 
-/* Monday-based week key for dinner plan (local) */
-function localISO(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),da=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${da}`;}
-function startOfWeekMondayLocal(d=new Date()){const x=new Date(d);x.setHours(0,0,0,0);const off=(x.getDay()+6)%7;x.setDate(x.getDate()-off);return x;}
-function thisMondayISO(){ return localISO(startOfWeekMondayLocal(new Date())); }
-function todayDayKey(){
-  // Mon..Sun keys to match dinner.html
-  const map=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  return map[new Date().getDay()];
+/* Week helpers for Dinner preview */
+function startOfWeekMonday(d=new Date()){
+  const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate()); // local midnight
+  const day = (dt.getDay()+6)%7; // Mon=0
+  dt.setDate(dt.getDate()-day);
+  return dt;
+}
+function thisMondayISO(){
+  const m = startOfWeekMonday(new Date());
+  const y=m.getFullYear(), mm=(m.getMonth()+1).toString().padStart(2,'0'), dd=m.getDate().toString().padStart(2,'0');
+  return `${y}-${mm}-${dd}`;
+}
+function todayDowShort(){ return new Date().toLocaleDateString('en-US',{weekday:'short'}); }
+function emojiFromLabel(label){
+  const s=(label||'').trim();
+  return s ? Array.from(s)[0] : '';
 }
 
 function renderGrid(){
@@ -686,6 +711,7 @@ function renderTile(c, slotIndex){
         emptyMsg.style.display='none';
         grid.style.display='grid';
 
+        // stable order by kid name for predictable layout
         const byName = (id)=> (kids.find(k=>k.id===id)?.name || '').toLowerCase();
         entries.sort((a,b)=> byName(a[0]).localeCompare(byName(b[0])));
 
@@ -706,45 +732,53 @@ function renderTile(c, slotIndex){
     }catch(err){ console.warn('Breakfast preview error', err); }
 
   } else if (c.id === 'dinner') {
-    /* Dinner Planner tile — compact preview for tonight (local, Mon-based week) */
+    /* Dinner tile — Two rows, Kids/Parents, emoji-only, include dessert on both rows if present */
     a.innerHTML = `
       <div class="label">Dinner Planner</div>
-      <div class="bf-box">
-        <div class="bf-date">Tonight’s Dinner</div>
-        <div class="bf-empty">No selections yet — tap Dinner Planner.</div>
-        <div class="bf-grid" aria-label="Dinner selections" style="display:none"></div>
+      <div class="dp-box">
+        <div class="dp-title">Tonight’s Dinner</div>
+        <div class="dp-empty">No selections yet — tap Dinner Planner.</div>
+        <div class="dp-rows" style="display:none">
+          <div class="dp-row"><div class="who">Kids</div><div class="dp-icons" data-row="kids"></div></div>
+          <div class="dp-row"><div class="who">Parents</div><div class="dp-icons" data-row="parents"></div></div>
+        </div>
       </div>
       <button class="minus" type="button">−</button>
     `;
 
     try{
-      const mISO = thisMondayISO();
-      const plan = JSON.parse(localStorage.getItem('dp:plan:'+mISO) || 'null') || null;
-      const dayKey = todayDayKey(); // "Sun".."Sat"
-      const x = (plan && plan.days && plan.days[dayKey]) || {kids:{},parents:{},dessert:""};
+      const mISO = thisMondayISO();                                  // local Monday ISO
+      const plan = JSON.parse(localStorage.getItem('dp:plan:'+mISO)||'null') || null;
+      const dow  = todayDowShort();                                   // "Mon".."Sun"
+      const data = plan?.days?.[dow] || null;
 
-      const kidsTxt = [x.kids?.main, x.kids?.side].filter(Boolean).join(' + ');
-      const parsTxt = [x.parents?.main, x.parents?.side].filter(Boolean).join(' + ');
-      const desTxt  = x.dessert || '';
+      const emptyMsg = a.querySelector('.dp-empty');
+      const rowsWrap = a.querySelector('.dp-rows');
 
-      const emptyMsg = a.querySelector('.bf-empty');
-      const grid = a.querySelector('.bf-grid');
+      if (data){
+        const kidsIcons = [];
+        const parsIcons = [];
 
-      const hasAny = !!(kidsTxt || parsTxt || desTxt);
-      if (hasAny){
-        emptyMsg.style.display='none';
-        grid.style.display='grid';
+        const kMain = emojiFromLabel(data.kids?.main);
+        const kSide = emojiFromLabel(data.kids?.side);
+        const pMain = emojiFromLabel(data.parents?.main);
+        const pSide = emojiFromLabel(data.parents?.side);
+        const dEmoji = emojiFromLabel(data.dessert);
 
-        const row = (label, text)=>{
-          if(!text) return;
-          const el = document.createElement('div');
-          el.className='bf-item';
-          el.innerHTML = `<span style="font-weight:800;min-width:72px">${label}</span><span>${text}</span>`;
-          grid.appendChild(el);
-        };
-        row('Kids', kidsTxt);
-        row('Parents', parsTxt);
-        row('Dessert', desTxt);
+        if (kMain) kidsIcons.push(kMain);
+        if (kSide) kidsIcons.push(kSide);
+        if (pMain) parsIcons.push(pMain);
+        if (pSide) parsIcons.push(pSide);
+        if (dEmoji){ kidsIcons.push(dEmoji); parsIcons.push(dEmoji); }
+
+        const hasAny = kidsIcons.length || parsIcons.length;
+
+        if (hasAny){
+          emptyMsg.style.display='none';
+          rowsWrap.style.display='grid';
+          a.querySelector('.dp-icons[data-row="kids"]').innerHTML = kidsIcons.map(e=>`<span>${e}</span>`).join('');
+          a.querySelector('.dp-icons[data-row="parents"]').innerHTML = parsIcons.map(e=>`<span>${e}</span>`).join('');
+        }
       }
     }catch(err){ console.warn('Dinner preview error', err); }
 
