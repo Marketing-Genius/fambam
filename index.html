@@ -664,29 +664,9 @@ function renderTile(c, slotIndex){
     `;
 
     try{
-const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
-
-const isoOf = (d)=>{
-  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${dd}`;                     // LOCAL date, not UTC
-};
-const today   = new Date();
-const kToday  = 'bf:day:' + isoOf(today);
-const kYday   = 'bf:day:' + isoOf(new Date(today.getFullYear(), today.getMonth(), today.getDate()-1));
-const kTmrrw  = 'bf:day:' + isoOf(new Date(today.getFullYear(), today.getMonth(), today.getDate()+1));
-
-let day = {};
-// Prefer local “today”. If empty, auto-fallback to the neighbor that actually has data.
-// This handles pages that saved in UTC (often “tomorrow” after late afternoon).
-const dToday = JSON.parse(localStorage.getItem(kToday) || '{}');
-if (Object.keys(dToday).length) {
-  day = dToday;
-} else {
-  const dTomorrow = JSON.parse(localStorage.getItem(kTmrrw) || '{}');
-  const dYesterday= JSON.parse(localStorage.getItem(kYday)  || '{}');
-  day = Object.keys(dTomorrow).length ? dTomorrow : dYesterday;
-}
-
+      const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
+      const key  = 'bf:day:'+todayISO();            // strictly today (local)
+      const day  = JSON.parse(localStorage.getItem(key)||'{}');
 
       const kids = (Family.getKids?.() || []);
       const entries = Object.entries(day);
