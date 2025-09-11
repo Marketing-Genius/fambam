@@ -94,7 +94,7 @@ header{
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
 
-/* Breakfast preview (2×2, avatar+emoji only, compact) */
+/* Shared preview box (Breakfast/Dinner) */
 .bf-box{
   margin-top:6px; width:100%;
   background:#081228; border:1px solid #27324a;
@@ -102,7 +102,6 @@ header{
   max-height: calc(var(--slotH) - 72px);
   overflow:hidden;
 }
-
 .bf-date{font-size:.9rem;font-weight:800}
 .bf-empty{opacity:.8;font-size:.95rem;margin-top:10px}
 
@@ -110,17 +109,16 @@ header{
 .bf-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:10px 12px;              /* row gap, column gap */
+  gap:10px 12px;
   margin-top:10px;
 }
 
-/* Single row: avatar + emoji (no background/border) */
+/* Single row */
 .bf-item{
   display:flex; align-items:center; justify-content:flex-start;
-  gap:10px;                    /* space between avatar and emoji */
-  min-height:40px;             /* keep row height compact */
+  gap:10px;
+  min-height:40px;
 }
-
 .bf-face{
   width:34px; height:34px; border-radius:50%; overflow:hidden;
   display:grid; place-items:center; flex:0 0 auto;
@@ -128,7 +126,6 @@ header{
 }
 .bf-face img{width:100%;height:100%;object-fit:cover}
 .bf-emoji{font-size:1.4rem; line-height:1}
-
 
 /* Edit affordances */
 .tile .minus{
@@ -546,7 +543,7 @@ function compress(file, maxSide=256, quality=0.8){
 }
 </script>
 
-<!-- Home grid logic (slots + editing + Photos + Breakfast preview) -->
+<!-- Home grid logic (slots + editing + Photos + Breakfast & Dinner previews) -->
 <script>
 const SLOT_KEY = 'hub:home:slots:v2';
 const SLOTS_TOTAL = 16;
@@ -590,6 +587,16 @@ function todayISO(){
   return `${y}-${m}-${dd}`;
 }
 function niceToday(){ return new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
+
+/* Monday-based week key for dinner plan (local) */
+function localISO(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),da=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${da}`;}
+function startOfWeekMondayLocal(d=new Date()){const x=new Date(d);x.setHours(0,0,0,0);const off=(x.getDay()+6)%7;x.setDate(x.getDate()-off);return x;}
+function thisMondayISO(){ return localISO(startOfWeekMondayLocal(new Date())); }
+function todayDayKey(){
+  // Mon..Sun keys to match dinner.html
+  const map=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  return map[new Date().getDay()];
+}
 
 function renderGrid(){
   const wrap = $('#slots'); wrap.innerHTML='';
@@ -651,6 +658,7 @@ function renderTile(c, slotIndex){
     } else {
       a.innerHTML = `<div class="label">${c.label}</div><div class="hint">${c.hint||''}</div><button class="minus" type="button">−</button>`;
     }
+
   } else if (c.id === 'breakfast') {
     /* Breakfast tile — 2×2 grid, avatar + emoji only, local-today */
     a.innerHTML = `
@@ -678,7 +686,6 @@ function renderTile(c, slotIndex){
         emptyMsg.style.display='none';
         grid.style.display='grid';
 
-        // stable order by kid name for predictable layout
         const byName = (id)=> (kids.find(k=>k.id===id)?.name || '').toLowerCase();
         entries.sort((a,b)=> byName(a[0]).localeCompare(byName(b[0])));
 
@@ -697,6 +704,49 @@ function renderTile(c, slotIndex){
         }
       }
     }catch(err){ console.warn('Breakfast preview error', err); }
+
+  } else if (c.id === 'dinner') {
+    /* Dinner Planner tile — compact preview for tonight (local, Mon-based week) */
+    a.innerHTML = `
+      <div class="label">Dinner Planner</div>
+      <div class="bf-box">
+        <div class="bf-date">Tonight’s Dinner</div>
+        <div class="bf-empty">No selections yet — tap Dinner Planner.</div>
+        <div class="bf-grid" aria-label="Dinner selections" style="display:none"></div>
+      </div>
+      <button class="minus" type="button">−</button>
+    `;
+
+    try{
+      const mISO = thisMondayISO();
+      const plan = JSON.parse(localStorage.getItem('dp:plan:'+mISO) || 'null') || null;
+      const dayKey = todayDayKey(); // "Sun".."Sat"
+      const x = (plan && plan.days && plan.days[dayKey]) || {kids:{},parents:{},dessert:""};
+
+      const kidsTxt = [x.kids?.main, x.kids?.side].filter(Boolean).join(' + ');
+      const parsTxt = [x.parents?.main, x.parents?.side].filter(Boolean).join(' + ');
+      const desTxt  = x.dessert || '';
+
+      const emptyMsg = a.querySelector('.bf-empty');
+      const grid = a.querySelector('.bf-grid');
+
+      const hasAny = !!(kidsTxt || parsTxt || desTxt);
+      if (hasAny){
+        emptyMsg.style.display='none';
+        grid.style.display='grid';
+
+        const row = (label, text)=>{
+          if(!text) return;
+          const el = document.createElement('div');
+          el.className='bf-item';
+          el.innerHTML = `<span style="font-weight:800;min-width:72px">${label}</span><span>${text}</span>`;
+          grid.appendChild(el);
+        };
+        row('Kids', kidsTxt);
+        row('Parents', parsTxt);
+        row('Dessert', desTxt);
+      }
+    }catch(err){ console.warn('Dinner preview error', err); }
 
   } else {
     a.innerHTML = `
