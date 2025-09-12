@@ -10,7 +10,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
-
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
@@ -97,65 +96,107 @@ header{
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
 
-/* Breakfast preview (2×2, avatar+emoji only, compact) */
-.bf-box,.dp-box,.ch-box,.pt-box{
+/* Breakfast preview */
+.bf-box{
   margin-top:6px; width:100%;
   background:#081228; border:1px solid #27324a;
   border-radius:16px; padding:12px;
   max-height: calc(var(--slotH) - 72px);
   overflow:hidden;
 }
-.bf-date,.dp-title,.ch-title,.pt-title{font-size:.95rem;font-weight:800}
-.bf-empty,.dp-empty,.ch-empty,.pt-empty{opacity:.8;font-size:.95rem;margin-top:10px}
-.bf-grid,.ch-grid,.pt-grid{
+.bf-date{font-size:.9rem;font-weight:800}
+.bf-empty{opacity:.8;font-size:.95rem;margin-top:10px}
+.bf-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:10px 12px;
   margin-top:10px;
 }
-.bf-item,.ch-item,.pt-item{display:flex; align-items:center; gap:10px; min-height:40px}
-.bf-face,.pt-face,.ch-face{
+.bf-item{display:flex; align-items:center; gap:10px; min-height:40px}
+.bf-face{
   width:34px; height:34px; border-radius:50%; overflow:hidden;
   display:grid; place-items:center; flex:0 0 auto;
   background:#334155; color:#e5e7eb; font-size:.95rem; font-weight:800;
 }
-.bf-face img,.pt-face img,.ch-face img{width:100%;height:100%;object-fit:cover}
+.bf-face img{width:100%;height:100%;object-fit:cover}
 .bf-emoji{font-size:1.4rem; line-height:1}
-.ch-emoji{font-size:1.25rem; line-height:1}
-.pt-score{font-weight:800}
 
 /* Dinner preview */
+.dp-box{
+  margin-top:6px; width:100%;
+  background:#081228; border:1px solid #27324a;
+  border-radius:16px; padding:12px;
+  max-height: calc(var(--slotH) - 72px);
+  overflow:hidden;
+}
+.dp-title{font-size:.95rem;font-weight:800}
+.dp-empty{opacity:.8;font-size:.95rem;margin-top:10px}
 .dp-rows{display:grid; gap:10px; margin-top:10px}
 .dp-row{display:flex; align-items:center; justify-content:space-between}
 .dp-row .who{font-weight:800}
 .dp-icons{display:flex; align-items:center; gap:10px; font-size:1.4rem; line-height:1}
 
-/* Edit affordances — new unique class to avoid collisions */
-.card-remove{
+/* Chores preview (avatar + emoji-only) */
+.ch-box{
+  margin-top:6px; width:100%;
+  background:#081228; border:1px solid #27324a;
+  border-radius:16px; padding:12px;
+  max-height: calc(var(--slotH) - 72px);
+  overflow:hidden;
+}
+.ch-title{font-size:.95rem;font-weight:800}
+.ch-empty{opacity:.8;font-size:.95rem;margin-top:10px}
+.ch-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px 12px;
+  margin-top:10px;
+}
+.ch-item{display:flex; align-items:center; gap:10px; min-height:40px}
+.ch-emoji{font-size:1.35rem; line-height:1}
+
+/* Points preview (2×2 avatars + numeric) */
+.pt-box{
+  margin-top:6px; width:100%;
+  background:#081228; border:1px solid #27324a;
+  border-radius:16px; padding:12px;
+  max-height: calc(var(--slotH) - 72px);
+  overflow:hidden;
+}
+.pt-title{font-size:.95rem;font-weight:800}
+.pt-empty{opacity:.8;font-size:.95rem;margin-top:10px}
+.pt-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px 12px;
+  margin-top:10px;
+}
+.pt-item{display:flex; align-items:center; gap:10px; min-height:40px}
+.pt-score{font-weight:800}
+
+/* Edit affordances */
+.tile .minus{
   position:absolute; right:8px; bottom:8px; width:36px; height:36px;
   display:none; place-items:center; font-weight:800;
   background:#3f1620; border:1px solid #7f1d1d; color:#fecaca; border-radius:999px;
 }
-.editing .tile .card-remove{ display:grid; cursor:pointer; }
+.editing .tile .minus{ display:grid; cursor:pointer; }
 .tile.selecting{ outline:2px solid var(--accent); }
 
 /* Photos tile */
 .tile.photo-only{ padding:0; border:none; background:transparent; box-shadow:none; }
-.photo-prev{ position:absolute; inset:0; border-radius:16px; overflow:hidden; z-index:0; opacity:.22; }
+.photo-prev{ position:absolute; inset:0; border-radius:16px; overflow:hidden; z-index:0; opacity:1; }
 .photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; }
-.tile.photos-card{ background: transparent; border: none; padding: 0; }
-.tile.photos-card .photo-prev{ opacity: 1; }
-.tile.photos-card .emoji, .tile.photos-card .label, .tile.photos-card .hint{ display: none; }
-.tile.photos-card::before{ content:""; position:absolute; inset:0; border-radius:16px; box-shadow: var(--shadow); pointer-events:none; }
 
-/* Photo controls */
-.photo-advance{
-  position:absolute; inset:0; z-index:3; background:transparent; border:0; cursor:pointer;
-}
 .photo-open{
-  position:absolute; right:10px; top:10px; z-index:4; border-radius:999px;
-  border:1px solid #1f2937; background:rgba(0,0,0,.45); color:#e5e7eb; padding:6px 8px; font-weight:800;
+  position:absolute; top:10px; right:10px; z-index:2;
+  width:36px; height:36px; border-radius:999px;
+  display:grid; place-items:center; font-weight:800;
+  background:rgba(0,0,0,.2); color:#e5e7eb; border:1px solid rgba(255,255,255,.15);
+  transition:opacity .2s, transform .1s; opacity:.2;
 }
+.photo-open:hover{ opacity:.6 }
+.photo-open:active{ transform:scale(.96) }
 
 /* Modal + form + edit bar */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -165,10 +206,7 @@ header{
 .modal .body{padding:14px 16px;display:grid;gap:18px;max-height:70vh;overflow:auto}
 .modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
 .tabs{display:flex;gap:8px;flex-wrap:wrap}
-.tab{
-  padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer;
-  color:var(--text); /* ensure visible on desktop */
-}
+.tab{padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer;color:var(--text)} /* ensure readable on desktop */
 .tab[aria-selected="true"]{outline:2px solid var(--accent)}
 .list{display:grid; gap:12px;}
 .item{display:flex;align-items:center;gap:10px;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:12px}
@@ -184,6 +222,9 @@ header{
 .toggle{display:inline-flex;align-items:center;gap:8px}
 #editBar{display:none; align-items:center; justify-content:space-between;margin-top:6px; padding:10px 12px; border-radius:12px;background:rgba(17,24,39,.65); border:1px solid #1f2937;}
 #editBar.show{display:flex}
+
+/* All Pages list */
+.ap-item{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:12px}
 </style>
 </head>
 <body>
@@ -258,17 +299,21 @@ header{
 
         <!-- Global Settings -->
         <section class="tab-panel" data-panel="global" style="display:none">
-          <div style="display:grid;gap:12px">
-            <div class="badge">Wallpaper</div>
-            <div class="row">
-              <button class="btn" id="btnPickWp">Edit Wallpaper</button>
-              <button class="btn-warn" id="btnClearWp">Clear Wallpaper</button>
+          <div class="list">
+            <div class="ap-item">
+              <div><b>Wallpaper</b><div style="opacity:.8">Set a background image for all pages.</div></div>
+              <div style="display:flex;gap:8px">
+                <button class="btn" id="btnPickWP">Pick</button>
+                <button class="btn-warn" id="btnClearWP">Clear</button>
+              </div>
             </div>
-            <div class="badge">Theme (coming soon)</div>
-            <div class="row">
-              <button class="btn" disabled>Light</button>
-              <button class="btn" disabled>Dark</button>
-              <button class="btn" disabled>Blue</button>
+            <div class="ap-item">
+              <div><b>Theme</b><div style="opacity:.8">Placeholder — choose a palette.</div></div>
+              <select id="themeSelect" class="btn">
+                <option value="dark" selected>Dark (default)</option>
+                <option value="light">Light</option>
+                <option value="cyan">Cyan</option>
+              </select>
             </div>
           </div>
         </section>
@@ -310,15 +355,15 @@ header{
   </div>
 
   <!-- All Pages Modal -->
-  <div id="pagesModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="pagesTitle">
-    <div class="modal" style="max-width:520px">
+  <div id="allPagesModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="apTitle">
+    <div class="modal" style="max-width:560px">
       <header>
-        <div id="pagesTitle" style="font-weight:800">All Pages</div>
-        <button id="pagesClose" class="btn">✖</button>
+        <div id="apTitle" style="font-weight:800">All Pages</div>
+        <button id="apClose" class="btn">✖</button>
       </header>
-      <div class="body" id="pagesBody" style="display:grid;gap:10px"></div>
+      <div class="body" id="apList"></div>
       <div class="footer">
-        <button id="pagesDone" class="btn-primary">Close</button>
+        <button class="btn-primary" id="apDone">Close</button>
       </div>
     </div>
   </div>
@@ -389,7 +434,7 @@ if (!window.Family) {
 })();
 </script>
 
-<!-- Wallpaper helpers used by Global Settings -->
+<!-- Wallpaper utilities (shared helper + safe fallback) -->
 <script>
 function pickWallpaper(){
   const input = document.getElementById('wallpaper-picker');
@@ -432,7 +477,7 @@ function compressImage(file, maxSide=2400, quality=.85){
 }
 </script>
 
-<!-- Menu + PIN gate -->
+<!-- Menu + PIN gate + All Pages -->
 <script>
 (function menu(){
   const btn = document.getElementById('btnMenu');
@@ -440,6 +485,7 @@ function compressImage(file, maxSide=2400, quality=.85){
   const openDD = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
   const closeDD= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
 
+  btn?.addEventListener('click,', ()=>{}); // defensive
   btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?closeDD():openDD(); });
   document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) closeDD(); });
 
@@ -447,7 +493,7 @@ function compressImage(file, maxSide=2400, quality=.85){
     const el = e.target.closest('.menu-item'); if (!el) return;
     const action = el.dataset.action;
     closeDD();
-    if (action === 'allpages') openPages();
+    if (action === 'allpages') openAllPages();
     else if (action === 'edithome') toggleEdit(true);
     else if (action === 'admin') {
       const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
@@ -455,9 +501,23 @@ function compressImage(file, maxSide=2400, quality=.85){
     } else if (action === 'about') showModal('aboutModal', true);
   });
 })();
+
+/* All Pages modal build */
+function openAllPages(){
+  const list = document.getElementById('apList'); list.innerHTML='';
+  CARDS.forEach(c=>{
+    const row = document.createElement('div'); row.className='ap-item';
+    row.innerHTML = `<div>${c.emoji} <b>${c.label}</b><div style="opacity:.8">${c.hint||''}</div></div>
+                     <a class="btn" href="${c.href}">Open</a>`;
+    list.appendChild(row);
+  });
+  showModal('allPagesModal', true);
+}
+document.getElementById('apClose').onclick=()=>showModal('allPagesModal',false);
+document.getElementById('apDone').onclick =()=>showModal('allPagesModal',false);
 </script>
 
-<!-- PIN modal helpers (Enter key submits) -->
+<!-- PIN modal helpers -->
 <script>
 function requestPinUI(onSuccess){
   const m = document.getElementById('pinModal');
@@ -465,21 +525,21 @@ function requestPinUI(onSuccess){
   const ok = document.getElementById('pinOk');
   const x = document.getElementById('pinClose');
 
-  function close(){ m.style.display='none'; m.setAttribute('aria-hidden','true'); input.value=''; ok.onclick = x.onclick = null; input.onkeydown = null; }
+  function doSubmit(){
+    const pin = (input.value||'').trim();
+    if (!/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
+    if (Family.verifyPin(pin)) { close(); onSuccess(); }
+    else { alert('Incorrect PIN.'); input.focus(); input.select(); }
+  }
+  function close(){ m.style.display='none'; m.setAttribute('aria-hidden','true'); input.value=''; ok.onclick = x.onclick = null; input.onkeydown=null; }
   function open(){
     m.style.display='flex'; m.setAttribute('aria-hidden','false');
     setTimeout(()=>{ input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 50);
   }
 
-  function submit(){
-    const pin = input.value.trim();
-    if (!/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
-    if (Family.verifyPin(pin)) { close(); onSuccess(); }
-    else { alert('Incorrect PIN.'); input.focus(); input.select(); }
-  }
-  ok.onclick = submit;
-  input.onkeydown = (e)=>{ if(e.key==='Enter') submit(); };
-  x.onclick = close;
+  ok.onclick = doSubmit;
+  x.onclick  = close;
+  input.onkeydown = (ev)=>{ if(ev.key==='Enter') doSubmit(); };
 
   open();
 }
@@ -505,7 +565,7 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.querySelectorAll('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab?'':'none'));
   });
 });
-function openAdmin(){ buildParents(); buildKids(); bindGlobal(); showModal('adminModal', true); }
+function openAdmin(){ buildParents(); buildKids(); buildGlobal(); showModal('adminModal', true); }
 function closeAdmin(){ showModal('adminModal', false); }
 
 /* Parents UI */
@@ -561,12 +621,14 @@ function buildKids(){
     row.querySelector('[data-remove]').onclick = ()=>{ Family.removeKid(id); buildKids(); };
   });
 }
-/* Global tab bindings */
-function bindGlobal(){
-  document.getElementById('btnPickWp').onclick = pickWallpaper;
-  document.getElementById('btnClearWp').onclick = clearWallpaper;
+/* Global UI */
+function buildGlobal(){
+  document.getElementById('btnPickWP').onclick = pickWallpaper;
+  document.getElementById('btnClearWP').onclick = clearWallpaper;
+  document.getElementById('themeSelect').onchange = (e)=>{
+    try{ localStorage.setItem('hub:theme', e.target.value); alert('Theme saved (placeholder).'); }catch{}
+  };
 }
-
 /* helpers */
 function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
@@ -600,7 +662,7 @@ function compress(file, maxSide=256, quality=0.8){
 }
 </script>
 
-<!-- Home grid logic (slots + previews + photos gestures) -->
+<!-- Home grid logic (slots + editing + Photos + Breakfast + Dinner + Chores + Points previews) -->
 <script>
 const SLOT_KEY = 'hub:home:slots:v2';
 const SLOTS_TOTAL = 16;
@@ -611,6 +673,7 @@ const CARDS = [
   {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',          hint:'Weekly rotation'},
   {id:'points',    href:'./points.html',    emoji:'⭐', label:'Points',          hint:'Leaderboard'},
   {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar', hint:'Events & activities'},
+  {id:'family',    href:'./family.html',    emoji:'👨‍👩‍👧‍👦', label:'Family',   hint:'Profiles'},
   {id:'photos',    href:'./photos.html',    emoji:'🖼️', label:'Photos',          hint:'Slideshow'}
 ];
 const byId = Object.fromEntries(CARDS.map(c=>[c.id,c]));
@@ -620,7 +683,7 @@ function loadSlots(){
     const v=JSON.parse(localStorage.getItem(SLOT_KEY));
     if(Array.isArray(v)) return v.slice(0,SLOTS_TOTAL).concat(Array(SLOTS_TOTAL).fill(null)).slice(0,SLOTS_TOTAL);
   }catch{}
-  const seed = ['points','breakfast','chores','dinner'];
+  const seed = ['breakfast','dinner','chores','calendar','points'];
   return seed.concat(Array(SLOTS_TOTAL-seed.length).fill(null));
 }
 function saveSlots(a){ localStorage.setItem(SLOT_KEY, JSON.stringify(a)); }
@@ -638,7 +701,7 @@ function safelyGetPhotoList(){
   catch{ return []; }
 }
 
-/* Local-date helpers */
+/* Local-date helpers (strictly local) */
 function todayISO(){
   const d=new Date();
   const y=d.getFullYear(), m=(d.getMonth()+1).toString().padStart(2,'0'), dd=d.getDate().toString().padStart(2,'0');
@@ -646,9 +709,9 @@ function todayISO(){
 }
 function niceToday(){ return new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
 
-/* Local week helpers (Mon–Sun) */
+/* Local week helpers (Mon–Sun, used by Dinner/Chores/Points) */
 function startOfWeekMonday(d=new Date()){
-  const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate()); // local midnight
+  const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const day = (dt.getDay()+6)%7; // Mon=0
   dt.setDate(dt.getDate()-day);
   return dt;
@@ -663,21 +726,6 @@ function emojiFromLabel(label){
   const s=(label||'').trim();
   return s ? Array.from(s)[0] : '';
 }
-function firstEmojiOrLetter(text){
-  const s=(text||'').trim();
-  if(!s) return '·';
-  const m = s.match(/\p{Extended_Pictographic}/u);
-  if(m) return m[0];
-  return s[0].toUpperCase();
-}
-
-/* Chore → emoji map (preview only) */
-const CHORE_EMOJI = {
-  'set the table':'🍽️',
-  'vacuum':'🧹',
-  'feed the dogs':'🐶',
-  'trash':'🗑️'
-};
 
 function renderGrid(){
   const wrap = $('#slots'); wrap.innerHTML='';
@@ -726,40 +774,46 @@ function renderTile(c, slotIndex){
 
   if(c.id === 'photos'){
     const list = safelyGetPhotoList();
-    if(list.length) a.classList.add('photos-card');
+
     if(list.length){
       a.classList.add('photo-only');
       a.innerHTML = `
+        <button class="photo-open" title="Open Photos" aria-label="Open Photos">↗</button>
         <div class="photo-prev"><img alt=""></div>
-        <button class="photo-advance" aria-label="Next photo"></button>
-        <button class="photo-open" type="button" title="Open Photos">↗︎</button>
-        <button class="card-remove" type="button" title="Remove">−</button>`;
+        <button class="minus" type="button">−</button>`;
       const img = a.querySelector('img');
       let idx = 0;
       img.src = list[0];
 
-      let timerId=null;
-      const cadence = Number(localStorage.getItem('photos:cadence_ms')) || 10000;
-      const start=()=>{ stop(); timerId=setInterval(()=>{ next(1); }, cadence); };
-      const stop =()=>{ if(timerId){ clearInterval(timerId); timerId=null; } };
-      const next =(delta)=>{ idx=(idx+delta+list.length)%list.length; img.src=list[idx]; };
+      // Tap to advance
+      a.addEventListener('click', (ev)=>{
+        // If the open button was hit, let it handle
+        if (ev.target.closest('.photo-open')) return;
+        ev.preventDefault();
+        idx = (idx+1) % list.length;
+        img.src = list[idx];
+      });
 
-      start();
+      // Basic swipe
+      let sx=0, sy=0, moving=false;
+      a.addEventListener('pointerdown', (e)=>{ sx=e.clientX; sy=e.clientY; moving=true; });
+      a.addEventListener('pointerup', (e)=>{
+        if(!moving) return; moving=false;
+        const dx=e.clientX-sx, dy=e.clientY-sy;
+        if(Math.abs(dx)>40 && Math.abs(dx)>Math.abs(dy)){
+          idx = (idx + (dx<0?1:list.length-1)) % list.length; img.src=list[idx];
+        }
+      });
 
-      // tap to advance
-      a.querySelector('.photo-advance').addEventListener('click',(e)=>{ e.preventDefault(); next(1); });
-      // swipe gestures
-      let sx=0,sy=0;
-      a.addEventListener('touchstart',(ev)=>{ const t=ev.changedTouches[0]; sx=t.clientX; sy=t.clientY; stop(); },{passive:true});
-      a.addEventListener('touchend',(ev)=>{ const t=ev.changedTouches[0]; const dx=t.clientX-sx, dy=t.clientY-sy;
-        if(Math.abs(dx)>40 && Math.abs(dx)>Math.abs(dy)) next(dx<0?1:-1); start();
-      },{passive:true});
-      a.addEventListener('mouseenter',stop); a.addEventListener('mouseleave',start);
-
-      a.querySelector('.photo-open').addEventListener('click',(ev)=>{ ev.stopPropagation(); ev.preventDefault(); location.href=c.href; });
+      // Open button
+      a.querySelector('.photo-open').addEventListener('click', (ev)=>{
+        ev.stopPropagation(); // so the image doesn't advance
+        // go to photos page
+        location.href = c.href;
+      });
 
     } else {
-      a.innerHTML = `<div class="label">${c.label}</div><div class="hint">${c.hint||''}</div><button class="card-remove" type="button">−</button>`;
+      a.innerHTML = `<div class="label">${c.label}</div><div class="hint">${c.hint||''}</div><button class="minus" type="button">−</button>`;
     }
 
   } else if (c.id === 'breakfast') {
@@ -770,7 +824,7 @@ function renderTile(c, slotIndex){
         <div class="bf-empty">No selections yet — tap Breakfast.</div>
         <div class="bf-grid" aria-label="Breakfast selections" style="display:none"></div>
       </div>
-      <button class="card-remove" type="button">−</button>
+      <button class="minus" type="button">−</button>
     `;
 
     try{
@@ -818,7 +872,7 @@ function renderTile(c, slotIndex){
           <div class="dp-row"><div class="who">Parents</div><div class="dp-icons" data-row="parents"></div></div>
         </div>
       </div>
-      <button class="card-remove" type="button">−</button>
+      <button class="minus" type="button">−</button>
     `;
 
     try{
@@ -858,7 +912,6 @@ function renderTile(c, slotIndex){
     }catch(err){ console.warn('Dinner preview error', err); }
 
   } else if (c.id === 'chores') {
-    /* avatar + emoji-badge for chore */
     a.innerHTML = `
       <div class="label">Chores</div>
       <div class="ch-box">
@@ -866,7 +919,7 @@ function renderTile(c, slotIndex){
         <div class="ch-empty">No assignments yet — tap Chores.</div>
         <div class="ch-grid" style="display:none" aria-label="Chore assignments"></div>
       </div>
-      <button class="card-remove" type="button">−</button>
+      <button class="minus" type="button">−</button>
     `;
     try{
       const mISO = thisMondayISO();
@@ -879,10 +932,7 @@ function renderTile(c, slotIndex){
       Object.entries(assigns).forEach(([choreId, kidId])=>{
         const label = choresById[choreId] || 'Chore';
         if(!byKid[kidId]) byKid[kidId] = [];
-        // preview: only push emoji/initial
-        const key = (label||'').toLowerCase();
-        const badge = CHORE_EMOJI[key] || firstEmojiOrLetter(label);
-        byKid[kidId].push(badge);
+        byKid[kidId].push(label);
       });
 
       const entries = Object.entries(byKid);
@@ -896,60 +946,63 @@ function renderTile(c, slotIndex){
         const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
         entries.sort((a,b)=> nameOf(a[0]).localeCompare(nameOf(b[0])));
 
-        for(const [kidId, badges] of entries.slice(0,4)){
+        for(const [kidId, labels] of entries.slice(0,4)){
           const kid = kids.find(k=>k.id===kidId);
           const face = kid?.photo
-            ? `<span class="ch-face"><img src="${kid.photo}" alt=""></span>`
-            : `<span class="ch-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-          const row = document.createElement('div');
-          row.className='ch-item';
-          row.innerHTML = `${face}<div class="ch-emoji">${badges.map(e=>`<span>${e}</span>`).join(' ')}</div>`;
-          grid.appendChild(row);
+            ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
+            : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
+          // show only first character/emoji of each chore name
+          const icons = labels.map(l=> emojiFromLabel(l)).filter(Boolean).slice(0,3); // cap to avoid overflow
+          const cell = document.createElement('div');
+          cell.className='ch-item';
+          cell.innerHTML = `${face}<div class="ch-emoji">${icons.map(e=>`<span>${e}</span>`).join(' ')}</div>`;
+          grid.appendChild(cell);
         }
       }
     }catch(err){ console.warn('Chores preview error', err); }
 
   } else if (c.id === 'points') {
-    /* 2×2 avatars + score, sorted by pts:balances (fallbacks included) */
     a.innerHTML = `
       <div class="label">Points</div>
       <div class="pt-box">
-        <div class="pt-title">Leaderboard</div>
+        <div class="pt-title">This Week</div>
         <div class="pt-empty">No points yet — tap Points.</div>
         <div class="pt-grid" style="display:none"></div>
       </div>
-      <button class="card-remove" type="button">−</button>
+      <button class="minus" type="button">−</button>
     `;
     try{
-      const balances = JSON.parse(localStorage.getItem('pts:balances')||'null');
-      let byKid = {};
-      if (balances && typeof balances==='object') byKid = balances;
-      else {
-        const alt = JSON.parse(localStorage.getItem('points:totals')||'null') || JSON.parse(localStorage.getItem('pts:totals')||'null');
-        if (alt && typeof alt==='object') byKid = alt;
+      const kids = (Family.getKids?.() || []);
+      // Primary: pts:balances { kidId: number }
+      let byKid = JSON.parse(localStorage.getItem('pts:balances') || 'null') || null;
+
+      // Fallback: pts:ledger = [{kidId, delta}]
+      if(!byKid){
+        const ledger = JSON.parse(localStorage.getItem('pts:ledger') || '[]');
+        byKid = {};
+        ledger.forEach(e=>{ const id=e.kidId||e.kid||e.id; const d=Number(e.delta||e.pts||0); if(id) byKid[id]=(byKid[id]||0)+d; });
       }
 
-      const kids = (Family.getKids?.() || []);
-      const grid = a.querySelector('.pt-grid');
+      const pairs = Object.entries(byKid || {}).filter(([,v])=>typeof v==='number');
+      const grid  = a.querySelector('.pt-grid');
       const empty = a.querySelector('.pt-empty');
 
-      const rows = Object.entries(byKid).filter(([,v])=> typeof v==='number');
-      if(rows.length){
+      if(pairs.length){
         empty.style.display='none';
         grid.style.display='grid';
 
         const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
-        rows.sort((a,b)=> b[1]-a[1] || nameOf(a[0]).localeCompare(nameOf(b[0])));
+        pairs.sort((a,b)=> b[1]-a[1] || nameOf(a[0]).localeCompare(nameOf(b[0])));
 
-        for(const [kidId, pts] of rows.slice(0,4)){
+        for(const [kidId, pts] of pairs.slice(0,4)){
           const kid = kids.find(k=>k.id===kidId);
           const face = kid?.photo
-            ? `<span class="pt-face"><img src="${kid.photo}" alt=""></span>`
-            : `<span class="pt-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-          const cell = document.createElement('div');
-          cell.className='pt-item';
-          cell.innerHTML = `${face}<span class="pt-score">${Number(pts)||0}</span>`;
-          grid.appendChild(cell);
+            ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
+            : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
+          const row = document.createElement('div');
+          row.className='pt-item';
+          row.innerHTML = `${face}<div class="pt-score">${Number(pts)||0}</div>`;
+          grid.appendChild(row);
         }
       }
     }catch(err){ console.warn('Points preview error', err); }
@@ -959,13 +1012,13 @@ function renderTile(c, slotIndex){
       <div class="emoji">${c.emoji}</div>
       <div class="label">${c.label}</div>
       <div class="hint">${c.hint||''}</div>
-      <button class="card-remove" type="button">−</button>
+      <button class="minus" type="button">−</button>
     `;
   }
 
   if(isEditing){ a.addEventListener('click', (e)=>e.preventDefault()); }
 
-  const minus = a.querySelector('.card-remove');
+  const minus = a.querySelector('.minus');
   if(minus){
     ['click','pointerdown','touchstart','mousedown'].forEach(evt=>{
       minus.addEventListener(evt, (ev)=>{
@@ -1033,20 +1086,6 @@ function showModal(id, show){
 }
 document.getElementById('aboutOk')?.addEventListener('click',()=>showModal('aboutModal',false));
 document.getElementById('aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
-
-/* All Pages modal */
-function openPages(){
-  const body = document.getElementById('pagesBody'); body.innerHTML='';
-  CARDS.forEach(c=>{
-    const row=document.createElement('a');
-    row.href=c.href; row.className='item'; row.style.textDecoration='none'; row.style.color='inherit';
-    row.innerHTML = `<div class="grow">${c.emoji} <b>${c.label}</b><div style="opacity:.8">${c.hint||''}</div></div><div>↗︎</div>`;
-    body.appendChild(row);
-  });
-  showModal('pagesModal', true);
-}
-document.getElementById('pagesClose').onclick=()=>showModal('pagesModal', false);
-document.getElementById('pagesDone').onclick =()=>showModal('pagesModal', false);
 </script>
 
 <!-- Boot + SW -->
