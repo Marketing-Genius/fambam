@@ -133,7 +133,7 @@ input[type="text"]{background:var(--card);border:1px solid #374151;border-radius
 
     <div class="footer">
       Works offline. Data stays on this device (local only).
-      <div class="version">Chores v1.2 (unified header, no PIN)</div>
+      <div class="version">Chores v1.3 (local-week keys)</div>
     </div>
   </div>
 
@@ -215,17 +215,21 @@ function getKids(){
   return [];
 }
 
-// ---------- Week helpers ----------
-function startOfWeekMonday(d=new Date()){
-  const dt=new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = (dt.getUTCDay()+6)%7; // 0..6, Monday=0
-  dt.setUTCDate(dt.getUTCDate()-day);
-  return dt;
+/* ---------- Local week helpers (Mon–Sun, STRICTLY LOCAL) ---------- */
+function localISO(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
 }
-function isoDateUTC(d){ return d.toISOString().slice(0,10); }
-function thisMondayISO(){ return isoDateUTC(startOfWeekMonday(new Date())); }
+function startOfWeekMondayLocal(d=new Date()){
+  const monday=new Date(d);
+  monday.setHours(0,0,0,0);
+  const offset=((monday.getDay()+6)%7); // Mon=0..Sun=6
+  monday.setDate(monday.getDate()-offset);
+  return monday;
+}
+function thisMondayISO(){ return localISO(startOfWeekMondayLocal(new Date())); }
 
-// ---------- Defaults ----------
+/* ---------- Defaults ---------- */
 function ensureDefaults(){
   let chores = load(LS.chores, null);
   if(!Array.isArray(chores) || !chores.length){
@@ -245,15 +249,16 @@ function ensureDefaults(){
   }
 }
 
-// ---------- Rotation logic ----------
+/* ---------- Rotation logic (local weeks) ---------- */
 function rotateForWeek(mondayISO){
   const chores = load(LS.chores, []);
   const eligIds = load(LS.elig, []).filter(id => getKids().some(k=>k.id===id));
   if(!chores.length || !eligIds.length) return {};
 
-  // previous week
-  const prev = new Date(mondayISO); prev.setUTCDate(prev.getUTCDate()-7);
-  const prevISO = isoDateUTC(prev);
+  // previous week (local)
+  const prev = new Date(mondayISO);
+  prev.setDate(prev.getDate()-7);
+  const prevISO = localISO(prev);
   const prevMap = load(LS.week(prevISO), null);
 
   let assignment = {};
@@ -267,21 +272,22 @@ function rotateForWeek(mondayISO){
   return assignment;
 }
 
-// ---------- Done map (per week) ----------
+/* ---------- Done map (per week) ---------- */
 const DAY_KEYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const DAY_LABELS = ['M','T','W','T','F','S','S'];
 
 function loadWeekDone(){ return load(LS.done(thisMondayISO()), {}) || {}; }
 function saveWeekDone(map){ save(LS.done(thisMondayISO()), map); }
 
-// ---------- UI render ----------
+/* ---------- UI render ---------- */
 let selectedChoreId = null;
 
-function weekLabelText(mondayISO){
-  const m=new Date(mondayISO+'T00:00:00Z');
-  const end=new Date(m); end.setUTCDate(end.getUTCDate()+6);
-  const fmt=(d)=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
-  return `${fmt(m)} – ${fmt(end)}`;
+function weekLabelText(mISO){
+  const [Y,M,D]=mISO.split('-').map(n=>parseInt(n,10));
+  const m = new Date(Y, M-1, D, 0,0,0,0);
+  const e = new Date(m); e.setDate(e.getDate()+6);
+  const fmt = d => d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  return `${fmt(m)} – ${fmt(e)}`;
 }
 
 function renderBoard(){
@@ -387,7 +393,7 @@ function kidOptions(selectedId){
   return kids.map(k=>`<option value="${k.id}" ${k.id===selectedId?'selected':''}>${k.name}</option>`).join('');
 }
 
-// ---------- Assignments ----------
+/* ---------- Assignments ---------- */
 function currentAssigns(){ return load(LS.week(thisMondayISO()), {}) || {}; }
 function saveAssigns(a){ save(LS.week(thisMondayISO()), a); renderBoard(); }
 function assignKid(choreId, kidId){ const a = currentAssigns(); a[choreId]=kidId; saveAssigns(a); }
@@ -396,7 +402,7 @@ function swapAssignees(choreIdA, choreIdB){
   const x=a[choreIdA], y=a[choreIdB]; a[choreIdA]=y; a[choreIdB]=x; saveAssigns(a);
 }
 
-// ---------- Manage modal ----------
+/* ---------- Manage modal ---------- */
 const manageModal = $('#manageModal');
 $('#manageClose').onclick = ()=> hide(manageModal);
 $('#manageSave').onclick = ()=>{
@@ -467,7 +473,7 @@ function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); 
 
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
 
-// ---------- Boot / weekly ensure ----------
+/* ---------- Boot / weekly ensure ---------- */
 function ensureAssignmentsForThisWeek(){
   const mondayISO = thisMondayISO();
   let a = load(LS.week(mondayISO), null);
