@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Fambam · Profile</title>
+
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<link rel="stylesheet" href="wallpaper.css">
+<script src="wallpaper.js" defer></script>
+
+<style>
+:root{ --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px }
+html,body{height:100%}
+body{
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%); color:var(--text);
+}
+.app{max-width:980px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
+.panel{background:rgba(17,24,39,.6);border:1px solid #0b1224;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px;backdrop-filter: blur(8px)}
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:38px;display:block}
+.title{font-weight:800}
+
+.hero{display:flex;gap:14px;align-items:center}
+.face{
+  width:96px;height:96px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
+  background:#0b1224;border:3px solid #334155;font-size:40px;font-weight:800;flex:0 0 auto
+}
+.face img{width:100%;height:100%;object-fit:cover}
+.name{font-weight:800;font-size:1.4rem}
+.sub{color:var(--muted)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.input{background:#0b1224;border:1px solid #334155;border-radius:12px;color:#e5e7eb;padding:8px 10px;font:inherit}
+.btn{background:#0b1224;border:1px solid #334155;border-radius:12px;color:#e5e7eb;padding:8px 10px;font:inherit;cursor:pointer}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{display:inline-flex;gap:6px;align-items:center;background:#0b1224;border:1px solid #334155;border-radius:999px;padding:6px 10px}
+.section{display:grid;gap:10px}
+.grid{display:grid;gap:12px}
+@media(min-width:860px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.stat{background:#0b1224;border:1px solid #27324a;border-radius:16px;padding:12px}
+.stat .hd{font-weight:800;margin-bottom:6px}
+.note{background:#0b1224;border:1px solid #27324a;border-radius:12px;padding:10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="panel">
+    <a href="./family.html" class="brand" title="Back">
+      <img src="fambam.png" alt="Fambam">
+    </a>
+    <div class="title" id="title">Profile</div>
+  </header>
+
+  <section class="panel">
+    <div class="hero">
+      <div id="avatar" class="face"><span>?</span></div>
+      <div>
+        <div class="name" id="pname">Member</div>
+        <div class="sub" id="meta">—</div>
+        <div class="row" style="margin-top:8px">
+          <label>Accent <input type="color" id="accent" class="input" value="#22d3ee"></label>
+          <label>Favorite food <input id="favFood" class="input" placeholder="🍕 or text"></label>
+          <label>Favorite animal <input id="favAnimal" class="input" placeholder="🐶 or text"></label>
+          <label>Favorite color <input id="favColor" class="input" placeholder="💜 or text"></label>
+          <button id="saveFav" class="btn">Save</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel section">
+    <div class="grid stats">
+      <div class="stat">
+        <div class="hd">Points</div>
+        <div id="points">—</div>
+      </div>
+      <div class="stat">
+        <div class="hd">This Week’s Chore</div>
+        <div id="chores">—</div>
+      </div>
+      <div class="stat">
+        <div class="hd">Tonight’s Dinner</div>
+        <div id="dinner">—</div>
+      </div>
+      <div class="stat">
+        <div class="hd">Breakfast Today</div>
+        <div id="breakfast">—</div>
+      </div>
+      <div class="stat">
+        <div class="hd">Badges</div>
+        <div id="badges" class="badges"></div>
+        <div class="row">
+          <input id="badgeEmoji" class="input" placeholder="🏅">
+          <input id="badgeLbl" class="input" placeholder="Label">
+          <button id="addBadge" class="btn">Add</button>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="hd">Notes</div>
+        <div id="notes" class="grid"></div>
+        <div class="row">
+          <input id="noteText" class="input" placeholder="Add note">
+          <button id="addNote" class="btn">Add</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer style="text-align:center;opacity:.7">Works offline. Data stays on this device (local only).</footer>
+</div>
+
+<script src="family.js?v=3.3.6"></script>
+<script>
+/* ---------- utils & stores ---------- */
+if(!window.Family){
+  (function(){
+    const K={kids:'hub:family:kids',parents:'hub:family:parents'};
+    const load=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{ return f}};
+    window.Family={ getKids(){return load(K.kids,[])}, getParents(){return load(K.parents,[])} };
+  })();
+}
+const Prof = {
+  key:(id)=>`prof:${id}`,
+  load(id){ try{return JSON.parse(localStorage.getItem(this.key(id)))||{}}catch{return{}} },
+  save(id, patch){ const cur=this.load(id); localStorage.setItem(this.key(id), JSON.stringify({...cur,...patch})); },
+  pushBadge(id, badge){ const cur=this.load(id); const a=[...(cur.badges||[])]; a.unshift(badge); this.save(id,{badges:a}); },
+  pushNote(id, note){ const cur=this.load(id); const a=[...(cur.notes||[])]; a.unshift(note); this.save(id,{notes:a}); }
+};
+
+const $=(s,e=document)=>e.querySelector(s);
+function initials(n){const p=(n||'').trim();return p? p[0].toUpperCase():'?';}
+function todayISO(){const d=new Date();const y=d.getFullYear(),m=(d.getMonth()+1+'').padStart(2,'0'),dd=(d.getDate()+'').padStart(2,'0');return `${y}-${m}-${dd}`;}
+function startOfWeekMonday(d=new Date()){const dt=new Date(d.getFullYear(), d.getMonth(), d.getDate()); const day=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-day); return dt;}
+function thisMondayISO(){const m=startOfWeekMonday(new Date()); const y=m.getFullYear(),mm=(m.getMonth()+1+'').padStart(2,'0'),dd=(m.getDate()+'').padStart(2,'0'); return `${y}-${mm}-${dd}`;}
+function todayDowShort(){ return new Date().toLocaleDateString('en-US',{weekday:'short'}); }
+function firstSymbol(s){ if(!s) return ''; const t=(s+'').trim(); const ch=[...t][0]; return ch; }
+
+/* ---------- load person ---------- */
+const id = decodeURIComponent((location.hash||'').slice(1));
+const parents = (Family.getParents?.()||[]);
+const kids = (Family.getKids?.()||[]);
+const person = [...parents, ...kids].find(p=>p.id===id) || {name:'Member'};
+const kind = kids.some(k=>k.id===id) ? 'kid' : 'parent';
+const prof = Prof.load(id);
+
+/* ---------- hero ---------- */
+document.title = `Fambam · ${person.name||'Profile'}`;
+$('#title').textContent = person.name ? `${person.name}` : 'Profile';
+$('#pname').textContent = person.name || 'Member';
+$('#meta').textContent = kind==='kid' ? 'Kid' : 'Parent';
+const accent = prof.accent || '#22d3ee';
+$('#accent').value = accent;
+
+const av = $('#avatar');
+av.style.borderColor = accent || '#334155';
+av.innerHTML = person.photo ? `<img src="${person.photo}" alt="">` : `<span>${initials(person.name)}</span>`;
+
+/* favorites */
+$('#favFood').value   = prof.favorites?.food || '';
+$('#favAnimal').value = prof.favorites?.animal || '';
+$('#favColor').value  = prof.favorites?.color || '';
+$('#saveFav').onclick = ()=>{
+  Prof.save(id, {
+    accent: $('#accent').value,
+    favorites:{
+      food: $('#favFood').value.trim(),
+      animal: $('#favAnimal').value.trim(),
+      color: $('#favColor').value.trim()
+    }
+  });
+  $('#avatar').style.borderColor = $('#accent').value;
+  alert('Saved!');
+};
+
+/* ---------- Stats: Points / Chores / Dinner / Breakfast ---------- */
+// Points
+(function(){
+  try{
+    const balances = JSON.parse(localStorage.getItem('pts:balances')||'{}');
+    const pts = balances[id];
+    $('#points').textContent = (typeof pts==='number') ? `${pts} pts` : '—';
+  }catch{ $('#points').textContent='—'; }
+})();
+
+// Chores (this week)
+(function(){
+  try{
+    const mISO=thisMondayISO();
+    const assigns = JSON.parse(localStorage.getItem('ch:assign:'+mISO)||'{}');
+    const choreList = JSON.parse(localStorage.getItem('ch:chores:list')||'[]');
+    const choresById = Object.fromEntries(choreList.map(c=>[c.id, c.label]));
+    const labels = Object.entries(assigns).filter(([,kidId])=>kidId===id).map(([cid])=>choresById[cid]).filter(Boolean);
+    const icons = labels.map(firstSymbol).filter(Boolean);
+    $('#chores').textContent = icons.length ? icons.join(' ') : '—';
+  }catch{ $('#chores').textContent='—'; }
+})();
+
+// Dinner (tonight)
+(function(){
+  try{
+    const mISO=thisMondayISO();
+    const plan = JSON.parse(localStorage.getItem('dp:plan:'+mISO)||'null') || null;
+    const dow=todayDowShort();
+    const data=plan?.days?.[dow]||null;
+    if(!data){ $('#dinner').textContent='—'; return; }
+    const row = (kind==='kid') ? data.kids : data.parents;
+    const icons = [firstSymbol(row?.main), firstSymbol(row?.side), firstSymbol(data.dessert)].filter(Boolean);
+    $('#dinner').textContent = icons.length ? icons.join(' ') : '—';
+  }catch{ $('#dinner').textContent='—'; }
+})();
+
+// Breakfast (today)
+(function(){
+  try{
+    const key='bf:day:'+todayISO();
+    const day = JSON.parse(localStorage.getItem(key)||'{}');
+    const choiceIdx = day[id];
+    const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
+    const emoji = (menu?.[choiceIdx]?.emoji)||'';
+    $('#breakfast').textContent = emoji || '—';
+  }catch{ $('#breakfast').textContent='—'; }
+})();
+
+/* ---------- Badges & Notes ---------- */
+function renderBadges(){
+  const wrap = $('#badges'); wrap.innerHTML='';
+  (prof.badges||[]).forEach(b=>{
+    const chip=document.createElement('div'); chip.className='badge';
+    chip.textContent = `${b.emoji||'🏅'} ${b.label||''}`;
+    wrap.appendChild(chip);
+  });
+}
+function renderNotes(){
+  const wrap=$('#notes'); wrap.innerHTML='';
+  (prof.notes||[]).forEach(n=>{
+    const div=document.createElement('div'); div.className='note';
+    div.textContent = n.text;
+    wrap.appendChild(div);
+  });
+}
+renderBadges(); renderNotes();
+
+$('#addBadge').onclick=()=>{
+  const emoji = ($('#badgeEmoji').value||'').trim() || '🏅';
+  const label = ($('#badgeLbl').value||'').trim() || 'Badge';
+  const item = {id:Math.random().toString(36).slice(2,10), emoji, label, date: new Date().toISOString()};
+  Prof.pushBadge(id, item);
+  Object.assign(prof, Prof.load(id));
+  $('#badgeEmoji').value=''; $('#badgeLbl').value='';
+  renderBadges();
+};
+$('#addNote').onclick=()=>{
+  const text = ($('#noteText').value||'').trim(); if(!text) return;
+  const item = {id:Math.random().toString(36).slice(2,10), text, date:new Date().toISOString()};
+  Prof.pushNote(id, item);
+  Object.assign(prof, Prof.load(id));
+  $('#noteText').value='';
+  renderNotes();
+};
+
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+</script>
+</body>
+</html>
