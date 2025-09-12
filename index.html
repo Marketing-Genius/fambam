@@ -202,7 +202,10 @@ header{
 .modal .body{padding:14px 16px;display:grid;gap:18px;max-height:70vh;overflow:auto}
 .modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
 .tabs{display:flex;gap:8px;flex-wrap:wrap}
-.tab{padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer}
+.tab{
+  padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer;
+  color: var(--text); /* fix desktop buttons defaulting to black */
+}
 .tab[aria-selected="true"]{outline:2px solid var(--accent)}
 .list{display:grid; gap:12px;}
 .item{display:flex;align-items:center;gap:10px;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:12px}
@@ -231,8 +234,6 @@ header{
         <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
           <button class="menu-item" data-action="edithome" role="menuitem">Edit Home</button>
           <button class="menu-item" data-action="admin" role="menuitem">Admin Settings</button>
-          <button class="menu-item" data-action="wallpaper" role="menuitem">Edit Wallpaper</button>
-          <button class="menu-item" data-action="clearwp" role="menuitem">Clear Wallpaper</button>
           <button class="menu-item" data-action="about" role="menuitem">About</button>
         </div>
       </div>
@@ -266,6 +267,7 @@ header{
         <div class="tabs">
           <button class="tab" data-tab="parents" aria-selected="true">Parents</button>
           <button class="tab" data-tab="kids">Kids</button>
+          <button class="tab" data-tab="global">Global Settings</button>
         </div>
 
         <!-- Parents -->
@@ -287,6 +289,37 @@ header{
           <div class="row">
             <input id="newKidName" class="btn" placeholder="Add kid name" />
             <button id="addKid" class="btn-primary btn-lg">Add Kid</button>
+          </div>
+        </section>
+
+        <!-- Global Settings -->
+        <section class="tab-panel" data-panel="global" style="display:none">
+          <div class="list">
+            <div class="item">
+              <div class="grow">
+                <div style="font-weight:800">Wallpaper</div>
+                <div style="opacity:.8">Set a background image for all pages (stored locally).</div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn" id="btnPickWallpaper">Edit Wallpaper</button>
+                <button class="btn-warn" id="btnClearWallpaper">Clear Wallpaper</button>
+              </div>
+            </div>
+
+            <div class="item">
+              <div class="grow">
+                <div style="font-weight:800">Theme (coming soon)</div>
+                <div style="opacity:.8">Choose a color scheme to apply across the app.</div>
+              </div>
+              <select id="themeSelect" class="btn">
+                <option value="system">System default</option>
+                <option value="dark" selected>Dark</option>
+                <option value="light">Light</option>
+                <option value="blue">Blue</option>
+                <option value="cyan">Cyan</option>
+                <option value="red">Red</option>
+              </select>
+            </div>
           </div>
         </section>
       </div>
@@ -455,9 +488,7 @@ function compressImage(file, maxSide=2400, quality=.85){
     else if (action === 'admin') {
       const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
       if (hasPin) requestPinUI(openAdmin); else openAdmin();
-    } else if (action === 'wallpaper') pickWallpaper();
-    else if (action === 'clearwp') clearWallpaper();
-    else if (action === 'about') showModal('aboutModal', true);
+    } else if (action === 'about') showModal('aboutModal', true);
   });
 })();
 </script>
@@ -470,7 +501,12 @@ function requestPinUI(onSuccess){
   const ok = document.getElementById('pinOk');
   const x = document.getElementById('pinClose');
 
-  function close(){ m.style.display='none'; m.setAttribute('aria-hidden','true'); input.value=''; ok.onclick = x.onclick = null; }
+  function close(){ 
+    m.style.display='none'; m.setAttribute('aria-hidden','true'); 
+    input.value=''; 
+    ok.onclick = x.onclick = null; 
+    input.onkeydown = null;
+  }
   function open(){
     m.style.display='flex'; m.setAttribute('aria-hidden','false');
     setTimeout(()=>{ input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 50);
@@ -483,6 +519,9 @@ function requestPinUI(onSuccess){
     else { alert('Incorrect PIN.'); input.focus(); input.select(); }
   };
   x.onclick = close;
+
+  // NEW: allow pressing Enter to submit
+  input.onkeydown = (e)=>{ if(e.key==='Enter'){ e.preventDefault(); ok.click(); } };
 
   open();
 }
@@ -508,7 +547,12 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.querySelectorAll('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab?'':'none'));
   });
 });
-function openAdmin(){ buildParents(); buildKids(); showModal('adminModal', true); }
+function openAdmin(){ 
+  buildParents(); 
+  buildKids(); 
+  buildGlobal(); 
+  showModal('adminModal', true); 
+}
 function closeAdmin(){ showModal('adminModal', false); }
 
 /* Parents UI */
@@ -564,6 +608,21 @@ function buildKids(){
     row.querySelector('[data-remove]').onclick = ()=>{ Family.removeKid(id); buildKids(); };
   });
 }
+/* Global Settings UI */
+function buildGlobal(){
+  document.getElementById('btnPickWallpaper').onclick = pickWallpaper;
+  document.getElementById('btnClearWallpaper').onclick = clearWallpaper;
+  const themeSel = document.getElementById('themeSelect');
+  try{
+    const cur = localStorage.getItem('hub:theme:scheme') || 'dark';
+    themeSel.value = cur;
+  }catch(_){}
+  themeSel.onchange = ()=> {
+    try{ localStorage.setItem('hub:theme:scheme', themeSel.value); }catch(_){}
+    alert('Theme preference saved (app-wide). Visual themes coming soon.');
+  };
+}
+
 /* helpers */
 function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
@@ -873,52 +932,32 @@ function renderTile(c, slotIndex){
     }catch(err){ console.warn('Chores preview error', err); }
 
   } else if (c.id === 'points') {
-    /* Points tile — leaderboard (top 4), tries a couple of common keys */
+    /* Points tile — leaderboard (top 4) using pts:balances */
     a.innerHTML = `
       <div class="label">Points</div>
       <div class="pt-box">
-        <div class="pt-title">This Week</div>
+        <div class="pt-title">Leaderboard</div>
         <div class="pt-empty">No points yet — tap Points.</div>
         <div class="pt-list" style="display:none"></div>
       </div>
       <button class="minus" type="button">−</button>
     `;
     try{
-      const mISO = thisMondayISO();
-      // Try a few likely keys; first one found wins.
-      const candidates = [
-        'pts:week:'+mISO,      // our proposed key
-        'points:week:'+mISO,   // alternative naming
-        'points:totals',       // fallback
-        'pts:totals'
-      ];
-      let data=null;
-      for(const k of candidates){
-        const v = localStorage.getItem(k);
-        if(v!=null){ data = JSON.parse(v); break; }
-      }
-
-      // Normalize into {byKid:{kidId:number}}
-      let byKid = {};
-      if(data){
-        if (data.byKid && typeof data.byKid==='object') byKid = data.byKid;
-        else if (typeof data==='object') byKid = data; // e.g., totals as {kidId:pts}
-      }
-
+      const balances = JSON.parse(localStorage.getItem('pts:balances')||'{}') || {};
       const kids = (Family.getKids?.() || []);
+      const entries = Object.entries(balances).filter(([,v])=> typeof v==='number');
+
       const listWrap = a.querySelector('.pt-list');
       const empty = a.querySelector('.pt-empty');
 
-      const pairs = Object.entries(byKid).filter(([,v])=> typeof v==='number');
-      if(pairs.length){
+      if(entries.length){
         empty.style.display='none';
         listWrap.style.display='grid';
 
-        // Sort desc by points, tie-break by kid name
         const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
-        pairs.sort((a,b)=> b[1]-a[1] || nameOf(a[0]).localeCompare(nameOf(b[0])));
+        entries.sort((a,b)=> b[1]-a[1] || nameOf(a[0]).localeCompare(nameOf(b[0])));
 
-        for(const [kidId, pts] of pairs.slice(0,4)){
+        for(const [kidId, pts] of entries.slice(0,4)){
           const kid = kids.find(k=>k.id===kidId);
           const face = kid?.photo
             ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
