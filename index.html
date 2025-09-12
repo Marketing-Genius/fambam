@@ -140,7 +140,7 @@ header{
 .dp-row .who{font-weight:800}
 .dp-icons{display:flex; align-items:center; gap:10px; font-size:1.4rem; line-height:1}
 
-/* Chores preview (avatar + text) */
+/* Chores preview (avatar + emoji icons) */
 .ch-box{
   margin-top:6px; width:100%;
   background:#081228; border:1px solid #27324a;
@@ -157,9 +157,9 @@ header{
   margin-top:10px;
 }
 .ch-item{display:flex; align-items:center; gap:10px; min-height:40px}
-.ch-task{font-size:.95rem; line-height:1.2}
+.ch-icons{display:flex; align-items:center; gap:10px; font-size:1.4rem; line-height:1}
 
-/* Points preview (leaderboard) */
+/* Points preview (2×2 avatar + number) */
 .pt-box{
   margin-top:6px; width:100%;
   background:#081228; border:1px solid #27324a;
@@ -169,10 +169,14 @@ header{
 }
 .pt-title{font-size:.95rem;font-weight:800}
 .pt-empty{opacity:.8;font-size:.95rem;margin-top:10px}
-.pt-list{display:grid; gap:10px; margin-top:10px}
-.pt-row{display:flex; align-items:center; justify-content:space-between; gap:10px}
-.pt-left{display:flex; align-items:center; gap:10px}
-.pt-score{font-weight:800}
+.pt-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px 12px;
+  margin-top:10px;
+}
+.pt-item{display:flex; align-items:center; gap:10px; min-height:40px}
+.pt-num{font-weight:800}
 
 /* Edit affordances */
 .tile .minus{
@@ -186,7 +190,7 @@ header{
 /* Photos tile */
 .tile.photo-only{ padding:0; border:none; background:transparent; box-shadow:none; }
 .photo-prev{ position:absolute; inset:0; border-radius:16px; overflow:hidden; z-index:0; opacity:.22; }
-.photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; }
+.photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; touch-action:pan-y; } /* allow horizontal swipe */
 .tile.photos-card{ background: transparent; border: none; padding: 0; }
 .tile.photos-card .photo-prev{ opacity: 1; }
 .tile.photos-card .emoji, .tile.photos-card .label, .tile.photos-card .hint{ display: none; }
@@ -202,10 +206,7 @@ header{
 .modal .body{padding:14px 16px;display:grid;gap:18px;max-height:70vh;overflow:auto}
 .modal .footer{padding:14px 16px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
 .tabs{display:flex;gap:8px;flex-wrap:wrap}
-.tab{
-  padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer;
-  color: var(--text); /* fix desktop buttons defaulting to black */
-}
+.tab{padding:8px 12px;border-radius:10px;background:#0b1224;border:1px solid #334155;cursor:pointer;color:var(--text)} /* ensure readable on desktop */
 .tab[aria-selected="true"]{outline:2px solid var(--accent)}
 .list{display:grid; gap:12px;}
 .item{display:flex;align-items:center;gap:10px;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:12px}
@@ -298,26 +299,21 @@ header{
             <div class="item">
               <div class="grow">
                 <div style="font-weight:800">Wallpaper</div>
-                <div style="opacity:.8">Set a background image for all pages (stored locally).</div>
+                <div style="opacity:.8">Change the background for all pages.</div>
               </div>
-              <div style="display:flex;gap:8px">
-                <button class="btn" id="btnPickWallpaper">Edit Wallpaper</button>
-                <button class="btn-warn" id="btnClearWallpaper">Clear Wallpaper</button>
-              </div>
+              <button class="btn" id="btnPickWP">Change</button>
+              <button class="btn-warn" id="btnClearWP">Clear</button>
             </div>
 
             <div class="item">
               <div class="grow">
-                <div style="font-weight:800">Theme (coming soon)</div>
-                <div style="opacity:.8">Choose a color scheme to apply across the app.</div>
+                <div style="font-weight:800">Theme</div>
+                <div style="opacity:.8">Placeholder — presets coming soon.</div>
               </div>
-              <select id="themeSelect" class="btn">
-                <option value="system">System default</option>
-                <option value="dark" selected>Dark</option>
-                <option value="light">Light</option>
-                <option value="blue">Blue</option>
-                <option value="cyan">Cyan</option>
-                <option value="red">Red</option>
+              <select id="themePicker" class="btn">
+                <option value="system">Default (Dark)</option>
+                <option value="light">Light (placeholder)</option>
+                <option value="cyan">Cyan Accent (placeholder)</option>
               </select>
             </div>
           </div>
@@ -425,7 +421,7 @@ if (!window.Family) {
 })();
 </script>
 
-<!-- Wallpaper utilities (shared helper + safe fallback) -->
+<!-- Wallpaper helpers (shared + fallback) -->
 <script>
 function pickWallpaper(){
   const input = document.getElementById('wallpaper-picker');
@@ -434,9 +430,9 @@ function pickWallpaper(){
     const dataUrl = await compressImage(file, 2400, 0.85);
 
     if (window.Wallpaper && typeof Wallpaper.set === 'function') {
-      Wallpaper.set(dataUrl);             // shared helper applies + persists
+      Wallpaper.set(dataUrl);
     } else {
-      const KEY = 'hub:wallpaper:dataurl'; // safe fallback
+      const KEY = 'hub:wallpaper:dataurl';
       localStorage.setItem(KEY, dataUrl);
       document.documentElement.style.setProperty('--wallpaper', `url("${dataUrl}")`);
     }
@@ -476,7 +472,7 @@ function compressImage(file, maxSide=2400, quality=.85){
   const openDD = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
   const closeDD= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
 
-  btn?.addEventListener('click,', ()=>{}); // defensive: avoid passive capture mismatch
+  btn?.addEventListener('click,', ()=>{}); // defensive
   btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?closeDD():openDD(); });
   document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) closeDD(); });
 
@@ -501,27 +497,22 @@ function requestPinUI(onSuccess){
   const ok = document.getElementById('pinOk');
   const x = document.getElementById('pinClose');
 
-  function close(){ 
-    m.style.display='none'; m.setAttribute('aria-hidden','true'); 
-    input.value=''; 
-    ok.onclick = x.onclick = null; 
-    input.onkeydown = null;
-  }
+  function close(){ m.style.display='none'; m.setAttribute('aria-hidden','true'); input.value=''; ok.onclick = x.onclick = null; input.onkeydown = null; }
   function open(){
     m.style.display='flex'; m.setAttribute('aria-hidden','false');
     setTimeout(()=>{ input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 50);
   }
 
-  ok.onclick = ()=> {
+  function submit(){
     const pin = input.value.trim();
     if (!/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
     if (Family.verifyPin(pin)) { close(); onSuccess(); }
     else { alert('Incorrect PIN.'); input.focus(); input.select(); }
-  };
-  x.onclick = close;
+  }
 
-  // NEW: allow pressing Enter to submit
-  input.onkeydown = (e)=>{ if(e.key==='Enter'){ e.preventDefault(); ok.click(); } };
+  ok.onclick = submit;
+  x.onclick = close;
+  input.onkeydown = (e)=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } };
 
   open();
 }
@@ -547,11 +538,13 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.querySelectorAll('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab?'':'none'));
   });
 });
-function openAdmin(){ 
-  buildParents(); 
-  buildKids(); 
-  buildGlobal(); 
-  showModal('adminModal', true); 
+function openAdmin(){
+  buildParents(); buildKids();
+  // hook global settings
+  document.getElementById('btnPickWP').onclick = pickWallpaper;
+  document.getElementById('btnClearWP').onclick = clearWallpaper;
+  document.getElementById('themePicker').onchange = (e)=>localStorage.setItem('hub:theme', e.target.value);
+  showModal('adminModal', true);
 }
 function closeAdmin(){ showModal('adminModal', false); }
 
@@ -608,21 +601,6 @@ function buildKids(){
     row.querySelector('[data-remove]').onclick = ()=>{ Family.removeKid(id); buildKids(); };
   });
 }
-/* Global Settings UI */
-function buildGlobal(){
-  document.getElementById('btnPickWallpaper').onclick = pickWallpaper;
-  document.getElementById('btnClearWallpaper').onclick = clearWallpaper;
-  const themeSel = document.getElementById('themeSelect');
-  try{
-    const cur = localStorage.getItem('hub:theme:scheme') || 'dark';
-    themeSel.value = cur;
-  }catch(_){}
-  themeSel.onchange = ()=> {
-    try{ localStorage.setItem('hub:theme:scheme', themeSel.value); }catch(_){}
-    alert('Theme preference saved (app-wide). Visual themes coming soon.');
-  };
-}
-
 /* helpers */
 function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
@@ -772,11 +750,52 @@ function renderTile(c, slotIndex){
       a.classList.add('photo-only');
       a.innerHTML = `<div class="photo-prev"><img alt=""></div><button class="minus" type="button">−</button>`;
       const img = a.querySelector('img');
-      let idx = 0;
-      img.src = list[0];
-      const cadence = Number(localStorage.getItem('photos:cadence_ms')) || 10000;
-      const timer = setInterval(()=>{ idx=(idx+1)%list.length; img.src=list[idx]; }, cadence);
-      a.addEventListener('click',()=>clearInterval(timer),{once:true});
+      let idx = 0, timerId = null;
+
+      const show = (i)=>{
+        idx = (i + list.length) % list.length;
+        img.src = list[idx];
+      };
+      const startTimer = ()=>{
+        clearInterval(timerId);
+        const cadence = Number(localStorage.getItem('photos:cadence_ms')) || 10000;
+        timerId = setInterval(()=> show(idx+1), cadence);
+      };
+
+      show(0);
+      startTimer();
+
+      // Tap to advance
+      a.addEventListener('click', (e)=>{
+        if(isEditing) return;
+        clearInterval(timerId);
+        show(idx+1);
+        startTimer();
+        e.preventDefault();
+      });
+
+      // Swipe left/right to navigate
+      let startX = null, moved=false;
+      img.addEventListener('pointerdown', (ev)=>{ startX = ev.clientX; moved=false; img.setPointerCapture(ev.pointerId); });
+      img.addEventListener('pointermove',  (ev)=>{ if(startX!=null && Math.abs(ev.clientX - startX) > 6) moved=true; });
+      img.addEventListener('pointerup',    (ev)=>{
+        if(startX==null) return;
+        const dx = ev.clientX - startX;
+        startX=null;
+        if(Math.abs(dx) > 30){
+          clearInterval(timerId);
+          show(idx + (dx<0 ? 1 : -1)); // left=next, right=prev
+          startTimer();
+        } else if(!moved){
+          // treat as tap
+          clearInterval(timerId);
+          show(idx+1);
+          startTimer();
+        }
+      });
+      // Stop slideshow when navigating away
+      a.addEventListener('mouseleave', ()=>{/* no-op */});
+      a.addEventListener('click',()=>{}, {once:true});
     } else {
       a.innerHTML = `<div class="label">${c.label}</div><div class="hint">${c.hint||''}</div><button class="minus" type="button">−</button>`;
     }
@@ -795,7 +814,7 @@ function renderTile(c, slotIndex){
 
     try{
       const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
-      const key  = 'bf:day:'+todayISO();            // strictly today (local)
+      const key  = 'bf:day:'+todayISO();
       const day  = JSON.parse(localStorage.getItem(key)||'{}');
 
       const kids = (Family.getKids?.() || []);
@@ -808,7 +827,6 @@ function renderTile(c, slotIndex){
         emptyMsg.style.display='none';
         grid.style.display='grid';
 
-        // stable order by kid name for predictable layout
         const byName = (id)=> (kids.find(k=>k.id===id)?.name || '').toLowerCase();
         entries.sort((a,b)=> byName(a[0]).localeCompare(byName(b[0])));
 
@@ -880,7 +898,7 @@ function renderTile(c, slotIndex){
     }catch(err){ console.warn('Dinner preview error', err); }
 
   } else if (c.id === 'chores') {
-    /* Chores tile — avatar + text (kid → assigned chore[s]), local-week keys */
+    /* Chores tile — avatar + chore emoji(s) (no text), local-week keys */
     a.innerHTML = `
       <div class="label">Chores</div>
       <div class="ch-box">
@@ -891,18 +909,33 @@ function renderTile(c, slotIndex){
       <button class="minus" type="button">−</button>
     `;
     try{
-      const mISO = thisMondayISO(); // matches chores.html storage
+      const mISO = thisMondayISO();
       const assigns = JSON.parse(localStorage.getItem('ch:assign:'+mISO) || '{}') || {};
       const choreList = JSON.parse(localStorage.getItem('ch:chores:list') || '[]') || [];
       const kids = (Family.getKids?.() || []);
 
-      // Build kidId -> [chore labels]
       const choresById = Object.fromEntries(choreList.map(c=>[c.id, c.label]));
+
+      const CHORE_EMOJI = {
+        'set the table':'🍽️',
+        'vacuum':'🧹',
+        'feed dogs':'🐶',
+        'feed the dogs':'🐶',
+        'trash':'🗑️',
+        'take out trash':'🗑️'
+      };
+      const symbolForChore = (label)=>{
+        const s=(label||'').trim(); const k=s.toLowerCase();
+        for(const key in CHORE_EMOJI){ if(k.startsWith(key)) return CHORE_EMOJI[key]; }
+        const g = Array.from(s); return g.length ? g[0] : '•';
+      };
+
       const byKid = {};
       Object.entries(assigns).forEach(([choreId, kidId])=>{
-        const label = choresById[choreId] || 'Chore';
+        const label = choresById[choreId] || '';
+        const sym = symbolForChore(label);
         if(!byKid[kidId]) byKid[kidId] = [];
-        byKid[kidId].push(label);
+        byKid[kidId].push(sym);
       });
 
       const entries = Object.entries(byKid);
@@ -913,32 +946,32 @@ function renderTile(c, slotIndex){
         empty.style.display='none';
         grid.style.display='grid';
 
-        // Stable by kid name
         const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
         entries.sort((a,b)=> nameOf(a[0]).localeCompare(nameOf(b[0])));
 
-        for(const [kidId, labels] of entries.slice(0,4)){ // 2×2
+        for(const [kidId, syms] of entries.slice(0,4)){ // 2×2
           const kid = kids.find(k=>k.id===kidId);
           const face = kid?.photo
             ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
             : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-          const task = labels.join(', ');
+
           const row = document.createElement('div');
           row.className='ch-item';
-          row.innerHTML = `${face}<div class="ch-task">${escapeHtml(task)}</div>`;
+          const icons = syms.slice(0,3).map(e=>`<span>${e}</span>`).join('');
+          row.innerHTML = `${face}<div class="ch-icons">${icons}</div>`;
           grid.appendChild(row);
         }
       }
     }catch(err){ console.warn('Chores preview error', err); }
 
   } else if (c.id === 'points') {
-    /* Points tile — leaderboard (top 4) using pts:balances */
+    /* Points tile — 2×2 grid of avatar + points (no names) from pts:balances */
     a.innerHTML = `
       <div class="label">Points</div>
       <div class="pt-box">
         <div class="pt-title">Leaderboard</div>
         <div class="pt-empty">No points yet — tap Points.</div>
-        <div class="pt-list" style="display:none"></div>
+        <div class="pt-grid" style="display:none"></div>
       </div>
       <button class="minus" type="button">−</button>
     `;
@@ -947,12 +980,12 @@ function renderTile(c, slotIndex){
       const kids = (Family.getKids?.() || []);
       const entries = Object.entries(balances).filter(([,v])=> typeof v==='number');
 
-      const listWrap = a.querySelector('.pt-list');
+      const grid = a.querySelector('.pt-grid');
       const empty = a.querySelector('.pt-empty');
 
       if(entries.length){
         empty.style.display='none';
-        listWrap.style.display='grid';
+        grid.style.display='grid';
 
         const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
         entries.sort((a,b)=> b[1]-a[1] || nameOf(a[0]).localeCompare(nameOf(b[0])));
@@ -962,12 +995,10 @@ function renderTile(c, slotIndex){
           const face = kid?.photo
             ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
             : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-          const row = document.createElement('div');
-          row.className='pt-row';
-          row.innerHTML = `
-            <div class="pt-left">${face}<div>${escapeHtml(kid?.name||'Kid')}</div></div>
-            <div class="pt-score">${Number(pts)||0}</div>`;
-          listWrap.appendChild(row);
+          const cell = document.createElement('div');
+          cell.className='pt-item';
+          cell.innerHTML = `${face}<div class="pt-num">${Number(pts)||0}</div>`;
+          grid.appendChild(cell);
         }
       }
     }catch(err){ console.warn('Points preview error', err); }
