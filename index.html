@@ -140,6 +140,40 @@ header{
 .dp-row .who{font-weight:800}
 .dp-icons{display:flex; align-items:center; gap:10px; font-size:1.4rem; line-height:1}
 
+/* Chores preview (avatar + text) */
+.ch-box{
+  margin-top:6px; width:100%;
+  background:#081228; border:1px solid #27324a;
+  border-radius:16px; padding:12px;
+  max-height: calc(var(--slotH) - 72px);
+  overflow:hidden;
+}
+.ch-title{font-size:.95rem;font-weight:800}
+.ch-empty{opacity:.8;font-size:.95rem;margin-top:10px}
+.ch-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px 12px;
+  margin-top:10px;
+}
+.ch-item{display:flex; align-items:center; gap:10px; min-height:40px}
+.ch-task{font-size:.95rem; line-height:1.2}
+
+/* Points preview (leaderboard) */
+.pt-box{
+  margin-top:6px; width:100%;
+  background:#081228; border:1px solid #27324a;
+  border-radius:16px; padding:12px;
+  max-height: calc(var(--slotH) - 72px);
+  overflow:hidden;
+}
+.pt-title{font-size:.95rem;font-weight:800}
+.pt-empty{opacity:.8;font-size:.95rem;margin-top:10px}
+.pt-list{display:grid; gap:10px; margin-top:10px}
+.pt-row{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.pt-left{display:flex; align-items:center; gap:10px}
+.pt-score{font-weight:800}
+
 /* Edit affordances */
 .tile .minus{
   position:absolute; right:8px; bottom:8px; width:36px; height:36px;
@@ -563,7 +597,7 @@ function compress(file, maxSide=256, quality=0.8){
 }
 </script>
 
-<!-- Home grid logic (slots + editing + Photos + Breakfast + Dinner preview) -->
+<!-- Home grid logic (slots + editing + Photos + Breakfast + Dinner + Chores + Points previews) -->
 <script>
 const SLOT_KEY = 'hub:home:slots:v2';
 const SLOTS_TOTAL = 16;
@@ -572,6 +606,7 @@ const CARDS = [
   {id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast', hint:''},
   {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner', hint:'Weekly plan'},
   {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',          hint:'Weekly rotation'},
+  {id:'points',    href:'./points.html',    emoji:'⭐', label:'Points',          hint:'Leaderboard'},
   {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar', hint:'Events & activities'},
   {id:'photos',    href:'./photos.html',    emoji:'🖼️', label:'Photos',          hint:'Slideshow'}
 ];
@@ -582,7 +617,7 @@ function loadSlots(){
     const v=JSON.parse(localStorage.getItem(SLOT_KEY));
     if(Array.isArray(v)) return v.slice(0,SLOTS_TOTAL).concat(Array(SLOTS_TOTAL).fill(null)).slice(0,SLOTS_TOTAL);
   }catch{}
-  const seed = ['breakfast','dinner','chores','calendar'];
+  const seed = ['breakfast','dinner','chores','calendar','points'];
   return seed.concat(Array(SLOTS_TOTAL-seed.length).fill(null));
 }
 function saveSlots(a){ localStorage.setItem(SLOT_KEY, JSON.stringify(a)); }
@@ -608,7 +643,7 @@ function todayISO(){
 }
 function niceToday(){ return new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
 
-/* Week helpers for Dinner preview */
+/* Local week helpers (Mon–Sun, used by Dinner/Chores/Points) */
 function startOfWeekMonday(d=new Date()){
   const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate()); // local midnight
   const day = (dt.getDay()+6)%7; // Mon=0
@@ -784,6 +819,119 @@ function renderTile(c, slotIndex){
         }
       }
     }catch(err){ console.warn('Dinner preview error', err); }
+
+  } else if (c.id === 'chores') {
+    /* Chores tile — avatar + text (kid → assigned chore[s]), local-week keys */
+    a.innerHTML = `
+      <div class="label">Chores</div>
+      <div class="ch-box">
+        <div class="ch-title">This Week</div>
+        <div class="ch-empty">No assignments yet — tap Chores.</div>
+        <div class="ch-grid" style="display:none" aria-label="Chore assignments"></div>
+      </div>
+      <button class="minus" type="button">−</button>
+    `;
+    try{
+      const mISO = thisMondayISO(); // matches chores.html storage
+      const assigns = JSON.parse(localStorage.getItem('ch:assign:'+mISO) || '{}') || {};
+      const choreList = JSON.parse(localStorage.getItem('ch:chores:list') || '[]') || [];
+      const kids = (Family.getKids?.() || []);
+
+      // Build kidId -> [chore labels]
+      const choresById = Object.fromEntries(choreList.map(c=>[c.id, c.label]));
+      const byKid = {};
+      Object.entries(assigns).forEach(([choreId, kidId])=>{
+        const label = choresById[choreId] || 'Chore';
+        if(!byKid[kidId]) byKid[kidId] = [];
+        byKid[kidId].push(label);
+      });
+
+      const entries = Object.entries(byKid);
+      const empty = a.querySelector('.ch-empty');
+      const grid  = a.querySelector('.ch-grid');
+
+      if(entries.length){
+        empty.style.display='none';
+        grid.style.display='grid';
+
+        // Stable by kid name
+        const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
+        entries.sort((a,b)=> nameOf(a[0]).localeCompare(nameOf(b[0])));
+
+        for(const [kidId, labels] of entries.slice(0,4)){ // 2×2
+          const kid = kids.find(k=>k.id===kidId);
+          const face = kid?.photo
+            ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
+            : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
+          const task = labels.join(', ');
+          const row = document.createElement('div');
+          row.className='ch-item';
+          row.innerHTML = `${face}<div class="ch-task">${escapeHtml(task)}</div>`;
+          grid.appendChild(row);
+        }
+      }
+    }catch(err){ console.warn('Chores preview error', err); }
+
+  } else if (c.id === 'points') {
+    /* Points tile — leaderboard (top 4), tries a couple of common keys */
+    a.innerHTML = `
+      <div class="label">Points</div>
+      <div class="pt-box">
+        <div class="pt-title">This Week</div>
+        <div class="pt-empty">No points yet — tap Points.</div>
+        <div class="pt-list" style="display:none"></div>
+      </div>
+      <button class="minus" type="button">−</button>
+    `;
+    try{
+      const mISO = thisMondayISO();
+      // Try a few likely keys; first one found wins.
+      const candidates = [
+        'pts:week:'+mISO,      // our proposed key
+        'points:week:'+mISO,   // alternative naming
+        'points:totals',       // fallback
+        'pts:totals'
+      ];
+      let data=null;
+      for(const k of candidates){
+        const v = localStorage.getItem(k);
+        if(v!=null){ data = JSON.parse(v); break; }
+      }
+
+      // Normalize into {byKid:{kidId:number}}
+      let byKid = {};
+      if(data){
+        if (data.byKid && typeof data.byKid==='object') byKid = data.byKid;
+        else if (typeof data==='object') byKid = data; // e.g., totals as {kidId:pts}
+      }
+
+      const kids = (Family.getKids?.() || []);
+      const listWrap = a.querySelector('.pt-list');
+      const empty = a.querySelector('.pt-empty');
+
+      const pairs = Object.entries(byKid).filter(([,v])=> typeof v==='number');
+      if(pairs.length){
+        empty.style.display='none';
+        listWrap.style.display='grid';
+
+        // Sort desc by points, tie-break by kid name
+        const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
+        pairs.sort((a,b)=> b[1]-a[1] || nameOf(a[0]).localeCompare(nameOf(b[0])));
+
+        for(const [kidId, pts] of pairs.slice(0,4)){
+          const kid = kids.find(k=>k.id===kidId);
+          const face = kid?.photo
+            ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
+            : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
+          const row = document.createElement('div');
+          row.className='pt-row';
+          row.innerHTML = `
+            <div class="pt-left">${face}<div>${escapeHtml(kid?.name||'Kid')}</div></div>
+            <div class="pt-score">${Number(pts)||0}</div>`;
+          listWrap.appendChild(row);
+        }
+      }
+    }catch(err){ console.warn('Points preview error', err); }
 
   } else {
     a.innerHTML = `
