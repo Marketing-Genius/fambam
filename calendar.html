@@ -3,55 +3,123 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Family Calendar (Coming Soon)</title>
+<title>Fambam · Family Calendar</title>
 
 <link rel="manifest" href="manifest.webmanifest">
 
-<!-- Universal wallpaper (shared across all pages) -->
+<!-- Universal wallpaper -->
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
 <style>
+:root{
+  --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
+  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+}
+
+html,body{height:100%}
 body{
   margin:0;
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  background:#0f172a;
-  color:#e5e7eb;
+  background:var(--bg);
+  color:var(--text);
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
 }
-.wrap{max-width:900px;margin:0 auto;padding:20px}
+.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto 1fr auto}
+
+/* Header */
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.h-left{display:flex;align-items:center;gap:14px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:38px;display:block;cursor:pointer}
+.title{font-weight:800;letter-spacing:.2px}
+.title .small{font-weight:600;font-size:.85rem;color:var(--muted)}
+.h-right{display:flex;align-items:center;gap:10px}
+
+/* Hamburger dropdown */
+.menu-wrap{position:relative}
+.hamburger{font:inherit;cursor:pointer;background:#0b1224;border:1px solid #334155;
+  border-radius:12px;color:#e5e7eb;padding:10px 12px}
+.menu-dropdown{
+  position:absolute; right:0; top:110%; min-width:220px; z-index:20;
+  background:#111827; border:1px solid #1f2937; border-radius:12px;
+  box-shadow:var(--shadow); padding:6px; display:none;
+}
+.menu-dropdown.open{display:block}
+.menu-item{
+  display:block; width:100%; text-align:left; padding:10px 12px;
+  border:none; background:transparent; color:#e5e7eb;
+  border-radius:10px; cursor:pointer
+}
+.menu-item:hover{background:#0b1224}
+
+/* Content card */
 .card{
-  background:rgba(17,24,39,.88);        /* slightly translucent to show wallpaper */
+  background:rgba(17,24,39,.88);
   border:1px solid #0b1224;
   border-radius:16px;
   padding:16px;
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  box-shadow:var(--shadow);
   backdrop-filter: blur(6px);
 }
-a.btn{
-  display:inline-block;
-  margin-bottom:12px;
-  text-decoration:none;
-  color:#0e1726;
-  background:#22d3ee;
-  padding:8px 12px;
-  border-radius:10px;
-  font-weight:800
-}
 .hint{opacity:.75}
+
+/* Footer */
+.footer{opacity:.75;text-align:center;font-size:.9rem}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <a class="btn" href="./index.html">← Home</a>
-  <div class="card">
+<div class="app">
+  <header class="panel">
+    <div class="h-left">
+      <a href="./index.html" class="brand" title="Home">
+        <img src="fambam.png" alt="Fambam">
+      </a>
+      <div class="title">
+        <div style="font-size:1.6rem">Family Calendar</div>
+        <div class="small">Coming soon: quick-add events & weekly view.</div>
+      </div>
+    </div>
+    <div class="h-right">
+      <div class="menu-wrap">
+        <button id="btnHamburger" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown">☰</button>
+        <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
+          <button class="menu-item" data-action="about">About Calendar</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="card">
     <h1>Family Calendar</h1>
     <p class="hint">We’ll add quick-add events and weekly view here.</p>
-  </div>
+  </section>
+
+  <div class="footer">Works offline. Data stays on this device (local only).</div>
 </div>
+
 <script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-}
+/* Hamburger logic */
+(function(){
+  const btn = document.getElementById('btnHamburger');
+  const dd  = document.getElementById('menuDropdown');
+  const open = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
+  const close= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
+
+  btn.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?close():open(); });
+  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) close(); });
+
+  dd.addEventListener('click', (e)=>{
+    const a = e.target.closest('.menu-item'); if(!a) return;
+    close();
+    const act=a.dataset.action;
+    if(act==='about'){ alert('Calendar placeholder. Features coming soon!'); }
+  });
+})();
+
+/* SW */
+if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
 </html>
