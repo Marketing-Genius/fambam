@@ -1,1 +1,1 @@
-Breakfast Chooser v3.2.2 full build with photo picker fix.
+Fambam - Family App v3.2.2 full build.
