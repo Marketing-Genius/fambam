@@ -189,14 +189,23 @@ header{
 
 /* Photos tile */
 .tile.photo-only{ padding:0; border:none; background:transparent; box-shadow:none; }
-.photo-prev{ position:absolute; inset:0; border-radius:16px; overflow:hidden; z-index:0; opacity:.22; }
+.photo-prev{ position:absolute; inset:0; border-radius:16px; overflow:hidden; z-index:0; opacity:1; }
 .photo-prev img{ width:100%; height:100%; object-fit:cover; display:block; touch-action:pan-y; } /* allow horizontal swipe */
 .tile.photos-card{ background: transparent; border: none; padding: 0; }
-.tile.photos-card .photo-prev{ opacity: 1; }
 .tile.photos-card .emoji, .tile.photos-card .label, .tile.photos-card .hint{ display: none; }
 .tile.photos-card .minus{ display:none; }
 .editing .tile.photos-card .minus{ display:grid; background: rgba(0,0,0,.4); border-color:#000; }
 .tile.photos-card::before{ content:""; position:absolute; inset:0; border-radius:16px; box-shadow: var(--shadow); pointer-events:none; }
+
+/* Open-link button overlay for Photos */
+.open-link{
+  position:absolute; top:8px; right:8px;
+  width:32px; height:32px; border-radius:999px;
+  display:grid; place-items:center;
+  background:rgba(0,0,0,.55); color:#e5e7eb; border:1px solid rgba(255,255,255,.2);
+  font-weight:800; cursor:pointer; z-index:5;
+}
+.editing .open-link{ display:none; }
 
 /* Modal + form + edit bar */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -222,6 +231,16 @@ header{
 .toggle{display:inline-flex;align-items:center;gap:8px}
 #editBar{display:none; align-items:center; justify-content:space-between;margin-top:6px; padding:10px 12px; border-radius:12px;background:rgba(17,24,39,.65); border:1px solid #1f2937;}
 #editBar.show{display:flex}
+
+/* All Pages modal list */
+.pages-grid{display:grid;gap:12px}
+.page-link{
+  display:flex;align-items:center;gap:10px;
+  background:#1f2937;border:1px solid #111827;border-radius:12px;
+  padding:12px;text-decoration:none;color:var(--text)
+}
+.page-link .emoji{font-size:22px}
+.page-link .meta{opacity:.8}
 </style>
 </head>
 <body>
@@ -233,6 +252,7 @@ header{
       <div class="menu-wrap">
         <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
         <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
+          <button class="menu-item" data-action="allpages" role="menuitem">All Pages</button>
           <button class="menu-item" data-action="edithome" role="menuitem">Edit Home</button>
           <button class="menu-item" data-action="admin" role="menuitem">Admin Settings</button>
           <button class="menu-item" data-action="about" role="menuitem">About</button>
@@ -355,6 +375,22 @@ header{
     </div>
   </div>
 
+  <!-- All Pages Modal -->
+  <div id="pagesModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="pagesTitle">
+    <div class="modal" style="max-width:520px">
+      <header>
+        <div id="pagesTitle" style="font-weight:800">All Pages</div>
+        <button id="pagesClose" class="btn">✖</button>
+      </header>
+      <div class="body">
+        <div id="pagesList" class="pages-grid"></div>
+      </div>
+      <div class="footer">
+        <button id="pagesDone" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- About Modal -->
   <div id="aboutModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="aboutTitle">
     <div class="modal" style="max-width:600px">
@@ -464,7 +500,7 @@ function compressImage(file, maxSide=2400, quality=.85){
 }
 </script>
 
-<!-- Menu + PIN gate -->
+<!-- Menu + PIN gate + All Pages -->
 <script>
 (function menu(){
   const btn = document.getElementById('btnMenu');
@@ -480,7 +516,8 @@ function compressImage(file, maxSide=2400, quality=.85){
     const el = e.target.closest('.menu-item'); if (!el) return;
     const action = el.dataset.action;
     closeDD();
-    if (action === 'edithome') toggleEdit(true);
+    if (action === 'allpages') openPages();
+    else if (action === 'edithome') toggleEdit(true);
     else if (action === 'admin') {
       const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
       if (hasPin) requestPinUI(openAdmin); else openAdmin();
@@ -524,7 +561,7 @@ window.addEventListener('load', ()=>{
 });
 </script>
 
-<!-- Admin modal logic -->
+<!-- Admin modal + All Pages logic -->
 <script>
 const modal = document.getElementById('adminModal');
 document.getElementById('adminClose')?.addEventListener('click', closeAdmin);
@@ -540,13 +577,26 @@ document.querySelectorAll('.tab').forEach(t=>{
 });
 function openAdmin(){
   buildParents(); buildKids();
-  // hook global settings
   document.getElementById('btnPickWP').onclick = pickWallpaper;
   document.getElementById('btnClearWP').onclick = clearWallpaper;
   document.getElementById('themePicker').onchange = (e)=>localStorage.setItem('hub:theme', e.target.value);
   showModal('adminModal', true);
 }
 function closeAdmin(){ showModal('adminModal', false); }
+
+/* All Pages */
+function openPages(){
+  const list = document.getElementById('pagesList'); list.innerHTML='';
+  CARDS.forEach(c=>{
+    const a=document.createElement('a');
+    a.href=c.href; a.className='page-link';
+    a.innerHTML=`<div class="emoji">${c.emoji}</div><div><div style="font-weight:800">${c.label}</div><div class="meta">${c.hint||''}</div></div>`;
+    list.appendChild(a);
+  });
+  showModal('pagesModal', true);
+}
+document.getElementById('pagesDone').onclick=()=>showModal('pagesModal', false);
+document.getElementById('pagesClose').onclick=()=>showModal('pagesModal', false);
 
 /* Parents UI */
 function buildParents(){
@@ -672,7 +722,7 @@ function safelyGetPhotoList(){
   catch{ return []; }
 }
 
-/* Local-date helpers (strictly local) */
+/* Local-date helpers */
 function todayISO(){
   const d=new Date();
   const y=d.getFullYear(), m=(d.getMonth()+1).toString().padStart(2,'0'), dd=d.getDate().toString().padStart(2,'0');
@@ -680,7 +730,7 @@ function todayISO(){
 }
 function niceToday(){ return new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
 
-/* Local week helpers (Mon–Sun, used by Dinner/Chores/Points) */
+/* Local week helpers (Mon–Sun) */
 function startOfWeekMonday(d=new Date()){
   const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate()); // local midnight
   const day = (dt.getDay()+6)%7; // Mon=0
@@ -748,8 +798,14 @@ function renderTile(c, slotIndex){
     if(list.length) a.classList.add('photos-card');
     if(list.length){
       a.classList.add('photo-only');
-      a.innerHTML = `<div class="photo-prev"><img alt=""></div><button class="minus" type="button">−</button>`;
+      a.innerHTML = `
+        <button class="open-link" title="Open Photos" aria-label="Open Photos">↗</button>
+        <div class="photo-prev"><img alt=""></div>
+        <button class="minus" type="button">−</button>`;
       const img = a.querySelector('img');
+      const openBtn = a.querySelector('.open-link');
+      openBtn.addEventListener('click',(e)=>{ e.stopPropagation(); /* let anchor navigate */ });
+
       let idx = 0, timerId = null;
 
       const show = (i)=>{
@@ -765,16 +821,17 @@ function renderTile(c, slotIndex){
       show(0);
       startTimer();
 
-      // Tap to advance
-      a.addEventListener('click', (e)=>{
+      // Tap to advance (on image only)
+      img.addEventListener('click', (e)=>{
         if(isEditing) return;
         clearInterval(timerId);
         show(idx+1);
         startTimer();
         e.preventDefault();
+        e.stopPropagation(); // don't trigger anchor nav
       });
 
-      // Swipe left/right to navigate
+      // Swipe left/right to navigate (on image)
       let startX = null, moved=false;
       img.addEventListener('pointerdown', (ev)=>{ startX = ev.clientX; moved=false; img.setPointerCapture(ev.pointerId); });
       img.addEventListener('pointermove',  (ev)=>{ if(startX!=null && Math.abs(ev.clientX - startX) > 6) moved=true; });
@@ -784,313 +841,5 @@ function renderTile(c, slotIndex){
         startX=null;
         if(Math.abs(dx) > 30){
           clearInterval(timerId);
-          show(idx + (dx<0 ? 1 : -1)); // left=next, right=prev
-          startTimer();
-        } else if(!moved){
-          // treat as tap
-          clearInterval(timerId);
-          show(idx+1);
-          startTimer();
-        }
-      });
-      // Stop slideshow when navigating away
-      a.addEventListener('mouseleave', ()=>{/* no-op */});
-      a.addEventListener('click',()=>{}, {once:true});
-    } else {
-      a.innerHTML = `<div class="label">${c.label}</div><div class="hint">${c.hint||''}</div><button class="minus" type="button">−</button>`;
-    }
-
-  } else if (c.id === 'breakfast') {
-    /* Breakfast tile — 2×2 grid, avatar + emoji only, local-today */
-    a.innerHTML = `
-      <div class="label">Breakfast</div>
-      <div class="bf-box">
-        <div class="bf-date">Today · ${niceToday()}</div>
-        <div class="bf-empty">No selections yet — tap Breakfast.</div>
-        <div class="bf-grid" aria-label="Breakfast selections" style="display:none"></div>
-      </div>
-      <button class="minus" type="button">−</button>
-    `;
-
-    try{
-      const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
-      const key  = 'bf:day:'+todayISO();
-      const day  = JSON.parse(localStorage.getItem(key)||'{}');
-
-      const kids = (Family.getKids?.() || []);
-      const entries = Object.entries(day);
-
-      const emptyMsg = a.querySelector('.bf-empty');
-      const grid = a.querySelector('.bf-grid');
-
-      if (entries.length){
-        emptyMsg.style.display='none';
-        grid.style.display='grid';
-
-        const byName = (id)=> (kids.find(k=>k.id===id)?.name || '').toLowerCase();
-        entries.sort((a,b)=> byName(a[0]).localeCompare(byName(b[0])));
-
-        for(const [kidId, idx] of entries.slice(0,4)){ // 2×2
-          const kid = kids.find(k=>k.id===kidId);
-          const choice = menu?.[idx];
-          if(!choice) continue;
-
-          const cell = document.createElement('div');
-          cell.className='bf-item';
-          const face = kid?.photo
-            ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
-            : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-          cell.innerHTML = `${face}<span class="bf-emoji">${choice.emoji||'❓'}</span>`;
-          grid.appendChild(cell);
-        }
-      }
-    }catch(err){ console.warn('Breakfast preview error', err); }
-
-  } else if (c.id === 'dinner') {
-    /* Dinner tile — Two rows, Kids/Parents, emoji-only, include dessert on both rows if present */
-    a.innerHTML = `
-      <div class="label">Dinner Planner</div>
-      <div class="dp-box">
-        <div class="dp-title">Tonight’s Dinner</div>
-        <div class="dp-empty">No selections yet — tap Dinner Planner.</div>
-        <div class="dp-rows" style="display:none">
-          <div class="dp-row"><div class="who">Kids</div><div class="dp-icons" data-row="kids"></div></div>
-          <div class="dp-row"><div class="who">Parents</div><div class="dp-icons" data-row="parents"></div></div>
-        </div>
-      </div>
-      <button class="minus" type="button">−</button>
-    `;
-
-    try{
-      const mISO = thisMondayISO();                                  // local Monday ISO
-      const plan = JSON.parse(localStorage.getItem('dp:plan:'+mISO)||'null') || null;
-      const dow  = todayDowShort();                                   // "Mon".."Sun"
-      const data = plan?.days?.[dow] || null;
-
-      const emptyMsg = a.querySelector('.dp-empty');
-      const rowsWrap = a.querySelector('.dp-rows');
-
-      if (data){
-        const kidsIcons = [];
-        const parsIcons = [];
-
-        const kMain = emojiFromLabel(data.kids?.main);
-        const kSide = emojiFromLabel(data.kids?.side);
-        const pMain = emojiFromLabel(data.parents?.main);
-        const pSide = emojiFromLabel(data.parents?.side);
-        const dEmoji = emojiFromLabel(data.dessert);
-
-        if (kMain) kidsIcons.push(kMain);
-        if (kSide) kidsIcons.push(kSide);
-        if (pMain) parsIcons.push(pMain);
-        if (pSide) parsIcons.push(pSide);
-        if (dEmoji){ kidsIcons.push(dEmoji); parsIcons.push(dEmoji); }
-
-        const hasAny = kidsIcons.length || parsIcons.length;
-
-        if (hasAny){
-          emptyMsg.style.display='none';
-          rowsWrap.style.display='grid';
-          a.querySelector('.dp-icons[data-row="kids"]').innerHTML = kidsIcons.map(e=>`<span>${e}</span>`).join('');
-          a.querySelector('.dp-icons[data-row="parents"]').innerHTML = parsIcons.map(e=>`<span>${e}</span>`).join('');
-        }
-      }
-    }catch(err){ console.warn('Dinner preview error', err); }
-
-  } else if (c.id === 'chores') {
-    /* Chores tile — avatar + chore emoji(s) (no text), local-week keys */
-    a.innerHTML = `
-      <div class="label">Chores</div>
-      <div class="ch-box">
-        <div class="ch-title">This Week</div>
-        <div class="ch-empty">No assignments yet — tap Chores.</div>
-        <div class="ch-grid" style="display:none" aria-label="Chore assignments"></div>
-      </div>
-      <button class="minus" type="button">−</button>
-    `;
-    try{
-      const mISO = thisMondayISO();
-      const assigns = JSON.parse(localStorage.getItem('ch:assign:'+mISO) || '{}') || {};
-      const choreList = JSON.parse(localStorage.getItem('ch:chores:list') || '[]') || [];
-      const kids = (Family.getKids?.() || []);
-
-      const choresById = Object.fromEntries(choreList.map(c=>[c.id, c.label]));
-
-      const CHORE_EMOJI = {
-        'set the table':'🍽️',
-        'vacuum':'🧹',
-        'feed dogs':'🐶',
-        'feed the dogs':'🐶',
-        'trash':'🗑️',
-        'take out trash':'🗑️'
-      };
-      const symbolForChore = (label)=>{
-        const s=(label||'').trim(); const k=s.toLowerCase();
-        for(const key in CHORE_EMOJI){ if(k.startsWith(key)) return CHORE_EMOJI[key]; }
-        const g = Array.from(s); return g.length ? g[0] : '•';
-      };
-
-      const byKid = {};
-      Object.entries(assigns).forEach(([choreId, kidId])=>{
-        const label = choresById[choreId] || '';
-        const sym = symbolForChore(label);
-        if(!byKid[kidId]) byKid[kidId] = [];
-        byKid[kidId].push(sym);
-      });
-
-      const entries = Object.entries(byKid);
-      const empty = a.querySelector('.ch-empty');
-      const grid  = a.querySelector('.ch-grid');
-
-      if(entries.length){
-        empty.style.display='none';
-        grid.style.display='grid';
-
-        const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
-        entries.sort((a,b)=> nameOf(a[0]).localeCompare(nameOf(b[0])));
-
-        for(const [kidId, syms] of entries.slice(0,4)){ // 2×2
-          const kid = kids.find(k=>k.id===kidId);
-          const face = kid?.photo
-            ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
-            : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-
-          const row = document.createElement('div');
-          row.className='ch-item';
-          const icons = syms.slice(0,3).map(e=>`<span>${e}</span>`).join('');
-          row.innerHTML = `${face}<div class="ch-icons">${icons}</div>`;
-          grid.appendChild(row);
-        }
-      }
-    }catch(err){ console.warn('Chores preview error', err); }
-
-  } else if (c.id === 'points') {
-    /* Points tile — 2×2 grid of avatar + points (no names) from pts:balances */
-    a.innerHTML = `
-      <div class="label">Points</div>
-      <div class="pt-box">
-        <div class="pt-title">Leaderboard</div>
-        <div class="pt-empty">No points yet — tap Points.</div>
-        <div class="pt-grid" style="display:none"></div>
-      </div>
-      <button class="minus" type="button">−</button>
-    `;
-    try{
-      const balances = JSON.parse(localStorage.getItem('pts:balances')||'{}') || {};
-      const kids = (Family.getKids?.() || []);
-      const entries = Object.entries(balances).filter(([,v])=> typeof v==='number');
-
-      const grid = a.querySelector('.pt-grid');
-      const empty = a.querySelector('.pt-empty');
-
-      if(entries.length){
-        empty.style.display='none';
-        grid.style.display='grid';
-
-        const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
-        entries.sort((a,b)=> b[1]-a[1] || nameOf(a[0]).localeCompare(nameOf(b[0])));
-
-        for(const [kidId, pts] of entries.slice(0,4)){
-          const kid = kids.find(k=>k.id===kidId);
-          const face = kid?.photo
-            ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
-            : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-          const cell = document.createElement('div');
-          cell.className='pt-item';
-          cell.innerHTML = `${face}<div class="pt-num">${Number(pts)||0}</div>`;
-          grid.appendChild(cell);
-        }
-      }
-    }catch(err){ console.warn('Points preview error', err); }
-
-  } else {
-    a.innerHTML = `
-      <div class="emoji">${c.emoji}</div>
-      <div class="label">${c.label}</div>
-      <div class="hint">${c.hint||''}</div>
-      <button class="minus" type="button">−</button>
-    `;
-  }
-
-  if(isEditing){ a.addEventListener('click', (e)=>e.preventDefault()); }
-
-  const minus = a.querySelector('.minus');
-  if(minus){
-    ['click','pointerdown','touchstart','mousedown'].forEach(evt=>{
-      minus.addEventListener(evt, (ev)=>{
-        ev.preventDefault(); ev.stopPropagation();
-      }, {passive:false});
-    });
-    minus.addEventListener('click', ()=>{
-      slots[slotIndex]=null; selectedCardId=null; selectedFromSlot=-1; saveSlots(slots); renderGrid();
-    });
-  }
-  return a;
-}
-
-/* ----- Edit controls / modal helpers ----- */
-function toggleEdit(on){
-  isEditing = !!on;
-  $('#editBar').classList.toggle('show', isEditing);
-  selectedCardId=null; selectedFromSlot=-1;
-  renderGrid();
-}
-document.getElementById('btnDoneEdit').onclick = ()=> toggleEdit(false);
-
-function openAddRemove(targetIndex){
-  const placed = new Set(slots.filter(Boolean));
-  const body = document.getElementById('addCardBody'); body.innerHTML='';
-  CARDS.forEach(c=>{
-    const isOnHome = placed.has(c.id);
-    const row=document.createElement('div'); row.className='item';
-    row.innerHTML=`
-      <div class="grow">${c.emoji} <b>${c.label}</b><div style="opacity:.8">${c.hint||''}</div></div>
-      <div style="display:flex;gap:8px">
-        <button class="btn" data-add>Add</button>
-        <button class="btn-warn" data-remove>Remove</button>
-      </div>
-    `;
-    const btnAdd = row.querySelector('[data-add]');
-    const btnRem = row.querySelector('[data-remove]');
-    if(isOnHome){ btnAdd.setAttribute('disabled',''); } else { btnRem.setAttribute('disabled',''); }
-    btnAdd.onclick=()=>{
-      const idx = (typeof targetIndex==='number') ? targetIndex : slots.findIndex(x=>!x);
-      if(idx<0){ alert('No empty slot available. Remove a card first.'); return; }
-      slots[idx]=c.id; saveSlots(slots); renderGrid(); openAddRemove(idx);
-    };
-    btnRem.onclick=()=>{
-      const ix = slots.findIndex(x=>x===c.id);
-      if(ix>=0){ slots[ix]=null; saveSlots(slots); renderGrid(); }
-      openAddRemove(targetIndex);
-    };
-    body.appendChild(row);
-  });
-  showModal('addCardModal', true);
-}
-document.getElementById('addCardDone').onclick=()=>showModal('addCardModal', false);
-document.getElementById('addCardClose').onclick=()=>showModal('addCardModal', false);
-document.getElementById('btnAddAnywhere').onclick=()=>{
-  const firstEmpty = slots.findIndex(x=>!x);
-  openAddRemove(firstEmpty<0?0:firstEmpty);
-};
-
-function showModal(id, show){
-  const m=document.getElementById(id);
-  if(!m) return;
-  if(show){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
-  else    { m.style.display='none'; m.setAttribute('aria-hidden','true'); }
-}
-document.getElementById('aboutOk')?.addEventListener('click',()=>showModal('aboutModal',false));
-document.getElementById('aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
-</script>
-
-<!-- Boot + SW -->
-<script>
-renderGrid();
-try { Family.onChange && Family.onChange(()=>{ renderGrid(); }); } catch(_){}
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
-}
-</script>
-</body>
-</html>
+          show(idx + (dx<0 ? 1 : -1));
+          start
