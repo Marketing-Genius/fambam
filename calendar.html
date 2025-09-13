@@ -15,11 +15,11 @@
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
+<!-- THEME BOOT (Dark/Light + Accent + Auto Logo Swap) -->
 <script>
-/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap)
-   Reads localStorage `ui:theme` = { mode:"dark"|"light", accent:"#RRGGBB" }.
+/* Reads localStorage `ui:theme` = { mode:"dark"|"light", accent:"#RRGGBB" }.
    Applies immediately, syncs <meta name="theme-color">, swaps Fambam logo.
-   Expects both `fambam.png` (dark) and `fambam2.png` (light) in the root. */
+   Expects `fambam.png` (dark) and `fambam2.png` (light) in the same directory. */
 (function () {
   var DARK_SRC = 'fambam.png';
   var LIGHT_SRC = 'fambam2.png';
@@ -50,11 +50,9 @@
     // Logo swap (if found)
     var logo = findLogo();
     if (logo) {
-      // Keep path prefix if any (e.g., ./img/fambam.png)
       var url = new URL(logo.src, location.href);
-      var base = url.pathname.replace(/[^/]+$/, ''); // path ending with slash
+      var base = url.pathname.replace(/[^/]+$/, ''); // keep path prefix
       logo.src = (mode === 'light') ? (base + LIGHT_SRC) : (base + DARK_SRC);
-      // Always ensure clicking the logo goes home if it's inside an anchor
       var a = logo.closest('a');
       if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
     }
@@ -76,19 +74,77 @@
   });
 })();
 </script>
-/* Panels / cards use variables now */
-.panel{
-  background:var(--panel);
-  border:1px solid var(--panel-border);
-  box-shadow:var(--shadow);
-  border-radius:var(--radius);
-  padding:14px
+
+<style>
+/* --- layout sanity --- */
+*, *::before, *::after { box-sizing: border-box; }
+
+:root{
+  /* core tokens */
+  --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
+  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+
+  /* surfaces (match index naming) */
+  --panelBorder:#0b1224;
+  --chipBg:#0b1224;
+  --chipBorder:#334155;
+  --dropdownBg:#111827;
+  --dropdownBorder:#1f2937;
+
+  /* header glass (kept subtle for this page) */
+  --glassHeader: rgba(17,24,39,.9);
 }
 
-/* Header */
-header{
-  display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap
+/* light theme overrides (soft ivory palette) */
+html[data-theme="light"]{
+  --panel:#f2efe7;
+  --card:#ffffff;
+  --muted:#556070;
+  --text:#0f1623;
+  --bg:#f0ece4;
+  --shadow:0 10px 28px rgba(0,0,0,.08);
+
+  --panelBorder:#e6e2da;
+  --chipBg:#f6f3ec;
+  --chipBorder:#e3ded4;
+  --dropdownBg:#ffffff;
+  --dropdownBorder:#ebe7df;
+
+  --glassHeader: rgba(255,255,255,.72);
 }
+
+html,body{height:100%}
+body{
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  color:var(--text); background:#404c69;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  overflow-x:hidden;
+}
+
+/* Wallpaper (consistent overlay across themes) */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background-image: var(--wallpaper);
+  background-size: cover; background-repeat:no-repeat;
+  background-position: center var(--wallpaper-shift);
+  transform: translateZ(0);
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background: rgba(64,76,105,.9); /* same overlay for light & dark */
+  pointer-events:none;
+}
+
+/* App chrome */
+.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto 1fr auto}
+
+/* Panels / cards */
+.panel{background:var(--glassHeader);border:1px solid var(--panelBorder);box-shadow:var(--shadow);border-radius:var(--radius);padding:14px;backdrop-filter:blur(8px)}
+.card{background:var(--panel);border:1px solid var(--panelBorder);border-radius:16px;padding:16px}
+.hint{opacity:.75}
+
+/* Header */
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .h-left{display:flex;align-items:center;gap:14px;min-width:0}
 .brand{display:flex;align-items:center;gap:10px}
 .brand img{height:38px;display:block;cursor:pointer}
@@ -97,14 +153,10 @@ header{
 
 /* Hamburger dropdown */
 .menu-wrap{position:relative}
-.hamburger{
-  font:inherit;cursor:pointer;color:var(--text);
-  background:var(--btn-bg);border:1px solid var(--btn-border);
-  border-radius:12px;padding:10px 12px
-}
+.hamburger{font:inherit;cursor:pointer;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;color:var(--text);padding:10px 12px}
 .menu-dropdown{
   position:absolute; right:0; top:110%; min-width:220px; z-index:20;
-  background:var(--dropdown-bg); border:1px solid var(--dropdown-border); border-radius:12px;
+  background:var(--dropdownBg); border:1px solid var(--dropdownBorder); border-radius:12px;
   box-shadow:var(--shadow); padding:6px; display:none;
 }
 .menu-dropdown.open{display:block}
@@ -113,16 +165,7 @@ header{
   padding:10px 12px; border:none; background:transparent; color:var(--text);
   border-radius:10px; cursor:pointer
 }
-.menu-item:hover{background:rgba(0,0,0,.08)}
-html[data-theme="light"] .menu-item:hover{background:rgba(0,0,0,.04)}
-
-/* Card */
-.card{
-  background:var(--panel);
-  border:1px solid var(--panel-border);
-  border-radius:16px;padding:16px
-}
-.hint{opacity:.75}
+.menu-item:hover{background:var(--chipBg)}
 
 /* Footer */
 .footer{text-align:center;opacity:.75}
@@ -158,7 +201,7 @@ html[data-theme="light"] .menu-item:hover{background:rgba(0,0,0,.04)}
 
     <div class="footer panel">
       Works offline. Data stays on this device (local only).
-      <div class="version">Calendar (placeholder) v0.3 — theme-ready</div>
+      <div class="version">Calendar (placeholder) v0.4 — theme-ready + wallpaper-consistent</div>
     </div>
   </div>
 
