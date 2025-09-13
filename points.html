@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -15,21 +15,136 @@
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
+<!-- THEME BOOT (Dark/Light + Accent + Auto Logo Swap) -->
+<script>
+/* Reads localStorage `ui:theme` = { mode:"dark"|"light", accent:"#RRGGBB" }.
+   Applies immediately, syncs <meta name="theme-color">, and swaps Fambam logo.
+   Expects `fambam.png` (dark) and `fambam2.png` (light) in the same directory. */
+(function () {
+  var DARK_SRC  = 'fambam.png';
+  var LIGHT_SRC = 'fambam2.png';
+
+  function findLogo() {
+    return (
+      document.getElementById('logoImg') ||
+      document.querySelector('.brand img') ||
+      document.querySelector('header .title img') ||
+      document.querySelector('img[alt="Fambam"]') ||
+      null
+    );
+  }
+
+  function swapLogoForMode(mode) {
+    var logo = findLogo();
+    if (!logo) return;
+
+    var cur = logo.getAttribute('src') || '';
+    var next;
+    if (/fambam2?\.png$/i.test(cur)) {
+      next = cur.replace(/fambam2?\.png$/i, mode === 'light' ? 'fambam2.png' : 'fambam.png');
+    } else {
+      next = (mode === 'light') ? LIGHT_SRC : DARK_SRC;
+    }
+    logo.setAttribute('src', next);
+
+    var a = logo.closest('a');
+    if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
+  }
+
+  function applyTheme(t) {
+    var mode   = (t && t.mode === 'light') ? 'light' : 'dark';
+    var accent = (t && t.accent) || '#22d3ee';
+
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.style.setProperty('--accent', accent);
+
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
+
+    swapLogoForMode(mode);
+    document.addEventListener('DOMContentLoaded', function(){ swapLogoForMode(mode); }, { once:true });
+  }
+
+  try {
+    var raw = localStorage.getItem('ui:theme');
+    var saved = raw ? JSON.parse(raw) : { mode: 'dark', accent: '#22d3ee' };
+    applyTheme(saved);
+  } catch (_) {
+    applyTheme({ mode: 'dark', accent: '#22d3ee' });
+  }
+
+  window.addEventListener('storage', function (e) {
+    if (e.key !== 'ui:theme') return;
+    try { applyTheme(JSON.parse(e.newValue || '{}')); } catch (_) {}
+  });
+})();
+</script>
+
 <style>
+/* --- layout sanity --- */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Tokens */
 :root{
   --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
-  --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+
+  --panelBorder:#0b1224;
+  --chipBg:#0b1224;
+  --chipBorder:#334155;
+
+  --dropdownBg:#111827;
+  --dropdownBorder:#1f2937;
+
+  /* Wallpaper hooks */
+  --wallpaper:url('');
+  --wallpaper-shift:40%;
 }
+
+/* LIGHT THEME OVERRIDES */
+html[data-theme="light"]{
+  --panel:#f2efe7;
+  --card:#ffffff;
+  --muted:#556070;
+  --text:#0f1623;
+  --bg:#f0ece4;
+  --shadow:0 10px 28px rgba(0,0,0,.08);
+
+  --panelBorder:#e6e2da;
+  --chipBg:#f6f3ec;
+  --chipBorder:#e3ded4;
+
+  --dropdownBg:#ffffff;
+  --dropdownBorder:#ebe7df;
+}
+
 html,body{height:100%}
 body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  color:var(--text); background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%);
+  color:var(--text);
+  background:#404c69; /* simple fallback */
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  overflow-x:hidden;
 }
+
+/* Wallpaper layers (match other pages) */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background-image: var(--wallpaper);
+  background-size: cover; background-repeat:no-repeat;
+  background-position: center var(--wallpaper-shift);
+  transform: translateZ(0);
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background: rgba(64,76,105,.9);
+  pointer-events:none;
+}
+
 .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
 
 /* Panels */
-.panel{background:rgba(17,24,39,.9);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
+.panel{background:var(--panel);border:1px solid var(--panelBorder);box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
 
 /* Header (consistent with other pages) */
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -39,15 +154,15 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .title{font-weight:800}
 .title .small{font-weight:600;font-size:.9rem;color:var(--muted)}
 .menu-wrap{position:relative}
-.hamburger{font:inherit;cursor:pointer;background:#0b1224;border:1px solid #334155;border-radius:12px;color:#e5e7eb;padding:10px 12px}
+.hamburger{font:inherit;cursor:pointer;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;color:var(--text);padding:10px 12px}
 .menu-dropdown{
   position:absolute; right:0; top:110%; min-width:240px; z-index:20;
-  background:#111827; border:1px solid #1f2937; border-radius:12px; box-shadow:var(--shadow);
+  background:var(--dropdownBg); border:1px solid var(--dropdownBorder); border-radius:12px; box-shadow:var(--shadow);
   padding:6px; display:none;
 }
 .menu-dropdown.open{display:block}
-.menu-item{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
-.menu-item:hover{background:#0b1224}
+.menu-item{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
+.menu-item:hover{background:var(--chipBg)}
 
 /* Layout */
 .grid{display:grid;gap:14px;grid-template-columns:360px 1fr}
@@ -56,33 +171,33 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 
 /* Leaderboard */
 .lb-list{display:grid;gap:10px}
-.lb-item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px;cursor:pointer}
+.lb-item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px;cursor:pointer}
 .lb-item.active{outline:2px solid var(--accent)}
 .person{display:flex;align-items:center;gap:10px}
-.face{width:42px;height:42px;border-radius:50%;background:#0b1224;border:2px solid #334155;overflow:hidden;display:grid;place-items:center;font-weight:800}
+.face{width:42px;height:42px;border-radius:50%;background:var(--chipBg);border:2px solid var(--chipBorder);overflow:hidden;display:grid;place-items:center;font-weight:800}
 .face img{width:100%;height:100%;object-fit:cover}
 .score{font-weight:800}
 
 /* Detail */
 .detail{display:grid;gap:12px}
-.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1224;border:1px solid #334155;color:#cbd5e1}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chipBg);border:1px solid var(--chipBorder);color:var(--muted)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-input[type="number"],input[type="text"],select,textarea{background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;color:var(--text);font:inherit}
-.btn{background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;color:#e5e7eb;font:inherit;cursor:pointer}
-.btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
+input[type="number"],input[type="text"],select,textarea{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit}
+.btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit;cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,var(--accent),color-mix(in oklab, var(--accent) 70%, #0891b2 30%));color:#001018;border:none;font-weight:800}
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 
 /* Ledger */
 .ledger{display:grid;gap:8px;max-height:320px;overflow:auto;padding-right:4px;-webkit-overflow-scrolling:touch}
-.entry{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:10px;padding:8px}
-.entry .muted{color:#94a3b8;font-size:.9rem}
-.positive{color:#86efac}
-.negative{color:#fca5a5}
+.entry{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--card);border:1px solid var(--panelBorder);border-radius:10px;padding:8px}
+.entry .muted{color:var(--muted);font-size:.9rem}
+.positive{color:#16a34a}
+.negative{color:#dc2626}
 
 /* Pending approvals */
 .pending{display:grid;gap:10px}
-.pending-item{display:grid;gap:8px;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
-.small{font-size:.9rem;color:#cbd5e1}
+.pending-item{display:grid;gap:8px;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px}
+.small{font-size:.9rem;color:var(--muted)}
 .hint{opacity:.8;font-size:.9rem;text-align:center}
 .version{opacity:.6;font-size:.8rem;margin-top:6px}
 </style>
@@ -151,7 +266,7 @@ input[type="number"],input[type="text"],select,textarea{background:#0b1224;borde
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Points v0.1.0 (MVP with Chores import)</div>
+      <div class="version">Points v0.1.1 — theme-ready</div>
     </div>
   </div>
 
