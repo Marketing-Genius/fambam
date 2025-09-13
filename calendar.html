@@ -15,90 +15,67 @@
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
-<!-- THEME BOOT -->
 <script>
-/* THEME BOOT (Dark/Light + Accent) — reads localStorage `ui:theme`
-   { mode: "dark"|"light", accent: "#22d3ee" } and applies immediately. */
+/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap)
+   Reads localStorage `ui:theme` = { mode:"dark"|"light", accent:"#RRGGBB" }.
+   Applies immediately, syncs <meta name="theme-color">, swaps Fambam logo.
+   Expects both `fambam.png` (dark) and `fambam2.png` (light) in the root. */
 (function () {
-  try {
-    const raw   = localStorage.getItem('ui:theme');
-    const saved = raw ? JSON.parse(raw) : { mode: 'dark', accent: '#22d3ee' };
-    const mode  = (saved.mode === 'light') ? 'light' : 'dark';
-    const accent = saved.accent || '#22d3ee';
+  var DARK_SRC = 'fambam.png';
+  var LIGHT_SRC = 'fambam2.png';
+
+  function findLogo() {
+    return (
+      document.getElementById('logoImg') ||
+      document.querySelector('.brand img') ||
+      document.querySelector('header .title img') ||
+      document.querySelector('img[alt="Fambam"]') ||
+      Array.from(document.images).find(img =>
+        (img.src||'').endsWith('/'+DARK_SRC) || (img.src||'').endsWith('/'+LIGHT_SRC)
+      ) || null
+    );
+  }
+
+  function applyTheme(t) {
+    var mode = (t && t.mode === 'light') ? 'light' : 'dark';
+    var accent = (t && t.accent) || '#22d3ee';
 
     document.documentElement.setAttribute('data-theme', mode);
     document.documentElement.style.setProperty('--accent', accent);
 
-    // Keep the browser chrome color in sync
-    const meta = document.querySelector('meta[name="theme-color"]');
+    // Browser UI color
+    var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
-  } catch (_) {}
 
-  // Optional: live-apply if another page changes the theme.
-  window.addEventListener('storage', (e) => {
+    // Logo swap (if found)
+    var logo = findLogo();
+    if (logo) {
+      // Keep path prefix if any (e.g., ./img/fambam.png)
+      var url = new URL(logo.src, location.href);
+      var base = url.pathname.replace(/[^/]+$/, ''); // path ending with slash
+      logo.src = (mode === 'light') ? (base + LIGHT_SRC) : (base + DARK_SRC);
+      // Always ensure clicking the logo goes home if it's inside an anchor
+      var a = logo.closest('a');
+      if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
+    }
+  }
+
+  // Initial apply
+  try {
+    var raw = localStorage.getItem('ui:theme');
+    var saved = raw ? JSON.parse(raw) : { mode: 'dark', accent: '#22d3ee' };
+    applyTheme(saved);
+  } catch (_) {
+    applyTheme({ mode: 'dark', accent: '#22d3ee' });
+  }
+
+  // Live-apply when other tabs/pages update the theme
+  window.addEventListener('storage', function (e) {
     if (e.key !== 'ui:theme') return;
-    try {
-      const t = JSON.parse(e.newValue || '{}');
-      const mode = (t.mode === 'light') ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', mode);
-      document.documentElement.style.setProperty('--accent', t.accent || '#22d3ee');
-      const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
-    } catch (_) {}
+    try { applyTheme(JSON.parse(e.newValue || '{}')); } catch (_) {}
   });
 })();
 </script>
-
-<style>
-/* ---------- Design tokens (dark defaults) ---------- */
-:root{
-  --panel:#111827;              /* surfaces (panels/cards) */
-  --panel-border:#1f2937;
-  --card:#1f2937;
-  --muted:#94a3b8;
-  --text:#e5e7eb;
-  --accent:#22d3ee;
-  --btn-bg:#0b1224;
-  --btn-border:#334155;
-  --dropdown-bg:#111827;
-  --dropdown-border:#1f2937;
-  --shadow:0 10px 30px rgba(0,0,0,.35);
-  --radius:18px;
-  --bg:#0f172a;
-}
-
-/* Light theme overrides */
-html[data-theme="light"]{
-  --panel:#ffffffee;           /* slightly translucent white */
-  --panel-border:#e2e8f0;
-  --card:#ffffff;
-  --muted:#475569;
-  --text:#111827;
-  --btn-bg:#f8fafc;
-  --btn-border:#cbd5e1;
-  --dropdown-bg:#ffffff;
-  --dropdown-border:#e2e8f0;
-  --bg:#f2efe7;                /* soft ivory */
-}
-
-html,body{height:100%}
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  color:var(--text);
-  background:transparent; /* wallpaper handles background */
-  -webkit-tap-highlight-color:transparent;
-  touch-action:manipulation;
-}
-.app{
-  max-width:1100px;
-  margin:0 auto;
-  padding:20px;
-  display:grid;
-  gap:18px;
-  grid-template-rows:auto 1fr auto
-}
-
 /* Panels / cards use variables now */
 .panel{
   background:var(--panel);
