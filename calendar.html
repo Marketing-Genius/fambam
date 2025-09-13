@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -18,10 +18,10 @@
 <!-- THEME BOOT (Dark/Light + Accent + Auto Logo Swap) -->
 <script>
 /* Reads localStorage `ui:theme` = { mode:"dark"|"light", accent:"#RRGGBB" }.
-   Applies immediately, syncs <meta name="theme-color">, swaps Fambam logo.
+   Applies immediately, syncs <meta name="theme-color">, and swaps Fambam logo.
    Expects `fambam.png` (dark) and `fambam2.png` (light) in the same directory. */
 (function () {
-  var DARK_SRC = 'fambam.png';
+  var DARK_SRC  = 'fambam.png';
   var LIGHT_SRC = 'fambam2.png';
 
   function findLogo() {
@@ -30,14 +30,32 @@
       document.querySelector('.brand img') ||
       document.querySelector('header .title img') ||
       document.querySelector('img[alt="Fambam"]') ||
-      Array.from(document.images).find(img =>
-        (img.src||'').endsWith('/'+DARK_SRC) || (img.src||'').endsWith('/'+LIGHT_SRC)
-      ) || null
+      null
     );
   }
 
+  function swapLogoForMode(mode) {
+    var logo = findLogo();
+    if (!logo) return;
+
+    // Prefer to transform the filename in the existing src attribute (not the resolved URL)
+    var cur = logo.getAttribute('src') || '';
+    var next;
+    if (/fambam2?\.png$/i.test(cur)) {
+      next = cur.replace(/fambam2?\.png$/i, mode === 'light' ? 'fambam2.png' : 'fambam.png');
+    } else {
+      // Fallback to simple relative filenames
+      next = (mode === 'light') ? LIGHT_SRC : DARK_SRC;
+    }
+    logo.setAttribute('src', next);
+
+    // Ensure the logo (if wrapped) goes home
+    var a = logo.closest('a');
+    if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
+  }
+
   function applyTheme(t) {
-    var mode = (t && t.mode === 'light') ? 'light' : 'dark';
+    var mode   = (t && t.mode === 'light') ? 'light' : 'dark';
     var accent = (t && t.accent) || '#22d3ee';
 
     document.documentElement.setAttribute('data-theme', mode);
@@ -47,15 +65,11 @@
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
 
-    // Logo swap (if found)
-    var logo = findLogo();
-    if (logo) {
-      var url = new URL(logo.src, location.href);
-      var base = url.pathname.replace(/[^/]+$/, ''); // keep path prefix
-      logo.src = (mode === 'light') ? (base + LIGHT_SRC) : (base + DARK_SRC);
-      var a = logo.closest('a');
-      if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
-    }
+    // Try swap immediately (in case the logo is already parsed)
+    swapLogoForMode(mode);
+
+    // Also swap once DOM is ready (covers the case where this ran before <img> existed)
+    document.addEventListener('DOMContentLoaded', function () { swapLogoForMode(mode); }, { once:true });
   }
 
   // Initial apply
@@ -67,7 +81,7 @@
     applyTheme({ mode: 'dark', accent: '#22d3ee' });
   }
 
-  // Live-apply when other tabs/pages update the theme
+  // Live-apply when other pages update the theme
   window.addEventListener('storage', function (e) {
     if (e.key !== 'ui:theme') return;
     try { applyTheme(JSON.parse(e.newValue || '{}')); } catch (_) {}
@@ -91,7 +105,7 @@
   --dropdownBg:#111827;
   --dropdownBorder:#1f2937;
 
-  /* header glass (kept subtle for this page) */
+  /* header glass */
   --glassHeader: rgba(17,24,39,.9);
 }
 
@@ -160,11 +174,7 @@ header{display:flex;gap:12px;align-items:center;justify-content:space-between;fl
   box-shadow:var(--shadow); padding:6px; display:none;
 }
 .menu-dropdown.open{display:block}
-.menu-item{
-  display:block; width:100%; text-align:left;
-  padding:10px 12px; border:none; background:transparent; color:var(--text);
-  border-radius:10px; cursor:pointer
-}
+.menu-item{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
 .menu-item:hover{background:var(--chipBg)}
 
 /* Footer */
@@ -201,7 +211,7 @@ header{display:flex;gap:12px;align-items:center;justify-content:space-between;fl
 
     <div class="footer panel">
       Works offline. Data stays on this device (local only).
-      <div class="version">Calendar (placeholder) v0.4 — theme-ready + wallpaper-consistent</div>
+      <div class="version">Calendar (placeholder) v0.5 — logo swap fixed</div>
     </div>
   </div>
 
