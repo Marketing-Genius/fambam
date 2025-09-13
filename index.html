@@ -14,8 +14,8 @@
 <script src="wallpaper.js" defer></script>
 
 <script>
-/* --- THEME BOOT (copy this <script> into other pages) -----------------------
-   Reads saved theme and applies it ASAP to prevent flash-of-wrong-theme.   */
+/* THEME BOOT + logo swap (copy this into other pages)
+   Applies saved theme immediately and swaps header logo for light mode. */
 (function themeBoot(){
   try{
     const raw = localStorage.getItem('ui:theme');
@@ -27,6 +27,27 @@
     const meta = document.querySelector('meta[name="theme-color"]');
     const headerColor = (mode==='light') ? '#f2efe7' : '#0f172a';
     if (meta) meta.setAttribute('content', headerColor);
+
+    // swap logo on load (light uses fambam2.png)
+    const swapLogo = ()=>{
+      const logo = document.getElementById('logoImg');
+      if (logo) logo.src = (document.documentElement.getAttribute('data-theme')==='light') ? 'fambam2.png' : 'fambam.png';
+    };
+    // initial swap (after DOM paints logo)
+    requestAnimationFrame(swapLogo);
+    // also swap if another page changes theme
+    window.addEventListener('storage', (e)=>{
+      if (e.key==='ui:theme'){
+        try{
+          const t = JSON.parse(e.newValue||'{}');
+          const m = (t.mode==='light') ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', m);
+          document.documentElement.style.setProperty('--accent', t.accent || '#22d3ee');
+          if (meta) meta.setAttribute('content', m==='light' ? '#f2efe7' : '#0f172a');
+          swapLogo();
+        }catch(_){}
+      }
+    });
   }catch(_){}
 })();
 </script>
@@ -82,10 +103,10 @@ body::before{
 }
 body::after{
   content:""; position:fixed; inset:0; z-index:-1;
+  /* Consistent overlay for both themes */
   background: rgba(64,76,105,.9);
   pointer-events:none;
 }
-html[data-theme="light"] body::after{ background: rgba(240,236,228,.85); }
 
 /* App */
 .app{
@@ -231,6 +252,19 @@ html[data-theme="light"] .bf-face{ background:#e3e0d8; color:#1b2432; }
 .editing .tile.photos-card .minus{ display:grid; background: rgba(0,0,0,.4); border-color:#000; }
 .tile.photos-card::before{ content:""; position:absolute; inset:0; border-radius:16px; box-shadow: var(--shadow); pointer-events:none; }
 
+/* Subtle "open" arrow on Photos card */
+.photos-arrow{
+  position:absolute; right:10px; bottom:10px;
+  width:38px; height:38px;
+  border-radius:50%; border:2px solid #fff;
+  background:rgba(0,0,0,.2); color:#fff;
+  display:grid; place-items:center;
+  font-size:18px; line-height:1;
+  opacity:.2; transition:opacity .2s, transform .2s;
+  pointer-events:none;
+}
+.tile.photos-card:hover .photos-arrow{ opacity:.6; transform:translateY(-1px); }
+
 /* Modal + form + edit bar */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
@@ -262,7 +296,7 @@ html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
   <div class="app">
     <header>
       <div class="title">
-        <img src="fambam.png" alt="Fambam">
+        <img id="logoImg" src="fambam.png" alt="Fambam">
       </div>
       <div class="menu-wrap">
         <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
@@ -569,7 +603,12 @@ function requestPinUI(onSuccess){
   function close(){ m.style.display='none'; m.setAttribute('aria-hidden','true'); input.value=''; ok.onclick = x.onclick = null; input.onkeydown=null; }
   function open(){
     m.style.display='flex'; m.setAttribute('aria-hidden','false');
-    setTimeout(()=>{ input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 50);
+    setTimeout(()=>{
+      input.focus();
+      if (input.setSelectionRange) {
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    }, 50);
   }
 
   function trySubmit(){
@@ -730,6 +769,10 @@ function setTheme(patch){
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', next.mode==='light' ? '#f2efe7' : '#0f172a');
 
+    // swap logo when theme changes
+    const logo = document.getElementById('logoImg');
+    if (logo) logo.src = (next.mode==='light') ? 'fambam2.png' : 'fambam.png';
+
     localStorage.setItem('ui:theme', JSON.stringify(next));
   }catch(e){ console.warn('setTheme failed', e); }
 }
@@ -816,6 +859,7 @@ function choreIconFromName(label){
 
 function renderGrid(){
   const wrap = $('#slots'); wrap.innerHTML='';
+  for(let i=0;i>SLOTS_TOTAL;i++); // no-op guard
   for(let i=0;i<SLOTS_TOTAL;i++){
     const div = document.createElement('div');
     div.className = 'slot' + (isEditing?' editing':'');
@@ -864,7 +908,10 @@ function renderTile(c, slotIndex){
     if(list.length) a.classList.add('photos-card');
     if(list.length){
       a.classList.add('photo-only');
-      a.innerHTML = `<div class="photo-prev"><img alt=""></div><button class="minus" type="button">−</button>`;
+      a.innerHTML = `
+        <div class="photo-prev"><img alt=""></div>
+        <div class="photos-arrow">➔</div>
+        <button class="minus" type="button">−</button>`;
       const img = a.querySelector('img');
       let idx = 0;
       img.src = list[0];
@@ -1012,8 +1059,6 @@ function renderTile(c, slotIndex){
       <button class="minus" type="button">−</button>
     `;
     try{
-      // balances are totals (all-time) in your current implementation,
-      // but this gives a nice preview regardless.
       const balances = JSON.parse(localStorage.getItem('pts:balances') || 'null') || {};
       const kids = (Family.getKids?.() || []);
       const grid = a.querySelector('.pt-grid');
