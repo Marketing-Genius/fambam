@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -11,42 +11,183 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
+<!-- Universal wallpaper -->
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
+<!-- THEME BOOT (Dark/Light + Accent + Auto Logo Swap) -->
+<script>
+/* Reads localStorage `ui:theme` = { mode:"dark"|"light", accent:"#RRGGBB" }.
+   Applies immediately, syncs <meta name="theme-color">, and swaps Fambam logo.
+   Expects `fambam.png` (dark) and `fambam2.png` (light) in the same directory. */
+(function () {
+  var DARK_SRC  = 'fambam.png';
+  var LIGHT_SRC = 'fambam2.png';
+
+  function findLogo() {
+    return (
+      document.getElementById('logoImg') ||
+      document.querySelector('.brand img') ||
+      document.querySelector('header .title img') ||
+      document.querySelector('img[alt="Fambam"]') ||
+      null
+    );
+  }
+
+  function swapLogoForMode(mode) {
+    var logo = findLogo();
+    if (!logo) return;
+
+    var cur = logo.getAttribute('src') || '';
+    var next;
+    if (/fambam2?\.png$/i.test(cur)) {
+      next = cur.replace(/fambam2?\.png$/i, mode === 'light' ? 'fambam2.png' : 'fambam.png');
+    } else {
+      next = (mode === 'light') ? LIGHT_SRC : DARK_SRC;
+    }
+    logo.setAttribute('src', next);
+
+    var a = logo.closest('a');
+    if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
+  }
+
+  function applyTheme(t) {
+    var mode   = (t && t.mode === 'light') ? 'light' : 'dark';
+    var accent = (t && t.accent) || '#22d3ee';
+
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.style.setProperty('--accent', accent);
+
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
+
+    swapLogoForMode(mode);
+    document.addEventListener('DOMContentLoaded', function(){ swapLogoForMode(mode); }, { once:true });
+  }
+
+  try {
+    var raw = localStorage.getItem('ui:theme');
+    var saved = raw ? JSON.parse(raw) : { mode: 'dark', accent: '#22d3ee' };
+    applyTheme(saved);
+  } catch (_) {
+    applyTheme({ mode: 'dark', accent: '#22d3ee' });
+  }
+
+  window.addEventListener('storage', function (e) {
+    if (e.key !== 'ui:theme') return;
+    try { applyTheme(JSON.parse(e.newValue || '{}')); } catch (_) {}
+  });
+})();
+</script>
+
 <style>
-:root{ --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px }
+/* --- layout sanity --- */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Tokens (match app) */
+:root{
+  --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
+  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+
+  --panelBorder:#0b1224;
+  --chipBg:#0b1224;
+  --chipBorder:#334155;
+
+  --previewBg:#081228;
+  --previewBorder:#27324a;
+
+  /* Wallpaper hooks */
+  --wallpaper:url('');
+  --wallpaper-shift:40%;
+}
+
+/* LIGHT THEME OVERRIDES (soft ivory palette) */
+html[data-theme="light"]{
+  --panel:#f2efe7;
+  --card:#ffffff;
+  --muted:#556070;
+  --text:#0f1623;
+  --bg:#f0ece4;
+  --shadow:0 10px 28px rgba(0,0,0,.08);
+
+  --panelBorder:#e6e2da;
+  --chipBg:#f6f3ec;
+  --chipBorder:#e3ded4;
+
+  --previewBg:#fffdf7;
+  --previewBorder:#ebe6db;
+}
+
 html,body{height:100%}
 body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%); color:var(--text);
+  color:var(--text);
+  background:#404c69; /* simple fallback */
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  overflow-x:hidden;
 }
+
+/* Wallpaper layers (consistent across pages) */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background-image: var(--wallpaper);
+  background-size: cover; background-repeat:no-repeat;
+  background-position: center var(--wallpaper-shift);
+  transform: translateZ(0);
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background: rgba(64,76,105,.9);
+  pointer-events:none;
+}
+html[data-theme="light"] body::after{ background: rgba(240,236,228,.85); }
+
+/* Layout */
 .app{max-width:980px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
-.panel{background:rgba(17,24,39,.6);border:1px solid #0b1224;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px;backdrop-filter: blur(8px)}
+
+/* Panels */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--panelBorder);
+  box-shadow:var(--shadow);
+  border-radius:var(--radius);
+  padding:14px;
+  backdrop-filter: blur(8px);
+}
+
+/* Header */
 header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px}
-.brand img{height:38px;display:block}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.brand img{height:38px;display:block;cursor:pointer}
 .title{font-weight:800}
 
+/* Hero */
 .hero{display:flex;gap:14px;align-items:center}
 .face{
   width:96px;height:96px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
-  background:#0b1224;border:3px solid #334155;font-size:40px;font-weight:800;flex:0 0 auto
+  background:var(--chipBg);border:3px solid var(--chipBorder);font-size:40px;font-weight:800;flex:0 0 auto
 }
 .face img{width:100%;height:100%;object-fit:cover}
 .name{font-weight:800;font-size:1.4rem}
 .sub{color:var(--muted)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.input{background:#0b1224;border:1px solid #334155;border-radius:12px;color:#e5e7eb;padding:8px 10px;font:inherit}
-.btn{background:#0b1224;border:1px solid #334155;border-radius:12px;color:#e5e7eb;padding:8px 10px;font:inherit;cursor:pointer}
+
+/* Inputs & buttons */
+.input{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;color:var(--text);padding:8px 10px;font:inherit}
+.btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;color:var(--text);padding:8px 10px;font:inherit;cursor:pointer}
+
+/* Stats / badges / notes */
 .badges{display:flex;gap:8px;flex-wrap:wrap}
-.badge{display:inline-flex;gap:6px;align-items:center;background:#0b1224;border:1px solid #334155;border-radius:999px;padding:6px 10px}
+.badge{display:inline-flex;gap:6px;align-items:center;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;padding:6px 10px}
 .section{display:grid;gap:10px}
 .grid{display:grid;gap:12px}
 @media(min-width:860px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.stat{background:#0b1224;border:1px solid #27324a;border-radius:16px;padding:12px}
+.stat{background:var(--chipBg);border:1px solid var(--previewBorder);border-radius:16px;padding:12px}
 .stat .hd{font-weight:800;margin-bottom:6px}
-.note{background:#0b1224;border:1px solid #27324a;border-radius:12px;padding:10px}
+.note{background:var(--chipBg);border:1px solid var(--previewBorder);border-radius:12px;padding:10px}
+
+/* Footer */
+footer{opacity:.75;font-size:.85rem;text-align:center}
 </style>
 </head>
 <body>
@@ -113,7 +254,7 @@ header{display:flex;gap:12px;align-items:center;justify-content:space-between;fl
     </div>
   </section>
 
-  <footer style="text-align:center;opacity:.7">Works offline. Data stays on this device (local only).</footer>
+  <footer>Works offline. Data stays on this device (local only).</footer>
 </div>
 
 <script src="family.js?v=3.3.6"></script>
@@ -159,7 +300,7 @@ const accent = prof.accent || '#22d3ee';
 $('#accent').value = accent;
 
 const av = $('#avatar');
-av.style.borderColor = accent || '#334155';
+av.style.borderColor = accent || 'var(--chipBorder)';
 av.innerHTML = person.photo ? `<img src="${person.photo}" alt="">` : `<span>${initials(person.name)}</span>`;
 
 /* favorites */
@@ -265,7 +406,10 @@ $('#addNote').onclick=()=>{
   renderNotes();
 };
 
-if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+/* SW */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
 </script>
 </body>
 </html>
