@@ -15,6 +15,39 @@
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
+<script>
+/* THEME BOOT (Dark/Light + Accent) — reads localStorage `ui:theme`
+   { mode: "dark"|"light", accent: "#22d3ee" } and applies immediately. */
+(function () {
+  try {
+    const raw   = localStorage.getItem('ui:theme');
+    const saved = raw ? JSON.parse(raw) : { mode: 'dark', accent: '#22d3ee' };
+    const mode  = (saved.mode === 'light') ? 'light' : 'dark';
+    const accent = saved.accent || '#22d3ee';
+
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.style.setProperty('--accent', accent);
+
+    // Keep the browser chrome color in sync
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
+  } catch (_) {}
+
+  // Optional: live-apply if another page changes the theme.
+  window.addEventListener('storage', (e) => {
+    if (e.key !== 'ui:theme') return;
+    try {
+      const t = JSON.parse(e.newValue || '{}');
+      const mode = (t.mode === 'light') ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', mode);
+      document.documentElement.style.setProperty('--accent', t.accent || '#22d3ee');
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
+    } catch (_) {}
+  });
+})();
+</script>
+
 <style>
 :root{
   --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
