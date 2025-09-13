@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
+<!-- THEME BOOT -->
 <script>
 /* THEME BOOT (Dark/Light + Accent) — reads localStorage `ui:theme`
    { mode: "dark"|"light", accent: "#22d3ee" } and applies immediately. */
@@ -49,21 +50,68 @@
 </script>
 
 <style>
+/* ---------- Design tokens (dark defaults) ---------- */
 :root{
-  --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
-  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px
+  --panel:#111827;              /* surfaces (panels/cards) */
+  --panel-border:#1f2937;
+  --card:#1f2937;
+  --muted:#94a3b8;
+  --text:#e5e7eb;
+  --accent:#22d3ee;
+  --btn-bg:#0b1224;
+  --btn-border:#334155;
+  --dropdown-bg:#111827;
+  --dropdown-border:#1f2937;
+  --shadow:0 10px 30px rgba(0,0,0,.35);
+  --radius:18px;
+  --bg:#0f172a;
 }
+
+/* Light theme overrides */
+html[data-theme="light"]{
+  --panel:#ffffffee;           /* slightly translucent white */
+  --panel-border:#e2e8f0;
+  --card:#ffffff;
+  --muted:#475569;
+  --text:#111827;
+  --btn-bg:#f8fafc;
+  --btn-border:#cbd5e1;
+  --dropdown-bg:#ffffff;
+  --dropdown-border:#e2e8f0;
+  --bg:#f2efe7;                /* soft ivory */
+}
+
 html,body{height:100%}
 body{
-  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
   color:var(--text);
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  background:transparent; /* wallpaper handles background */
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
 }
-.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto 1fr auto}
-.panel{background:rgba(17,24,39,.9);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
+.app{
+  max-width:1100px;
+  margin:0 auto;
+  padding:20px;
+  display:grid;
+  gap:18px;
+  grid-template-rows:auto 1fr auto
+}
 
-/* Header (match Chores) */
-header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+/* Panels / cards use variables now */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--panel-border);
+  box-shadow:var(--shadow);
+  border-radius:var(--radius);
+  padding:14px
+}
+
+/* Header */
+header{
+  display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap
+}
 .h-left{display:flex;align-items:center;gap:14px;min-width:0}
 .brand{display:flex;align-items:center;gap:10px}
 .brand img{height:38px;display:block;cursor:pointer}
@@ -72,18 +120,31 @@ header{display:flex;gap:12px;align-items:center;justify-content:space-between;fl
 
 /* Hamburger dropdown */
 .menu-wrap{position:relative}
-.hamburger{font:inherit;cursor:pointer;background:#0b1224;border:1px solid #334155;border-radius:12px;color:#e5e7eb;padding:10px 12px}
+.hamburger{
+  font:inherit;cursor:pointer;color:var(--text);
+  background:var(--btn-bg);border:1px solid var(--btn-border);
+  border-radius:12px;padding:10px 12px
+}
 .menu-dropdown{
   position:absolute; right:0; top:110%; min-width:220px; z-index:20;
-  background:#111827; border:1px solid #1f2937; border-radius:12px;
+  background:var(--dropdown-bg); border:1px solid var(--dropdown-border); border-radius:12px;
   box-shadow:var(--shadow); padding:6px; display:none;
 }
 .menu-dropdown.open{display:block}
-.menu-item{display:block; width:100%; text-align:left; padding:10px 12px; border:none; background:transparent; color:#e5e7eb; border-radius:10px; cursor:pointer}
-.menu-item:hover{background:#0b1224}
+.menu-item{
+  display:block; width:100%; text-align:left;
+  padding:10px 12px; border:none; background:transparent; color:var(--text);
+  border-radius:10px; cursor:pointer
+}
+.menu-item:hover{background:rgba(0,0,0,.08)}
+html[data-theme="light"] .menu-item:hover{background:rgba(0,0,0,.04)}
 
-/* Placeholder card */
-.card{background:var(--panel);border:1px solid #0b1224;border-radius:16px;padding:16px}
+/* Card */
+.card{
+  background:var(--panel);
+  border:1px solid var(--panel-border);
+  border-radius:16px;padding:16px
+}
 .hint{opacity:.75}
 
 /* Footer */
@@ -120,7 +181,7 @@ header{display:flex;gap:12px;align-items:center;justify-content:space-between;fl
 
     <div class="footer panel">
       Works offline. Data stays on this device (local only).
-      <div class="version">Calendar (placeholder) v0.2 — unified header + wallpaper</div>
+      <div class="version">Calendar (placeholder) v0.3 — theme-ready</div>
     </div>
   </div>
 
