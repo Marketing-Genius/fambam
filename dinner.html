@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
+<!-- Universal wallpaper -->
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
@@ -63,7 +64,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .h-left{display:flex;align-items:center;gap:14px;min-width:0}
 .brand{display:flex;align-items:center;gap:10px}
 .brand img{height:38px;display:block;cursor:pointer}
-.title{font-weight:800;letter-spacing:.2px}
+.title{font-weight:800}
 .title .small{font-weight:600;font-size:.85rem;color:var(--muted)}
 .h-right{display:flex;align-items:center;gap:10px}
 
@@ -73,8 +74,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 html[data-theme="light"] .hamburger{ background:#fffdf7; border-color:#dcd6c8; color:#0f1623; }
 .menu-dropdown{
   position:absolute; right:0; top:110%; min-width:220px; z-index:20;
-  background:#111827; border:1px solid #1f2937; border-radius:12px;
-  box-shadow:var(--shadow); padding:6px; display:none;
+  background:#111827; border:1px solid #1f2937; border-radius:12px; box-shadow:var(--shadow); padding:6px; display:none;
 }
 html[data-theme="light"] .menu-dropdown{ background:#fffef9; border-color:#e6e2da; }
 .menu-dropdown.open{display:block}
@@ -98,12 +98,10 @@ html[data-theme="light"] .card{ border-color:#e1ddd2; }
 .card .head .right{display:flex;gap:8px;align-items:center}
 
 /* Header image */
-.hero{position:relative; border-radius:14px; overflow:hidden; background:#0b1224; border:1px solid #334155; transition:height .2s}
+.hero{display:none; position:relative; border-radius:14px; overflow:hidden; background:#0b1224; border:1px solid #334155}
 .hero img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
+.hero.hasimg{display:block; height:200px}
 .hero .overlay{position:absolute; right:8px; bottom:8px; display:flex; gap:8px}
-.hero.empty{height:56px; background:transparent; border:1px dashed #334155}
-.hero:not(.empty){height:200px}
-html[data-theme="light"] .hero.empty{ border-color:#dcd6c8; }
 
 /* Inputs */
 select, input[type="text"], textarea{background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 12px;min-width:140px;color:var(--text);font:inherit}
@@ -116,7 +114,6 @@ html[data-theme="light"] .btn{ background:#fffdf7; border-color:#dcd6c8; color:#
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 .smallmuted{color:#94a3b8;font-size:.9rem}
 
-/* Modals etc (unchanged) */
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal{width:min(900px,100%);max-height:90vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
 .modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f2937;position:sticky;top:0;background:inherit;z-index:1}
@@ -167,16 +164,16 @@ input[type="file"].sr-only{ display:none !important; }
         <button id="prevDay" class="daybtn" title="Previous day">◀︎</button>
         <div class="dayname"><span id="dayLabel">Mon</span> · <span id="dateLabel">Sep 9</span></div>
         <button id="nextDay" class="daybtn" title="Next day">▶︎</button>
+        <button id="todayBtn" class="daybtn" title="Back to today">Today</button>
       </div>
       <div class="badge">Week of <b id="weekLabel"></b></div>
     </section>
 
     <!-- Single-day view -->
     <section id="dayCard" class="card">
-      <div id="hero" class="hero empty">
+      <div id="hero" class="hero">
         <img id="heroImg" alt="">
         <div class="overlay">
-          <button id="btnAddHero" class="btn">Header photo</button>
           <button id="btnRemoveHero" class="btn-warn">Remove</button>
         </div>
       </div>
@@ -184,6 +181,7 @@ input[type="file"].sr-only{ display:none !important; }
       <div class="head">
         <div style="font-weight:800">Selections</div>
         <div class="right">
+          <button id="btnAddHero" class="btn">Add photo</button>
           <select id="rateSel" title="How did dinner go?">
             <option value="">— rating —</option>
             <option value="1">👍</option>
@@ -216,30 +214,134 @@ input[type="file"].sr-only{ display:none !important; }
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Dinner Planner v2.0.1 (day view + header image + recipe search)</div>
+      <div class="version">Dinner Planner v2.1.0 (day view + header image + recipe search + fixes)</div>
     </div>
   </div>
 
+  <!-- Hidden header picker -->
   <input id="heroPicker" type="file" accept="image/*,.heic,.heif" class="sr-only"/>
 
-  <!-- Manage / Templates / Groceries / Notes modals (unchanged from your file) -->
-  <!-- … to keep this reply concise, those modal sections are identical to your last version … -->
+  <!-- Manage Modal -->
+  <div class="modal-backdrop" id="manageModal" aria-hidden="true" role="dialog" aria-labelledby="manageTitle">
+    <div class="modal">
+      <header>
+        <div id="manageTitle" style="font-weight:800">Manage Menus</div>
+        <button id="manageClose" class="btn">✖</button>
+      </header>
+      <div class="body">
+        <div class="badge">Food Options (for Main & Side)</div>
+        <div id="foodList" class="list"></div>
+        <div class="add-line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input id="newFood" type="text" placeholder="Add food (e.g., 🍕 Pizza)"/>
+          <button id="addFood" class="btn-primary">Add</button>
+        </div>
 
-  <script>
-  /* Share helper unchanged */
-  async function shareText(content){
-    try{ if(navigator.share){ await navigator.share({text:content}); return; } }catch{}
-    const encoded=encodeURIComponent(content);
-    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-    const href=isIOS?`sms:&body=${encoded}`:`sms:?body=${encoded}`;
-    try{ location.href=href; return; }catch{}
-    try{ await navigator.clipboard.writeText(content); alert('Copied to clipboard.'); }
-    catch{ alert('Share unavailable. Copy/paste this:\n\n'+content); }
-  }
-  </script>
+        <div class="badge">Dessert Options</div>
+        <div id="dessertList" class="list"></div>
+        <div class="add-line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input id="newDessert" type="text" placeholder="Add dessert (e.g., 🍨 Ice Cream)"/>
+          <button id="addDessert" class="btn-primary">Add</button>
+        </div>
 
-  <script>
-/* ---------- Storage / helpers (same keys) ---------- */
+        <div class="badge">Pantry / Staples (excluded from grocery list)</div>
+        <textarea id="pantryBox" placeholder="e.g., salt, pepper, ketchup, olive oil"></textarea>
+      </div>
+      <div class="footer">
+        <button id="manageSave" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Templates Modal -->
+  <div class="modal-backdrop" id="tplModal" aria-hidden="true" role="dialog" aria-labelledby="tplTitle">
+    <div class="modal">
+      <header>
+        <div id="tplTitle" style="font-weight:800">Templates</div>
+        <button id="tplClose" class="btn">✖</button>
+      </header>
+      <div class="body">
+        <div class="badge">Built-ins</div>
+        <div class="list" id="tplBuiltins"></div>
+        <div class="badge">Your Templates</div>
+        <div class="list" id="tplUser"></div>
+        <div class="add-line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input id="tplName" type="text" placeholder="Template name (e.g., Week: Pizza Friday)"/>
+          <button id="tplSave" class="btn-primary">Save Current as Template</button>
+        </div>
+      </div>
+      <div class="footer">
+        <button id="tplApplyDone" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Groceries Modal -->
+  <div class="modal-backdrop" id="groModal" aria-hidden="true" role="dialog" aria-labelledby="groTitle">
+    <div class="modal">
+      <header>
+        <div id="groTitle" style="font-weight:800">Grocery List</div>
+        <button id="groClose" class="btn">✖</button>
+      </header>
+      <div class="body" id="groBody"></div>
+      <div class="footer">
+        <button id="groCopy" class="btn">Copy</button>
+        <button id="groDownload" class="btn-primary">Download .txt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day Notes Modal -->
+  <div class="modal-backdrop" id="dayNotesModal" aria-hidden="true" role="dialog" aria-labelledby="dayNotesTitle">
+    <div class="modal">
+      <header>
+        <div id="dayNotesTitle" style="font-weight:800">Food Notes</div>
+        <button id="dayNotesClose" class="btn">✖</button>
+      </header>
+      <div class="body" id="dayNotesBody"></div>
+      <div class="footer">
+        <button id="dayNotesDone" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Food Notes Editor Modal -->
+  <div class="modal-backdrop" id="notesEditModal" aria-hidden="true" role="dialog" aria-labelledby="notesEditTitle">
+    <div class="modal">
+      <header>
+        <div id="notesEditTitle" style="font-weight:800">Edit Notes</div>
+        <button id="notesEditClose" class="btn">✖</button>
+      </header>
+      <div class="body">
+        <div class="badge">Item</div>
+        <div id="fnLabel" class="smallmuted"></div>
+
+        <div class="badge">Global notes</div>
+        <textarea id="fnGlobal"></textarea>
+      </div>
+      <div class="footer" style="justify-content:space-between">
+        <button id="fnClear" class="btn-warn">Clear Notes</button>
+        <div>
+          <button id="fnSave" class="btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* Share helper */
+async function shareText(content){
+  try{ if(navigator.share){ await navigator.share({text:content}); return; } }catch{}
+  const encoded=encodeURIComponent(content);
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+  const href=isIOS?`sms:&body=${encoded}`:`sms:?body=${encoded}`;
+  try{ location.href=href; return; }catch{}
+  try{ await navigator.clipboard.writeText(content); alert('Copied to clipboard.'); }
+  catch{ alert('Share unavailable. Copy/paste this:\n\n'+content); }
+}
+</script>
+
+<script>
+/* ---------- Storage / helpers ---------- */
 const LS={foods:'dp:foods:list',desserts:'dp:desserts:list',week:(m)=>`dp:plan:${m}`,templates:'dp:tpls',pantry:'dp:pantry', notes:'dp:food:notes'};
 const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
 const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
@@ -264,15 +366,21 @@ function seedFoodsIfNeeded(){ let foods=load(LS.foods,null); if(!Array.isArray(f
 /* Day state */
 const mISO=thisMondayISO(); let curIdx=todayIdxInWeek(mISO);
 function curDayKey(){ return DAYS[curIdx]; }
-function stripEmoji(txt){ return (txt||'').replace(/^[^\p{L}\p{N}]+/u,'').trim(); }
 
 /* UI helpers */
-function fillSelect(el,list,selected){ const ph='— Choose item —'; const arr=[ph,...list];
-  el.innerHTML=arr.map(v=>{const isPH=v===ph; const val=isPH?'':v; const sel=(val===selected)||(isPH&&!selected)?' selected':''; return `<option value="${val.replace(/&/g,'&amp;').replace(/</g,'&lt;')}">${v}</option>`;}).join('');
+function fillSelect(el,list,selected){
+  const ph='— Choose item —';
+  const arr=[ph,...list];
+  el.innerHTML = arr.map(v=>{
+    const isPH = v===ph;
+    const val  = isPH ? '' : v;
+    const sel  = (val===selected) || (isPH && !selected) ? ' selected' : '';
+    return `<option value="${val.replace(/&/g,'&amp;').replace(/</g,'&lt;')}"${sel}>${v}</option>`;
+  }).join('');
 }
 function dayLabelAndDate(){
   const start=new Date(mISO+'T00:00:00'); const d=new Date(start); d.setDate(d.getDate()+curIdx);
-  const nice=d.toLocaleDateString(undefined,{month:'short',day:'numeric'}); // <- no weekday
+  const nice=d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
   document.getElementById('dayLabel').textContent=curDayKey();
   document.getElementById('dateLabel').textContent=nice;
 }
@@ -307,8 +415,8 @@ function renderDay(){
 
   // hero
   const heroBox=document.getElementById('hero'); const hero=document.getElementById('heroImg');
-  if(x.hero){ hero.src=x.hero; heroBox.classList.remove('empty'); }
-  else { hero.removeAttribute('src'); heroBox.classList.add('empty'); }
+  if(x.hero){ hero.src=x.hero; heroBox.classList.add('hasimg'); }
+  else { hero.removeAttribute('src'); heroBox.classList.remove('hasimg'); }
 
   const foods=load(LS.foods,[]), desserts=load(LS.desserts,[]);
   fillSelect(document.getElementById('kidsMain'), foods, x.kids.main);
@@ -326,14 +434,24 @@ function renderDay(){
   document.getElementById('btnDayNotes').setAttribute('data-hasnotes',String(has));
 }
 
-/* Wire inputs */
+/* Mutate helpers */
 function mutateDay(fn){ const p=loadWeekPlan(mISO); fn(p.days[curDayKey()]); save(LS.week(mISO),p); renderDay(); }
+
+/* Select wires */
 document.getElementById('kidsMain').onchange=()=>mutateDay(d=>d.kids.main=document.getElementById('kidsMain').value);
 document.getElementById('kidsSide').onchange=()=>mutateDay(d=>d.kids.side=document.getElementById('kidsSide').value);
 document.getElementById('parentsMain').onchange=()=>mutateDay(d=>d.parents.main=document.getElementById('parentsMain').value);
 document.getElementById('parentsSide').onchange=()=>mutateDay(d=>d.parents.side=document.getElementById('parentsSide').value);
-document.getElementById('btnDessert').onclick=()=>mutateDay(d=>{ d.dessert = d.dessert ? "" : ""; /* reveal select; choice happens on change */ document.getElementById('dessertSel').style.display=''; });
+
+/* Dessert toggle */
+document.getElementById('btnDessert').onclick=()=>{
+  const p=loadWeekPlan(mISO); const d=p.days[curDayKey()];
+  if(d.dessert){ d.dessert=""; save(LS.week(mISO),p); renderDay(); }
+  else{ document.getElementById('dessertSel').style.display=''; document.getElementById('dessertSel').focus(); }
+};
 document.getElementById('dessertSel').onchange=()=>mutateDay(d=>d.dessert=document.getElementById('dessertSel').value);
+
+/* Rating */
 document.getElementById('rateSel').onchange=()=>mutateDay(d=>d.rating=(document.getElementById('rateSel').value===''?null:parseInt(document.getElementById('rateSel').value,10)));
 
 /* Header photo buttons */
@@ -348,11 +466,171 @@ document.getElementById('heroPicker').onchange=async e=>{
   e.target.value='';
 };
 
-/* Notes modal & editor — unchanged from your last file (hooked to #btnDayNotes) */
+/* Day Notes modal */
 const dayNotesModal = document.getElementById('dayNotesModal');
-if(dayNotesModal){ /* keep existing implementation in your file */ }
+const dayNotesBody  = document.getElementById('dayNotesBody');
+document.getElementById('dayNotesClose').onclick=()=>hide(dayNotesModal);
+document.getElementById('dayNotesDone').onclick =()=>hide(dayNotesModal);
+document.getElementById('btnDayNotes').onclick=()=>openDayNotes(curDayKey());
+
+function openDayNotes(day){
+  const plan=loadWeekPlan(mISO); const x=plan.days[day];
+  const items = [
+    {label:x.kids.main, role:'Kids main'},
+    {label:x.kids.side, role:'Kids side'},
+    {label:x.parents.main, role:'Parents main'},
+    {label:x.parents.side, role:'Parents side'},
+    ...(x.dessert?[{label:x.dessert, role:'Dessert'}]:[])
+  ].filter(it=>it.label);
+  dayNotesBody.innerHTML = items.length ? '' : '<div class="smallmuted">No items selected yet for this day.</div>';
+  const notes = getNotes();
+  items.forEach(it=>{
+    const has = !!(notes[it.label] && (notes[it.label].global||'').trim());
+    const row = document.createElement('div');
+    row.className='noteRow';
+    row.innerHTML = `
+      <div><div style="font-weight:700">${escapeHtml(it.label)}</div><div class="smallmuted">${it.role}</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${has?'<span class="badge">has notes</span>':''}
+        <button class="btn" data-edit>Edit</button>
+      </div>`;
+    row.querySelector('[data-edit]').onclick = ()=> openNotesEditor(it.label, ()=>{ openDayNotes(day); renderDay(); });
+    dayNotesBody.appendChild(row);
+  });
+  document.getElementById('dayNotesTitle').textContent = `Food Notes · ${day}`;
+  show(dayNotesModal);
+}
+
+/* Notes editor */
+const notesEditModal = document.getElementById('notesEditModal');
+document.getElementById('notesEditClose').onclick = ()=> hide(notesEditModal);
+document.getElementById('fnSave').onclick = saveNotesFromEditor;
+document.getElementById('fnClear').onclick = ()=>{
+  if (!confirm('Clear notes for this item?')) return;
+  const map=getNotes(); delete map[_editingLabel]; setNotes(map); hide(notesEditModal);
+  if (notesEditModal._onSavedCb) notesEditModal._onSavedCb();
+};
+let _editingLabel = '';
+function openNotesEditor(label, onSaved){
+  _editingLabel = label;
+  document.getElementById('fnLabel').textContent = label;
+  const map = getNotes(); const entry = map[label] || { global:'' };
+  document.getElementById('fnGlobal').value = entry.global || '';
+  notesEditModal._onSavedCb = onSaved || null;
+  show(notesEditModal);
+}
+function saveNotesFromEditor(){
+  const label = _editingLabel;
+  const g = (document.getElementById('fnGlobal').value||'').trim();
+  const map = getNotes();
+  if (!g) { delete map[label]; } else { map[label] = { global:g }; }
+  setNotes(map);
+  hide(notesEditModal);
+  if (notesEditModal._onSavedCb) notesEditModal._onSavedCb();
+}
+
+/* Templates / Groceries / Manage (restored) */
+const tplModal=$('#tplModal');$('#tplClose').onclick=()=>hide(tplModal);$('#tplApplyDone').onclick=()=>hide(tplModal);
+$('#tplSave').onclick=()=>{const name=($('#tplName').value||'').trim();if(!name)return alert('Name your template');const plan=loadWeekPlan(mISO);const t=load(LS.templates,[]);t.push({id:uid(),name,plan});save(LS.templates,t);$('#tplName').value='';buildTplLists();}
+function openTemplates(){buildTplLists();show(tplModal)}
+function buildTplLists(){
+  const built=$('#tplBuiltins');built.innerHTML='';
+  const pizza=document.createElement('div');pizza.className='item';
+  pizza.innerHTML=`<div>🍕 Pizza Friday</div><button class="btn" data-apply>Apply</button>`;
+  pizza.querySelector('[data-apply]').onclick=()=>{const plan=loadWeekPlan(mISO);plan.days["Fri"].kids.main="🍕 Pizza";plan.days["Fri"].parents.main="🍕 Pizza";saveWeekPlan(mISO,plan);renderDay();};
+  built.appendChild(pizza);
+
+  const wrap=$('#tplUser');wrap.innerHTML='';
+  const tpls=load(LS.templates,[]);
+  if(!tpls.length){
+    const empty=document.createElement('div');empty.className='item';empty.innerHTML='<div>No saved templates yet.</div>';
+    wrap.appendChild(empty);
+  }else{
+    tpls.forEach(t=>{
+      const row=document.createElement('div');row.className='item';
+      row.innerHTML=`<div>${escapeHtml(t.name)}</div><div style="display:flex;gap:8px"><button class="btn" data-apply>Apply</button><button class="btn-warn" data-del>Delete</button></div>`;
+      wrap.appendChild(row);
+      row.querySelector('[data-apply]').onclick=()=>{save(LS.week(mISO),t.plan);renderDay();};
+      row.querySelector('[data-del]').onclick=()=>{const arr=load(LS.templates,[]).filter(x=>x!==t);save(LS.templates,arr);buildTplLists();};
+    });
+  }
+}
+
+const groModal=$('#groModal');$('#groClose').onclick=()=>hide(groModal);
+$('#groCopy').onclick=()=>navigator.clipboard.writeText(groceryText()).then(()=>alert('Grocery list copied.'));
+$('#groDownload').onclick=()=>{const blob=new Blob([groceryText()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fambam-Groceries-${mISO}.txt`;a.click();URL.revokeObjectURL(a.href);}
+
+function groceryText(){
+  const plan=loadWeekPlan(mISO());
+  return planSummaryBuckets();
+}
+function planSummaryBuckets(){
+  const plan=loadWeekPlan(mISO);
+  const pantry=new Set(load(LS.pantry,[]).map(s=>s.toLowerCase()));
+  const buckets={"Kids mains":{}, "Kids sides":{}, "Parents mains":{}, "Parents sides":{}, "Desserts":{}};
+  const bump=(b,name)=>{if(!name)return;const clean=name.replace(/^[^\w]+/,'').trim();if(!clean)return;if(pantry.has(clean.toLowerCase()))return;buckets[b][clean]=(buckets[b][clean]||0)+1;};
+  DAYS.forEach(d=>{const x=plan.days[d]||emptyDay();bump("Kids mains",x.kids.main);bump("Kids sides",x.kids.side);bump("Parents mains",x.parents.main);bump("Parents sides",x.parents.side);bump("Desserts",x.dessert);});
+  const lines=[`🛒 Fambam Groceries — ${$('#weekLabel').textContent}`];
+  for(const [section,items] of Object.entries(buckets)){
+    const names=Object.keys(items).sort((a,b)=>a.localeCompare(b));
+    if(!names.length)continue;
+    lines.push(`\n${section}`);
+    names.forEach(n=>lines.push(`- ${n}${items[n]>1?` ×${items[n]}`:''}`));
+  }
+  if(pantry.size){lines.push(`\n(Excluded pantry: ${[...pantry].join(', ')})`);}
+  return lines.join('\n');
+}
+function planSummaryText(){
+  const plan=loadWeekPlan(mISO);
+  const lines=[`🍽️ Fambam Dinner Plan — ${$('#weekLabel').textContent}`];
+  DAYS.forEach(d=>{
+    const x=plan.days[d];
+    const r=(x.rating==null)?'':(x.rating===1?' 👍':(x.rating===-1?' 👎':' 😐'));
+    const kids=[x.kids.main,x.kids.side].filter(Boolean).join(' + ');
+    const pars=[x.parents.main,x.parents.side].filter(Boolean).join(' + ');
+    const des=x.dessert?` • Dessert: ${x.dessert}`:'';
+    lines.push(`${d}: Kids ${kids||'—'} | Parents ${pars||'—'}${des}${r}`)
+  });
+  return lines.join('\n');
+}
+
+/* Manage modal */
+const manageModal=$('#manageModal');
+$('#manageClose').onclick=()=>hide(manageModal);
+$('#manageSave').onclick=()=>{const list=($('#pantryBox').value||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);save(LS.pantry,list);hide(manageModal);}
+function openManage(){buildFoodList();buildDessertList();$('#pantryBox').value=load(LS.pantry,[]).join(', ');show(manageModal);}
+function buildFoodList(){
+  const wrap=$('#foodList');wrap.innerHTML='';
+  const foods=load(LS.foods,[]);
+  foods.forEach((f,idx)=>{
+    const row=document.createElement('div');row.className='item';
+    row.innerHTML=`<input class="btn" value="${escapeHtml(f)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;
+    wrap.appendChild(row);
+    row.querySelector('[data-notes]').onclick=()=>openNotesEditor(f);
+    row.querySelector('input').oninput=e=>{foods[idx]=e.target.value;save(LS.foods,foods);renderDay();};
+    row.querySelector('[data-rm]').onclick=()=>{foods.splice(idx,1);save(LS.foods,foods);buildFoodList();renderDay();};
+  });
+  $('#addFood').onclick=()=>{const v=($('#newFood').value||'').trim();if(!v)return;const list=load(LS.foods,[]);list.push(v);save(LS.foods,list);$('#newFood').value='';buildFoodList();renderDay();};
+}
+function buildDessertList(){
+  const wrap=$('#dessertList');wrap.innerHTML='';
+  const ds=load(LS.desserts,[]);
+  ds.forEach((d,idx)=>{
+    const row=document.createElement('div');row.className='item';
+    row.innerHTML=`<input class="btn" value="${escapeHtml(d)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;
+    wrap.appendChild(row);
+    row.querySelector('[data-notes]').onclick=()=>openNotesEditor(d);
+    row.querySelector('input').oninput=e=>{ds[idx]=e.target.value;save(LS.desserts,ds);renderDay();};
+    row.querySelector('[data-rm]').onclick=()=>{ds.splice(idx,1);save(LS.desserts,ds);buildDessertList();renderDay();};
+  });
+  $('#addDessert').onclick=()=>{const v=($('#newDessert').value||'').trim();if(!v)return;const list=load(LS.desserts,[]);list.push(v);save(LS.desserts,list);$('#newDessert').value='';buildDessertList();renderDay();};
+}
+function show(m){m.style.display='flex';m.setAttribute('aria-hidden','false')}
+function hide(m){m.style.display='none';m.setAttribute('aria-hidden','true')}
+function escapeHtml(s){return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 
 /* Recipe search */
+function stripEmoji(txt){ return (txt||'').replace(/^[^\p{L}\p{N}]+/u,'').trim(); }
 document.getElementById('btnRecipeSearch').onclick=()=>{
   const x=loadWeekPlan(mISO).days[curDayKey()];
   const terms=[x.kids.main,x.parents.main,x.kids.side,x.parents.side,x.dessert].filter(Boolean).map(stripEmoji);
@@ -360,7 +638,7 @@ document.getElementById('btnRecipeSearch').onclick=()=>{
   window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank');
 };
 
-/* Menu hamburger (unchanged logic) */
+/* Menu hamburger */
 (function(){
   const btn=document.getElementById('btnHamburger'), dd=document.getElementById('menuDropdown');
   const open=()=>{dd.classList.add('open');btn.setAttribute('aria-expanded','true');dd.setAttribute('aria-hidden','false');};
@@ -369,24 +647,24 @@ document.getElementById('btnRecipeSearch').onclick=()=>{
   document.addEventListener('click',e=>{ if(!dd.contains(e.target)&&e.target!==btn) close(); });
   dd.addEventListener('click',e=>{
     const a=e.target.closest('.menu-item'); if(!a) return; close();
-    const act=a.dataset.action, plan=loadWeekPlan(mISO);
-    if(act==='reset'){ if(confirm('Clear all entries for this week?')){ const p={days:{}};DAYS.forEach(d=>p.days[d]=emptyDay()); save(LS.week(mISO),p); renderDay(); } }
-    else if(act==='templates'){ openTemplates(); }
-    else if(act==='groceries'){ openGroceries(); }
-    else if(act==='shareGro'){ shareText(groceryText()); }
-    else if(act==='sharePlan'){ shareText(planSummaryText()); }
-    else if(act==='manage'){ openManage(); }
+    const act=a.dataset.action;
+    if (act==='reset'){ if(confirm('Clear all entries for this week?')){ const p={days:{}};DAYS.forEach(d=>p.days[d]=emptyDay()); save(LS.week(mISO),p); renderDay(); } }
+    else if (act==='templates'){ openTemplates(); }
+    else if (act==='groceries'){ const pre=document.createElement('pre');pre.style.whiteSpace='pre-wrap';pre.style.margin='0';pre.textContent=planSummaryBuckets(); const body=$('#groBody'); body.innerHTML=''; body.appendChild(pre); show($('#groModal')); }
+    else if (act==='shareGro'){ shareText(planSummaryBuckets()); }
+    else if (act==='sharePlan'){ shareText(planSummaryText()); }
+    else if (act==='manage'){ openManage(); }
   });
 })();
-
-/* Manage/templates/groceries functions remain the same as your last version … */
 
 /* Boot */
 seedFoodsIfNeeded();
 document.getElementById('weekLabel').textContent=weekLabelText(mISO);
 renderDay();
+
 document.getElementById('prevDay').onclick=()=>{curIdx=(curIdx+6)%7; renderDay();};
 document.getElementById('nextDay').onclick=()=>{curIdx=(curIdx+1)%7; renderDay();};
+document.getElementById('todayBtn').onclick =()=>{curIdx=todayIdxInWeek(mISO); renderDay();};
 
 window.addEventListener('pageshow', renderDay);
 window.addEventListener('storage', e=>{
@@ -395,6 +673,6 @@ window.addEventListener('storage', e=>{
 });
 
 if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-  </script>
+</script>
 </body>
 </html>
