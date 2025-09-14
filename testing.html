@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Fambam · Testing Sandbox</title>
+
+<meta name="theme-color" content="#0f172a">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<link rel="stylesheet" href="wallpaper.css">
+<script src="wallpaper.js" defer></script>
+
+<script>
+/* Theme boot + auto logo swap (same as app) */
+(function () {
+  var DARK='fambam.png', LIGHT='fambam2.png';
+  function logo(){return document.getElementById('logoImg')||document.querySelector('img[alt="Fambam"]');}
+  function apply(t){
+    var mode=(t&&t.mode==='light')?'light':'dark', accent=(t&&t.accent)||'#22d3ee';
+    document.documentElement.setAttribute('data-theme',mode);
+    document.documentElement.style.setProperty('--accent',accent);
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', mode==='light'?'#f2efe7':'#0f172a');
+    var img=logo(); if(img){
+      var url=new URL(img.src,location.href), base=url.pathname.replace(/[^/]+$/,'');
+      img.src = (mode==='light') ? (base+LIGHT) : (base+DARK);
+    }
+  }
+  function boot(){ try{apply(JSON.parse(localStorage.getItem('ui:theme')||'{}'));}catch{apply();} }
+  boot(); document.addEventListener('DOMContentLoaded',boot);
+  addEventListener('storage',e=>{if(e.key==='ui:theme') try{apply(JSON.parse(e.newValue||'{}'))}catch{};});
+})();
+
+/* LocalStorage namespace (sandbox) */
+window.TStore=(function(){
+  const P='t:'; // sandbox prefix
+  return {
+    get:(k,def)=>{ try{const v=JSON.parse(localStorage.getItem(P+k)); return (v==null?def:v);}catch{return def;} },
+    set:(k,v)=>localStorage.setItem(P+k,JSON.stringify(v)),
+    rm:(k)=>localStorage.removeItem(P+k),
+    clearAll:()=>Object.keys(localStorage).forEach(k=>{if(k.startsWith(P)) localStorage.removeItem(k);}),
+    copyFromProd:(keys=[])=>{
+      keys.forEach(k=>{ const raw=localStorage.getItem(k); if(raw!=null) localStorage.setItem(P+k,raw); });
+    }
+  };
+})();
+</script>
+
+<style>
+:root{
+  --panel:#111827; --card:#0b1224; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
+  --ring:#334155; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+  --wallpaper:url(''); --wallpaper-shift:40%;
+}
+html[data-theme="light"]{ --panel:#f2efe7; --card:#fffdf7; --muted:#556070; --text:#0f1623; --ring:#e3ded4; --shadow:0 10px 28px rgba(0,0,0,.08); }
+html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:var(--text);background:#404c69;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:-2;background-image:var(--wallpaper);background-size:cover;background-repeat:no-repeat;background-position:center var(--wallpaper-shift)}
+body::after{content:"";position:fixed;inset:0;z-index:-1;background:rgba(64,76,105,.9);pointer-events:none}
+
+.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:14px}
+.panel{background:var(--panel);border:1px solid var(--ring);box-shadow:var(--shadow);border-radius:18px;padding:12px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:38px}
+.badge{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:999px;background:var(--card);border:1px solid var(--ring);color:var(--muted)}
+.btn{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:8px 12px;color:var(--text);cursor:pointer}
+.ribbon{position:fixed;top:10px;right:-50px;transform:rotate(45deg);background:#7c3aed;color:#fff;padding:6px 70px;z-index:1000;box-shadow:var(--shadow)}
+#play{min-height:50vh}
+</style>
+</head>
+<body>
+<div class="ribbon">TESTING BUILD</div>
+
+<div class="app">
+  <header class="panel">
+    <a href="./index.html" class="brand"><img id="logoImg" src="fambam.png" alt="Fambam"></a>
+    <div class="badge">Sandbox storage prefix: <code>t:</code></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="btnClear">Clear sandbox data</button>
+      <button class="btn" id="btnSeed">Copy prod → sandbox</button>
+    </div>
+  </header>
+
+  <!-- Paste the page-under-test markup here while iterating -->
+  <main id="play" class="panel">
+    <h2>Testing area</h2>
+    <p>Paste the body of the page you’re iterating on here, or include it via a script/module.</p>
+    <p class="badge">Tip: use <code>TStore.get/set</code> instead of <code>localStorage</code> to keep test data isolated.</p>
+  </main>
+
+  <footer class="panel" style="text-align:center;opacity:.75">
+    Works offline. Data stays on this device (sandbox namespace).
+  </footer>
+</div>
+
+<script>
+// Quick controls
+document.getElementById('btnClear').onclick = ()=>{ TStore.clearAll(); alert('Sandbox storage cleared.'); };
+// Example prod keys you might want to pull into sandbox quickly:
+const PROD_KEYS = [
+  'dp:foods:list','dp:desserts:list','dp:pantry',
+  // add others like 'dp:plan:YYYY-MM-DD' if desired
+];
+document.getElementById('btnSeed').onclick = ()=>{ TStore.copyFromProd(PROD_KEYS); alert('Copied some prod keys into sandbox namespace.'); };
+</script>
+</body>
+</html>
