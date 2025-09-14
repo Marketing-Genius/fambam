@@ -15,6 +15,55 @@
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
+<script>
+/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap, DOM-ready safe) */
+(function () {
+  var DARK_SRC  = 'fambam.png';
+  var LIGHT_SRC = 'fambam2.png';
+  var currentTheme = { mode:'dark', accent:'#22d3ee' };
+
+  function applyThemeTokens(t){
+    var mode = (t && t.mode === 'light') ? 'light' : 'dark';
+    var accent = (t && t.accent) || '#22d3ee';
+    currentTheme = { mode:mode, accent:accent };
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.style.setProperty('--accent', accent);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
+  }
+  function findLogo(){
+    return (
+      document.getElementById('logoImg') ||
+      document.querySelector('.brand img') ||
+      document.querySelector('header img[alt="Fambam"]') ||
+      null
+    );
+  }
+  function swapLogo(){
+    var logo = findLogo();
+    if (!logo) return;
+    var curAttr = logo.getAttribute('src') || '';
+    var base = curAttr.replace(/[^/]*$/, '');
+    var file = (currentTheme.mode === 'light') ? LIGHT_SRC : DARK_SRC;
+    logo.setAttribute('src', base + file);
+    var a = logo.closest('a');
+    if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
+  }
+  try {
+    var raw = localStorage.getItem('ui:theme');
+    applyThemeTokens(raw ? JSON.parse(raw) : {mode:'dark',accent:'#22d3ee'});
+  } catch(_) { applyThemeTokens({mode:'dark',accent:'#22d3ee'}); }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', swapLogo, {once:true});
+  } else { swapLogo(); }
+  window.addEventListener('storage', function(e){
+    if (e.key !== 'ui:theme') return;
+    try { applyThemeTokens(JSON.parse(e.newValue||'{}')); } catch(_){}
+    (document.readyState==='loading') ? document.addEventListener('DOMContentLoaded', swapLogo, {once:true}) : swapLogo();
+  });
+})();
+</script>
+
 <style>
 :root{
   --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
@@ -50,25 +99,34 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .menu-item{display:block; width:100%; text-align:left; padding:10px 12px; border:none; background:transparent; color:#e5e7eb; border-radius:10px; cursor:pointer}
 .menu-item:hover{background:#0b1224}
 
-/* Content */
+/* Day toolbar */
+.daybar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.daynav{display:flex;align-items:center;gap:8px}
+.daybtn{background:#0b1224;border:1px solid #334155;border-radius:12px;padding:8px 10px;color:var(--text);cursor:pointer}
+.dayname{font-weight:800}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1224;border:1px solid #334155;color:#cbd5e1}
 
-.grid{display:grid;gap:14px}
-@media(min-width:860px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Single-day card */
 .card{display:grid;gap:12px;background:var(--panel);border:1px solid #1f2937;border-radius:16px;padding:14px}
 .card .head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .card .head .right{display:flex;gap:8px;align-items:center}
-.day{font-weight:800}
 .row{display:grid;gap:8px;grid-template-columns:92px 1fr 1fr}
 .row .label{color:#cbd5e1;align-self:center}
 .row .actions{display:flex;gap:8px;align-items:center}
 
+/* Header image */
+.hero{position:relative; border-radius:14px; overflow:hidden; background:#0b1224; border:1px solid #334155; height:200px}
+.hero img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
+.hero .overlay{position:absolute; right:8px; bottom:8px; display:flex; gap:8px}
+
+/* Inputs */
 select, input[type="text"], textarea{background:var(--card);border:1px solid #374151;border-radius:12px;padding:10px 12px;min-width:140px;color:var(--text);font:inherit}
 textarea{min-height:88px;resize:vertical}
 button{cursor:pointer}
 .btn{background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;color:#e5e7eb;font:inherit}
 .btn-primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);color:#001018;border:none;font-weight:800}
 .btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
+.smallmuted{color:#94a3b8;font-size:.9rem}
 
 .hint{opacity:.8;font-size:.9rem;text-align:center}
 .version{opacity:.6;font-size:.8rem;margin-top:6px}
@@ -92,8 +150,10 @@ button{cursor:pointer}
   content:""; position:absolute; right:8px; top:8px; width:8px; height:8px; border-radius:50%;
   background:#22d3ee; box-shadow:0 0 0 2px rgba(11,18,36,.8);
 }
-.smallmuted{color:#94a3b8;font-size:.9rem}
 .noteRow{display:flex;align-items:center;justify-content:space-between;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:10px}
+
+/* hide native file input (used for header image) */
+input[type="file"].sr-only{ display:none !important; }
 </style>
 </head>
 <body>
@@ -123,17 +183,68 @@ button{cursor:pointer}
       </div>
     </header>
 
-    <section class="panel" id="weekPanel">
-      <div>Week of <b id="weekLabel"></b></div>
+    <!-- Day toolbar -->
+    <section class="panel daybar" id="weekPanel">
+      <div class="daynav">
+        <button id="prevDay" class="daybtn" title="Previous day">◀︎</button>
+        <div class="dayname"><span id="dayLabel">Mon</span> · <span id="dateLabel"></span></div>
+        <button id="nextDay" class="daybtn" title="Next day">▶︎</button>
+      </div>
+      <div class="badge">Week of <b id="weekLabel"></b></div>
     </section>
 
-    <section class="grid" id="cards"></section>
+    <!-- Single-day view -->
+    <section id="dayCard" class="card">
+      <!-- header image -->
+      <div class="hero">
+        <img id="heroImg" alt="" />
+        <div class="overlay">
+          <button id="btnAddHero" class="btn">Header photo</button>
+          <button id="btnRemoveHero" class="btn-warn">Remove</button>
+        </div>
+      </div>
+
+      <div class="head">
+        <div style="font-weight:800">Selections</div>
+        <div class="right">
+          <select id="rateSel" title="How did dinner go?">
+            <option value="">— rating —</option>
+            <option value="1">👍</option>
+            <option value="0">😐</option>
+            <option value="-1">👎</option>
+          </select>
+          <button id="btnDayNotes" class="btn btn-badge">Notes</button>
+          <button id="btnRecipeSearch" class="btn">Search recipes</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="label">Kids</div>
+        <select id="kidsMain"></select>
+        <select id="kidsSide"></select>
+      </div>
+      <div class="row">
+        <div class="label">Parents</div>
+        <select id="parentsMain"></select>
+        <select id="parentsSide"></select>
+      </div>
+      <div class="row">
+        <div class="label">Dessert</div>
+        <div class="actions">
+          <select id="dessertSel" style="display:none"></select>
+          <button id="btnDessert" class="btn">Add dessert</button>
+        </div>
+      </div>
+    </section>
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Dinner Planner v1.4.1 (local-date week keys + auto-refresh)</div>
+      <div class="version">Dinner Planner v2.0 (day view + header image + recipe search)</div>
     </div>
   </div>
+
+  <!-- Hidden image picker for header -->
+  <input id="heroPicker" type="file" accept="image/*,.heic,.heif" class="sr-only"/>
 
   <!-- Manage Modal -->
   <div class="modal-backdrop" id="manageModal" aria-hidden="true" role="dialog" aria-labelledby="manageTitle">
@@ -263,26 +374,27 @@ const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const uid=()=>Math.random().toString(36).slice(2,10);
 
 /* ----- Local-date helpers (Mon–Sun week; no UTC conversions) ----- */
-function localISO(d){
-  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
-function startOfWeekMondayLocal(d=new Date()){
-  const monday=new Date(d);
-  monday.setHours(0,0,0,0);
-  const offset=((monday.getDay()+6)%7); // Mon=0..Sun=6
-  monday.setDate(monday.getDate()-offset);
-  return monday;
-}
+function localISO(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
+function startOfWeekMondayLocal(d=new Date()){const monday=new Date(d);monday.setHours(0,0,0,0);const offset=((monday.getDay()+6)%7);monday.setDate(monday.getDate()-offset);return monday;}
 function thisMondayISO(){ return localISO(startOfWeekMondayLocal(new Date())); }
-function weekLabelText(mISO){
-  const [Y,M,D]=mISO.split('-').map(n=>parseInt(n,10));
-  const m = new Date(Y, M-1, D, 0,0,0,0);
-  const e = new Date(m); e.setDate(e.getDate()+6);
-  const f = d => d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
-  return `${f(m)} – ${f(e)}`;
-}
+function weekLabelText(mISO){const [Y,M,D]=mISO.split('-').map(n=>parseInt(n,10));const m=new Date(Y,M-1,D,0,0,0,0);const e=new Date(m);e.setDate(e.getDate()+6);const f=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});return `${f(m)} – ${f(e)}`;}
+function todayIdxInWeek(mISO){ const [Y,M,D]=mISO.split('-').map(Number); const m=new Date(Y,M-1,D); const t=new Date(); t.setHours(0,0,0,0); const diff=Math.floor((t-m)/86400000); return Math.max(0, Math.min(6, diff)); }
 
+/* ---------- Plan model ---------- */
+const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+function emptyDay(){return {kids:{main:"",side:""},parents:{main:"",side:""},dessert:"",rating:null, hero:null}}
+function loadWeekPlan(mISO){
+  let plan=load(LS.week(mISO),null);
+  if(!plan){ plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay()); save(LS.week(mISO),plan); }
+  return plan;
+}
+function saveWeekPlan(mISO,plan){save(LS.week(mISO),plan)}
+
+/* ---------- Food Notes store ---------- */
+function getNotes(){ return load(LS.notes, {}); }
+function setNotes(map){ save(LS.notes, map); }
+
+/* ---------- Seed menus ---------- */
 function seedFoodsIfNeeded(){
   let foods=load(LS.foods,null);
   if(!Array.isArray(foods)||foods.length<10){
@@ -297,164 +409,156 @@ function seedFoodsIfNeeded(){
   if(load(LS.pantry,null)==null){ save(LS.pantry,["salt","pepper","ketchup","mustard","olive oil","butter"]); }
 }
 
-/* ---------- Plan model ---------- */
-const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-function emptyDay(){return {kids:{main:"",side:""},parents:{main:"",side:""},dessert:"",rating:null}}
-function loadWeekPlan(mISO){
-  let plan=load(LS.week(mISO),null);
-  if(!plan){ plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay()); save(LS.week(mISO),plan); }
-  return plan;
-}
-function saveWeekPlan(mISO,plan){save(LS.week(mISO),plan)}
+/* ---------- Day state ---------- */
+const mISO = thisMondayISO();
+let curIdx = todayIdxInWeek(mISO); // 0..6
+function curDayKey(){ return DAYS[curIdx]; }
 
-/* ---------- Food Notes store ---------- */
-function getNotes(){ return load(LS.notes, {}); }
-function setNotes(map){ save(LS.notes, map); }
+/* ---------- Helpers ---------- */
+function escapeHtml(s){return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function setByPath(o,p,val){const parts=p.split('.');for(let i=0;i<parts.length-1;i++)o=o[parts[i]];o[parts[parts.length-1]]=val}
+function firstSymbol(s){ if(!s) return ''; const t=(s+'').trim(); return [...t][0]; }
+function stripEmoji(txt){ return (txt||'').replace(/^[^\p{L}\p{N}]+/u,'').trim(); }
 
-/* ---------- Render ---------- */
-function render(){
-  const mISO=thisMondayISO();
-  $('#weekLabel').textContent=weekLabelText(mISO);
-  const plan=loadWeekPlan(mISO);
-  const foods=load(LS.foods,[]),desserts=load(LS.desserts,[]);
-  const cards=$('#cards'); cards.innerHTML='';
-
-  DAYS.forEach((day,i)=>{
-    const data=plan.days[day]||emptyDay();
-    const dt=new Date(mISO+'T00:00:00'); dt.setDate(dt.getDate()+i);
-    const nice=dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
-
-    const el=document.createElement('div'); el.className='card'; el.dataset.day=day;
-
-    const rateSel = `
-      <select data-rate="${day}" title="How did dinner go?">
-        <option value="" ${data.rating==null?'selected':''}>— rating —</option>
-        <option value="1" ${data.rating===1?'selected':''}>👍</option>
-        <option value="0" ${data.rating===0?'selected':''}>😐</option>
-        <option value="-1" ${data.rating===-1?'selected':''}>👎</option>
-      </select>`;
-
-    const hasAnyNotes = dayHasAnyNotes(data);
-    const notesBtn = `<button class="btn btn-badge" data-notes="${day}" ${hasAnyNotes?'data-hasnotes="true"':''}>Notes</button>`;
-
-    el.innerHTML = `
-      <div class="head">
-        <div class="day">${day}</div>
-        <div class="right">
-          <span class="badge">${nice}</span>
-          ${rateSel}
-          ${notesBtn}
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="label">Kids</div>
-        <select data-k="${day}" data-field="kids.main">${options(foods,data.kids.main)}</select>
-        <select data-k="${day}" data-field="kids.side">${options(foods,data.kids.side)}</select>
-      </div>
-      <div class="row">
-        <div class="label">Parents</div>
-        <select data-k="${day}" data-field="parents.main">${options(foods,data.parents.main)}</select>
-        <select data-k="${day}" data-field="parents.side">${options(foods,data.parents.side)}</select>
-      </div>
-      <div class="row">
-        <div class="label">Dessert</div>
-        <div class="actions">
-          <select data-k="${day}" data-field="dessert" ${data.dessert?'':'style="display:none"'}>${options(desserts,data.dessert,true)}</select>
-          <button class="btn" data-dess="${day}">${data.dessert?'Remove dessert':'Add dessert'}</button>
-        </div>
-      </div>
-    `;
-    cards.appendChild(el);
-  });
-
-  // selects change
-  $$('#cards select[data-k]').forEach(sel=>{
-    sel.onchange=()=>{const day=sel.dataset.k,field=sel.dataset.field;const plan=loadWeekPlan(thisMondayISO());setByPath(plan.days[day],field,sel.value);saveWeekPlan(thisMondayISO(),plan); updateNotesBadgesFor(day);};
-  });
-
-  // dessert toggle
-  $$('[data-dess]').forEach(btn=>{
-    btn.onclick=()=>{
-      const day=btn.dataset.dess;
-      const plan=loadWeekPlan(thisMondayISO());
-      const row=btn.closest('.row'); const sel=row.querySelector('select');
-      if(plan.days[day].dessert){ plan.days[day].dessert=""; sel.style.display='none'; btn.textContent='Add dessert'; }
-      else { plan.days[day].dessert=""; sel.style.display=''; btn.textContent='Remove dessert'; }
-      saveWeekPlan(thisMondayISO(),plan); updateNotesBadgesFor(day);
-    };
-  });
-
-  // rating save
-  $$('select[data-rate]').forEach(r=>{
-    r.onchange=()=>{
-      const day=r.dataset.rate;
-      const plan=loadWeekPlan(thisMondayISO());
-      plan.days[day].rating = (r.value===''? null : parseInt(r.value,10));
-      saveWeekPlan(thisMondayISO(),plan);
-    };
-  });
-
-  // notes per day
-  $$('[data-notes]').forEach(b=>{
-    b.onclick=()=> openDayNotes(b.dataset.notes);
-  });
-}
-
-function options(list,selected,allowBlank=false){
+/* ---------- UI: populate a single day ---------- */
+function fillSelect(el, list, selected, allowBlank=false){
   const placeholder='— Choose item —';
   const arr=allowBlank?[placeholder,...list]:[placeholder,...list];
-  return arr.map(v=>{
+  el.innerHTML = arr.map(v=>{
     const isPH=v===placeholder; const val=isPH?'':v;
     const sel=(val===selected)||(isPH&&!selected)?' selected':'';
     return `<option value="${escapeHtml(val)}"${sel}>${escapeHtml(v)}</option>`;
   }).join('');
 }
-function escapeHtml(s){return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function setByPath(o,p,val){const parts=p.split('.');for(let i=0;i<parts.length-1;i++)o=o[parts[i]];o[parts[parts.length-1]]=val}
-
-/* ---------- Manage modal ---------- */
-const manageModal=$('#manageModal');
-$('#manageClose').onclick=()=>hide(manageModal);
-$('#manageSave').onclick=()=>{const list=($('#pantryBox').value||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);save(LS.pantry,list);hide(manageModal);}
-
-function openManage(){buildFoodList();buildDessertList();$('#pantryBox').value=load(LS.pantry,[]).join(', ');show(manageModal);}
-function buildFoodList(){
-  const wrap=$('#foodList');wrap.innerHTML='';
-  const foods=load(LS.foods,[]);
-  foods.forEach((f,idx)=>{
-    const row=document.createElement('div');row.className='item';
-    row.innerHTML=`<input class="btn" value="${escapeHtml(f)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;
-    wrap.appendChild(row);
-    row.querySelector('[data-notes]').onclick=()=>openNotesEditor(f);
-    row.querySelector('input').oninput=e=>{foods[idx]=e.target.value;save(LS.foods,foods);render();};
-    row.querySelector('[data-rm]').onclick=()=>{foods.splice(idx,1);save(LS.foods,foods);buildFoodList();render();};
-  });
-  $('#addFood').onclick=()=>{const v=($('#newFood').value||'').trim();if(!v)return;const list=load(LS.foods,[]);list.push(v);save(LS.foods,list);$('#newFood').value='';buildFoodList();render();};
+function dayLabelAndDate(){
+  const start = new Date(mISO+'T00:00:00');
+  const d = new Date(start); d.setDate(d.getDate()+curIdx);
+  const nice = d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+  $('#dayLabel').textContent = curDayKey();
+  $('#dateLabel').textContent = nice;
 }
-function buildDessertList(){
-  const wrap=$('#dessertList');wrap.innerHTML='';
-  const ds=load(LS.desserts,[]);
-  ds.forEach((d,idx)=>{
-    const row=document.createElement('div');row.className='item';
-    row.innerHTML=`<input class="btn" value="${escapeHtml(d)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;
-    wrap.appendChild(row);
-    row.querySelector('[data-notes]').onclick=()=>openNotesEditor(d);
-    row.querySelector('input').oninput=e=>{ds[idx]=e.target.value;save(LS.desserts,ds);render();};
-    row.querySelector('[data-rm]').onclick=()=>{ds.splice(idx,1);save(LS.desserts,ds);buildDessertList();render();};
-  });
-  $('#addDessert').onclick=()=>{const v=($('#newDessert').value||'').trim();if(!v)return;const list=load(LS.desserts,[]);list.push(v);save(LS.desserts,list);$('#newDessert').value='';buildDessertList();render();};
-}
-function show(m){m.style.display='flex';m.setAttribute('aria-hidden','false')}
-function hide(m){m.style.display='none';m.setAttribute('aria-hidden','true')}
 
-/* ---------- Day Notes modal ---------- */
+/* notes badge calc */
+function dayHasAnyNotes(x){
+  const n=getNotes();
+  return [x?.kids?.main, x?.kids?.side, x?.parents?.main, x?.parents?.side, x?.dessert]
+    .filter(Boolean).some(lab => !!(n[lab] && (n[lab].global||'').trim()));
+}
+function updateNotesBadge(x){
+  const btn = $('#btnDayNotes');
+  btn.setAttribute('data-hasnotes', String(dayHasAnyNotes(x)));
+}
+
+/* Header image */
+async function readAndShrinkSmart(file, maxSide=1800, quality=.9){
+  const bitmap = await decodeToBitmap(file).catch(()=>null);
+  if(!bitmap) return null;
+  const scale = Math.min(1, maxSide/Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx = c.getContext('2d'); ctx.drawImage(bitmap, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', quality);
+}
+function decodeToBitmap(file){
+  return new Promise((resolve, reject)=>{
+    if ('createImageBitmap' in window) {
+      createImageBitmap(file).then(resolve).catch(()=>{
+        const fr = new FileReader();
+        fr.onload = ()=>{
+          const img = new Image();
+          img.onload = ()=> resolve(img);
+          img.onerror = reject;
+          img.src = fr.result;
+        };
+        fr.onerror = reject;
+        fr.readAsDataURL(file);
+      });
+    } else {
+      const fr = new FileReader();
+      fr.onload = ()=>{
+        const img = new Image();
+        img.onload = ()=> resolve(img);
+        img.onerror = reject;
+        img.src = fr.result;
+      };
+      fr.onerror = reject;
+      fr.readAsDataURL(file);
+    }
+  });
+}
+
+/* ---------- Render current day ---------- */
+function renderDay(){
+  $('#weekLabel').textContent = weekLabelText(mISO);
+  dayLabelAndDate();
+
+  const plan = loadWeekPlan(mISO);
+  const x = plan.days[curDayKey()] || emptyDay();
+
+  // header image
+  const hero = $('#heroImg');
+  if (x.hero) { hero.src = x.hero; hero.style.display='block'; }
+  else { hero.removeAttribute('src'); hero.style.display='none'; }
+
+  // selects
+  const foods=load(LS.foods,[]), desserts=load(LS.desserts,[]);
+  fillSelect($('#kidsMain'), foods, x.kids.main);
+  fillSelect($('#kidsSide'), foods, x.kids.side);
+  fillSelect($('#parentsMain'), foods, x.parents.main);
+  fillSelect($('#parentsSide'), foods, x.parents.side);
+  fillSelect($('#dessertSel'), desserts, x.dessert, true);
+
+  $('#dessertSel').style.display = x.dessert ? '' : 'none';
+  $('#btnDessert').textContent  = x.dessert ? 'Remove dessert' : 'Add dessert';
+
+  // rating
+  $('#rateSel').value = (x.rating==null)? '' : String(x.rating);
+
+  updateNotesBadge(x);
+}
+
+/* ---------- Wire inputs (single-day) ---------- */
+function saveAndRerender(mut){
+  const plan = loadWeekPlan(mISO);
+  mut(plan.days[curDayKey()]);
+  saveWeekPlan(mISO, plan);
+  renderDay();
+}
+
+$('#kidsMain').onchange   = ()=> saveAndRerender(d=> d.kids.main    = $('#kidsMain').value);
+$('#kidsSide').onchange   = ()=> saveAndRerender(d=> d.kids.side    = $('#kidsSide').value);
+$('#parentsMain').onchange= ()=> saveAndRerender(d=> d.parents.main = $('#parentsMain').value);
+$('#parentsSide').onchange= ()=> saveAndRerender(d=> d.parents.side = $('#parentsSide').value);
+
+$('#btnDessert').onclick = ()=>{
+  const plan=loadWeekPlan(mISO); const day=plan.days[curDayKey()];
+  if(day.dessert){ day.dessert=""; }
+  else { day.dessert=""; } // show select to choose
+  saveWeekPlan(mISO,plan); renderDay(); $('#dessertSel').focus();
+};
+$('#dessertSel').onchange = ()=> saveAndRerender(d=> d.dessert = $('#dessertSel').value);
+
+$('#rateSel').onchange    = ()=> saveAndRerender(d=> d.rating = ($('#rateSel').value===''? null : parseInt($('#rateSel').value,10)));
+
+/* Header image handlers */
+$('#btnAddHero').onclick = ()=> $('#heroPicker').click();
+$('#btnRemoveHero').onclick = ()=> saveAndRerender(d=> d.hero = null);
+$('#heroPicker').onchange = async (e)=>{
+  const f = (e.target.files||[])[0]; if(!f) return;
+  const data = await readAndShrinkSmart(f, 1800, .9).catch(()=>null);
+  if(!data){ alert('Could not load this image.'); return; }
+  saveAndRerender(d=> d.hero = data);
+  e.target.value='';
+};
+
+/* Notes */
 const dayNotesModal = $('#dayNotesModal');
 $('#dayNotesClose').onclick = ()=> hide(dayNotesModal);
 $('#dayNotesDone').onclick  = ()=> hide(dayNotesModal);
+$('#btnDayNotes').onclick = ()=> openDayNotes(curDayKey());
 
 function openDayNotes(day){
-  const mISO=thisMondayISO();
   const plan=loadWeekPlan(mISO);
   const x=plan.days[day];
   const items = [
@@ -479,7 +583,7 @@ function openDayNotes(day){
         ${has?'<span class="badge">has notes</span>':''}
         <button class="btn" data-edit>Edit</button>
       </div>`;
-    row.querySelector('[data-edit]').onclick = ()=> openNotesEditor(it.label, ()=>{ openDayNotes(day); updateNotesBadgesFor(day); });
+    row.querySelector('[data-edit]').onclick = ()=> openNotesEditor(it.label, ()=>{ openDayNotes(day); updateNotesBadge(loadWeekPlan(mISO).days[day]); });
     body.appendChild(row);
   });
 
@@ -487,18 +591,7 @@ function openDayNotes(day){
   show(dayNotesModal);
 }
 
-function dayHasAnyNotes(dayData){
-  const n=getNotes();
-  return [dayData?.kids?.main, dayData?.kids?.side, dayData?.parents?.main, dayData?.parents?.side, dayData?.dessert]
-    .filter(Boolean).some(lab => !!(n[lab] && (n[lab].global||'').trim()));
-}
-function updateNotesBadgesFor(day){
-  const mISO=thisMondayISO(); const plan=loadWeekPlan(mISO); const data=plan.days[day];
-  const btn = document.querySelector(`[data-notes="${day}"]`);
-  if (btn) btn.setAttribute('data-hasnotes', String( dayHasAnyNotes(data) ));
-}
-
-/* ---------- Notes editor ---------- */
+/* Notes editor */
 const notesEditModal = $('#notesEditModal');
 $('#notesEditClose').onclick = ()=> hide(notesEditModal);
 $('#fnSave').onclick = saveNotesFromEditor;
@@ -507,16 +600,13 @@ $('#fnClear').onclick = ()=>{
   const map=getNotes(); delete map[_editingLabel]; setNotes(map); hide(notesEditModal);
   if (notesEditModal._onSavedCb) notesEditModal._onSavedCb();
 };
-
 let _editingLabel = '';
 function openNotesEditor(label, onSaved){
   _editingLabel = label;
   $('#fnLabel').textContent = label;
-
   const map = getNotes();
   const entry = map[label] || { global:'' };
   $('#fnGlobal').value = entry.global || '';
-
   notesEditModal._onSavedCb = onSaved || null;
   show(notesEditModal);
 }
@@ -532,7 +622,7 @@ function saveNotesFromEditor(){
 
 /* ---------- Templates / Groceries / Share ---------- */
 const tplModal=$('#tplModal');$('#tplClose').onclick=()=>hide(tplModal);$('#tplApplyDone').onclick=()=>hide(tplModal);
-$('#tplSave').onclick=()=>{const name=($('#tplName').value||'').trim();if(!name)return alert('Name your template');const plan=loadWeekPlan(thisMondayISO());const t=load(LS.templates,[]);t.push({id:uid(),name,plan});save(LS.templates,t);$('#tplName').value='';buildTplLists();}
+$('#tplSave').onclick=()=>{const name=($('#tplName').value||'').trim();if(!name)return alert('Name your template');const plan=loadWeekPlan(mISO);const t=load(LS.templates,[]);t.push({id:uid(),name,plan});save(LS.templates,t);$('#tplName').value='';buildTplLists();}
 function openTemplates(){buildTplLists();show(tplModal)}
 function buildTplLists(){
   const built=$('#tplBuiltins');built.innerHTML='';
@@ -551,16 +641,16 @@ function buildTplLists(){
       const row=document.createElement('div');row.className='item';
       row.innerHTML=`<div>${escapeHtml(t.name)}</div><div style="display:flex;gap:8px"><button class="btn" data-apply>Apply</button><button class="btn-warn" data-del>Delete</button></div>`;
       wrap.appendChild(row);
-      row.querySelector('[data-apply]').onclick=()=>{save(LS.week(thisMondayISO()),t.plan);render();};
+      row.querySelector('[data-apply]').onclick=()=>{save(LS.week(mISO),t.plan);renderDay();};
       row.querySelector('[data-del]').onclick=()=>{const arr=load(LS.templates,[]).filter(x=>x!==t);save(LS.templates,arr);buildTplLists();};
     });
   }
 }
 function applyPizzaFriday(){
-  const plan=loadWeekPlan(thisMondayISO());
+  const plan=loadWeekPlan(mISO);
   plan.days["Fri"].kids.main="🍕 Pizza";
   plan.days["Fri"].parents.main="🍕 Pizza";
-  saveWeekPlan(thisMondayISO(),plan); render();
+  saveWeekPlan(mISO,plan); renderDay();
 }
 
 const groModal=$('#groModal');$('#groClose').onclick=()=>hide(groModal);
@@ -569,10 +659,10 @@ function openGroceries(){
   const body=$('#groBody');body.innerHTML='';body.appendChild(pre);show(groModal);
 }
 $('#groCopy').onclick=()=>navigator.clipboard.writeText(groceryText()).then(()=>alert('Grocery list copied.'));
-$('#groDownload').onclick=()=>{const blob=new Blob([groceryText()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fambam-Groceries-${thisMondayISO()}.txt`;a.click();URL.revokeObjectURL(a.href);}
+$('#groDownload').onclick=()=>{const blob=new Blob([groceryText()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fambam-Groceries-${mISO}.txt`;a.click();URL.revokeObjectURL(a.href);}
 
 function groceryText(){
-  const plan=loadWeekPlan(thisMondayISO());
+  const plan=loadWeekPlan(mISO);
   const pantry=new Set(load(LS.pantry,[]).map(s=>s.toLowerCase()));
   const buckets={"Kids mains":{}, "Kids sides":{}, "Parents mains":{}, "Parents sides":{}, "Desserts":{}};
   const bump=(b,name)=>{if(!name)return;const clean=name.replace(/^[^\w]+/,'').trim();if(!clean)return;if(pantry.has(clean.toLowerCase()))return;buckets[b][clean]=(buckets[b][clean]||0)+1;};
@@ -588,7 +678,7 @@ function groceryText(){
   return lines.join('\n');
 }
 function planSummaryText(){
-  const plan=loadWeekPlan(thisMondayISO());
+  const plan=loadWeekPlan(mISO);
   const lines=[`🍽️ Fambam Dinner Plan — ${$('#weekLabel').textContent}`];
   DAYS.forEach(d=>{
     const x=plan.days[d];
@@ -600,6 +690,16 @@ function planSummaryText(){
   });
   return lines.join('\n');
 }
+
+/* ---------- Recipe search ---------- */
+$('#btnRecipeSearch').onclick = ()=>{
+  const x = loadWeekPlan(mISO).days[curDayKey()];
+  const terms = [x.kids.main, x.parents.main, x.kids.side, x.parents.side, x.dessert]
+    .filter(Boolean).map(stripEmoji);
+  const q = (terms.join(' ') || 'easy family dinner') + ' recipes';
+  const url = 'https://www.google.com/search?q=' + encodeURIComponent(q);
+  window.open(url, '_blank'); // opens in default browser
+};
 
 /* ---------- Header hamburger ---------- */
 (function hamburger(){
@@ -615,24 +715,63 @@ function planSummaryText(){
     const a = e.target.closest('.menu-item'); if(!a) return;
     close();
     const act = a.dataset.action;
-    if (act==='reset'){ if(confirm('Clear all entries for this week?')){ const plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay());save(LS.week(thisMondayISO()),plan);render(); } }
+    if (act==='reset'){ if(confirm('Clear all entries for this week?')){ const plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay());save(LS.week(mISO),plan);renderDay(); } }
     else if (act==='templates'){ openTemplates(); }
     else if (act==='groceries'){ openGroceries(); }
     else if (act==='shareGro'){ shareText(groceryText()); }
     else if (act==='sharePlan'){ shareText(planSummaryText()); }
-    else if (act==='manage'){ openManage(); } // ← no PIN
+    else if (act==='manage'){ openManage(); }
   });
 })();
 
-/* ---------- Boot ---------- */
-seedFoodsIfNeeded(); render();
+/* ---------- Manage modal ---------- */
+const manageModal=$('#manageModal');
+$('#manageClose').onclick=()=>hide(manageModal);
+$('#manageSave').onclick=()=>{const list=($('#pantryBox').value||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);save(LS.pantry,list);hide(manageModal);}
 
-/* Auto-refresh when returning to page or when storage changes */
-window.addEventListener('pageshow', render);
+function openManage(){buildFoodList();buildDessertList();$('#pantryBox').value=load(LS.pantry,[]).join(', ');show(manageModal);}
+function buildFoodList(){
+  const wrap=$('#foodList');wrap.innerHTML='';
+  const foods=load(LS.foods,[]);
+  foods.forEach((f,idx)=>{
+    const row=document.createElement('div');row.className='item';
+    row.innerHTML=`<input class="btn" value="${escapeHtml(f)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;
+    wrap.appendChild(row);
+    row.querySelector('[data-notes]').onclick=()=>openNotesEditor(f);
+    row.querySelector('input').oninput=e=>{foods[idx]=e.target.value;save(LS.foods,foods);renderDay();};
+    row.querySelector('[data-rm]').onclick=()=>{foods.splice(idx,1);save(LS.foods,foods);buildFoodList();renderDay();};
+  });
+  $('#addFood').onclick=()=>{const v=($('#newFood').value||'').trim();if(!v)return;const list=load(LS.foods,[]);list.push(v);save(LS.foods,list);$('#newFood').value='';buildFoodList();renderDay();};
+}
+function buildDessertList(){
+  const wrap=$('#dessertList');wrap.innerHTML='';
+  const ds=load(LS.desserts,[]);
+  ds.forEach((d,idx)=>{
+    const row=document.createElement('div');row.className='item';
+    row.innerHTML=`<input class="btn" value="${escapeHtml(d)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>📝 Notes</button><button class="btn-warn" data-rm>Remove</button></div>`;
+    wrap.appendChild(row);
+    row.querySelector('[data-notes]').onclick=()=>openNotesEditor(d);
+    row.querySelector('input').oninput=e=>{ds[idx]=e.target.value;save(LS.desserts,ds);renderDay();};
+    row.querySelector('[data-rm]').onclick=()=>{ds.splice(idx,1);save(LS.desserts,ds);buildDessertList();renderDay();};
+  });
+  $('#addDessert').onclick=()=>{const v=($('#newDessert').value||'').trim();if(!v)return;const list=load(LS.desserts,[]);list.push(v);save(LS.desserts,list);$('#newDessert').value='';buildDessertList();renderDay();};
+}
+function show(m){m.style.display='flex';m.setAttribute('aria-hidden','false')}
+function hide(m){m.style.display='none';m.setAttribute('aria-hidden','true')}
+
+/* ---------- Day navigation ---------- */
+$('#prevDay').onclick = ()=>{ curIdx=(curIdx+6)%7; renderDay(); };
+$('#nextDay').onclick = ()=>{ curIdx=(curIdx+1)%7; renderDay(); };
+
+/* ---------- Boot & refresh ---------- */
+seedFoodsIfNeeded();
+renderDay();
+
+window.addEventListener('pageshow', renderDay);
 window.addEventListener('storage', (e)=>{
   if (!e.key) return;
   if (e.key.startsWith('dp:plan:') || e.key === 'dp:foods:list' || e.key === 'dp:desserts:list' || e.key === 'dp:pantry') {
-    render();
+    renderDay();
   }
 });
 
