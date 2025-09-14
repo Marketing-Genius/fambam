@@ -11,64 +11,168 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
-<!-- Universal wallpaper (shared across all pages) -->
+<!-- Universal wallpaper -->
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
+
+<script>
+/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap) */
+(function () {
+  var DARK_SRC = 'fambam.png';
+  var LIGHT_SRC = 'fambam2.png';
+
+  function findLogo() {
+    return (
+      document.getElementById('logoImg') ||
+      document.querySelector('.brand img') ||
+      document.querySelector('header .title img') ||
+      document.querySelector('img[alt="Fambam"]') ||
+      Array.from(document.images).find(img =>
+        (img.src||'').endsWith('/'+DARK_SRC) || (img.src||'').endsWith('/'+LIGHT_SRC)
+      ) || null
+    );
+  }
+
+  function applyTheme(t) {
+    var mode = (t && t.mode === 'light') ? 'light' : 'dark';
+    var accent = (t && t.accent) || '#22d3ee';
+
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.style.setProperty('--accent', accent);
+
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
+
+    var logo = findLogo();
+    if (logo) {
+      var url = new URL(logo.src, location.href);
+      var base = url.pathname.replace(/[^/]+$/, '');
+      logo.src = (mode === 'light') ? (base + LIGHT_SRC) : (base + DARK_SRC);
+      var a = logo.closest('a');
+      if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
+    }
+  }
+
+  try {
+    var raw = localStorage.getItem('ui:theme');
+    var saved = raw ? JSON.parse(raw) : { mode: 'dark', accent: '#22d3ee' };
+    applyTheme(saved);
+  } catch (_) {
+    applyTheme({ mode: 'dark', accent: '#22d3ee' });
+  }
+
+  window.addEventListener('storage', function (e) {
+    if (e.key !== 'ui:theme') return;
+    try { applyTheme(JSON.parse(e.newValue || '{}')); } catch (_) {}
+  });
+})();
+</script>
 
 <style>
 :root{
   --panel:#111827; --card:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --accent:#22d3ee;
   --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+  --wallpaper:url(''); --wallpaper-shift:40%;
 }
+/* Light palette overrides (soft ivory) */
+html[data-theme="light"]{
+  --panel:#f2efe7; --card:#ffffff; --text:#0f1623; --muted:#556070;
+  --shadow:0 10px 28px rgba(0,0,0,.08);
+}
+
 html,body{height:100%}
 body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  background:linear-gradient(180deg,#0b1026 0%,#0f172a 100%); color:var(--text);
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  color:var(--text); background:#404c69;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation; overflow-x:hidden;
 }
+/* Wallpaper layers (consistent across app) */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background-image: var(--wallpaper);
+  background-size: cover; background-repeat:no-repeat;
+  background-position: center var(--wallpaper-shift);
+  transform: translateZ(0);
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background: rgba(64,76,105,.9); /* same overlay for both themes */
+  pointer-events:none;
+}
+
 .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto 1fr auto}
 
 /* Panels */
-.panel{background:var(--panel);border:1px solid #111827;box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
+.panel{
+  background:rgba(17,24,39,.6); border:1px solid #0b1224;
+  box-shadow:var(--shadow); border-radius:var(--radius); padding:14px; backdrop-filter: blur(8px);
+}
+html[data-theme="light"] .panel{ background:rgba(255,255,255,.72); border-color:#e6e2da; }
 
-/* Header (consistent) */
+/* Header */
 header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .head-left{display:flex;align-items:center;gap:10px}
-.head-left img{height:36px;display:block;cursor:pointer}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.brand img{height:36px;display:block;cursor:pointer}
 .title{font-weight:800}
 .title .small{font-weight:600;font-size:.9rem;color:var(--muted)}
 .menu-wrap{position:relative}
-.hamburger{font:inherit;cursor:pointer;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;color:var(--text)}
-.menu-dd{position:absolute;right:0;top:110%;min-width:220px;background:#111827;border:1px solid #1f2937;border-radius:12px;box-shadow:var(--shadow);display:none;padding:6px;z-index:10}
+.hamburger{
+  font:inherit;cursor:pointer;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;color:var(--text)
+}
+html[data-theme="light"] .hamburger{ background:#fffdf7; border-color:#e3ded4; }
+.menu-dd{
+  position:absolute;right:0;top:110%;min-width:220px;background:var(--panel);
+  border:1px solid #0b1224;border-radius:12px;box-shadow:var(--shadow);display:none;padding:6px;z-index:10
+}
+html[data-theme="light"] .menu-dd{ border-color:#e6e2da; }
 .menu-dd.open{display:block}
-.mi{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:#e5e7eb;border-radius:10px;cursor:pointer}
+.mi{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
 .mi:hover{background:#0b1224}
+html[data-theme="light"] .mi:hover{ background:#f6f3ec; }
 
 /* Layout */
 .grid{display:grid;gap:14px;grid-template-columns:1fr 360px}
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
-.viewer{position:relative;height:60vh;min-height:360px;border-radius:16px;overflow:hidden;background:#0b1224;border:1px solid #334155}
+.viewer{
+  position:relative;height:60vh;min-height:360px;border-radius:16px;overflow:hidden;
+  background:#0b1224;border:1px solid #334155
+}
+html[data-theme="light"] .viewer{ background:#fffdf7; border-color:#e3ded4; }
 .viewer img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .5s}
 
 /* List (scrollable) */
 .list{
   display:grid;gap:10px;max-height:60vh;overflow:auto;padding-right:4px;
-  -webkit-overflow-scrolling:touch;         /* smooth iPad scrolling */
-  overscroll-behavior:contain;              /* prevents page from dragging */
+  -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
 }
-.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:#1f2937;border:1px solid #111827;border-radius:12px;padding:8px 10px;cursor:pointer}
+.row{
+  display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;
+  background:#1f2937;border:1px solid #111827;border-radius:12px;padding:8px 10px;cursor:pointer
+}
+html[data-theme="light"] .row{ background:#fffdf7; border-color:#ebe6db; }
 .row:hover{background:#1e293b}
+html[data-theme="light"] .row:hover{ background:#f3efe6; }
 .row.active{outline:2px solid var(--accent)}
 .thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;background:#0b1224;border:1px solid #334155}
-.row .name{font-size:.92rem;color:#e5e7eb}
-.btn{font:inherit;color:#e5e7eb;background:#0b1224;border:1px solid #334155;border-radius:10px;padding:8px 10px;cursor:pointer}
-.small{font-size:.9rem;color:#cbd5e1}
+html[data-theme="light"] .thumb{ background:#f6f3ec; border-color:#e3ded4; }
+.row .name{font-size:.92rem;color:var(--text)}
+.btn{
+  font:inherit;color:var(--text);background:#0b1224;border:1px solid #334155;border-radius:10px;padding:8px 10px;cursor:pointer
+}
+html[data-theme="light"] .btn{ background:#fffdf7; border-color:#e3ded4; }
+.small{font-size:.9rem;color:var(--muted)}
 
 /* Hide file input completely (prevents iOS “Choose Files” pill) */
 input[type="file"].sr-only{ display:none !important; }
 
 /* Toast */
-.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#0b1224;border:1px solid #334155;color:#e5e7eb;padding:10px 12px;border-radius:10px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .25s}
+.toast{
+  position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+  background:#0b1224;border:1px solid #334155;color:var(--text);
+  padding:10px 12px;border-radius:10px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .25s
+}
+html[data-theme="light"] .toast{ background:#fffdf7; border-color:#e3ded4; }
 .toast.show{opacity:1}
 </style>
 </head>
@@ -77,7 +181,9 @@ input[type="file"].sr-only{ display:none !important; }
   <!-- Header -->
   <header class="panel">
     <div class="head-left">
-      <img src="fambam.png" alt="Fambam" title="Home" onclick="location.href='./index.html'"/>
+      <a href="./index.html" class="brand" title="Home">
+        <img src="fambam.png" alt="Fambam">
+      </a>
       <div class="title">
         <div style="font-size:1.4rem">Photos</div>
         <div class="small">Pick images for the home slideshow card.</div>
@@ -122,7 +228,7 @@ input[type="file"].sr-only{ display:none !important; }
 
 <script>
 const LS_LIST='photos:list';
-const LS_IV  ='photos:cadence_ms'; // same key Home tile uses
+const LS_IV  ='photos:cadence_ms';
 const MAX_PHOTOS = 20;
 
 const $=(s,e=document)=>e.querySelector(s);
@@ -170,7 +276,7 @@ function renderList(){
       <button class="btn" data-remove>Remove</button>
     `;
     row.onclick = (ev)=>{
-      if(ev.target.closest('[data-remove]')) return; // button handles its own click
+      if(ev.target.closest('[data-remove]')) return;
       jumpTo(i);
     };
     row.querySelector('[data-remove]').onclick=()=>{
@@ -183,7 +289,6 @@ function renderList(){
     };
     listEl.appendChild(row);
   });
-  // highlight current
   highlightActive();
 }
 function highlightActive(){
@@ -231,8 +336,6 @@ picker.onchange = async (e)=>{
   else showToast('No supported photos were added.');
 };
 
-/* Try createImageBitmap first (often decodes HEIC on iPad Safari).
-   Fallback to Image + FileReader. Always output normalized JPEG. */
 async function readAndShrinkSmart(file, maxSide=1800, quality=.9){
   const bitmap = await decodeToBitmap(file).catch(()=>null);
   if(!bitmap) return null;
