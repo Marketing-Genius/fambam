@@ -17,9 +17,6 @@
 
 <!-- THEME BOOT (Dark/Light + Accent + Auto Logo Swap) -->
 <script>
-/* Reads localStorage `ui:theme` = { mode:"dark"|"light", accent:"#RRGGBB" }.
-   Applies immediately, syncs <meta name="theme-color">, and swaps Fambam logo.
-   Expects `fambam.png` (dark) and `fambam2.png` (light) in the same directory. */
 (function () {
   var DARK_SRC  = 'fambam.png';
   var LIGHT_SRC = 'fambam2.png';
@@ -33,38 +30,25 @@
       null
     );
   }
-
   function swapLogoForMode(mode) {
-    var logo = findLogo();
-    if (!logo) return;
-
+    var logo = findLogo(); if (!logo) return;
     var cur = logo.getAttribute('src') || '';
-    var next;
-    if (/fambam2?\.png$/i.test(cur)) {
-      next = cur.replace(/fambam2?\.png$/i, mode === 'light' ? 'fambam2.png' : 'fambam.png');
-    } else {
-      next = (mode === 'light') ? LIGHT_SRC : DARK_SRC;
-    }
+    var next = /fambam2?\.png$/i.test(cur)
+      ? cur.replace(/fambam2?\.png$/i, mode === 'light' ? 'fambam2.png' : 'fambam.png')
+      : (mode === 'light' ? LIGHT_SRC : DARK_SRC);
     logo.setAttribute('src', next);
-
-    var a = logo.closest('a');
-    if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
+    var a = logo.closest('a'); if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
   }
-
   function applyTheme(t) {
     var mode   = (t && t.mode === 'light') ? 'light' : 'dark';
     var accent = (t && t.accent) || '#22d3ee';
-
     document.documentElement.setAttribute('data-theme', mode);
     document.documentElement.style.setProperty('--accent', accent);
-
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
-
     swapLogoForMode(mode);
     document.addEventListener('DOMContentLoaded', function(){ swapLogoForMode(mode); }, { once:true });
   }
-
   try {
     var raw = localStorage.getItem('ui:theme');
     var saved = raw ? JSON.parse(raw) : { mode: 'dark', accent: '#22d3ee' };
@@ -72,7 +56,6 @@
   } catch (_) {
     applyTheme({ mode: 'dark', accent: '#22d3ee' });
   }
-
   window.addEventListener('storage', function (e) {
     if (e.key !== 'ui:theme') return;
     try { applyTheme(JSON.parse(e.newValue || '{}')); } catch (_) {}
@@ -81,10 +64,10 @@
 </script>
 
 <style>
-/* --- layout sanity --- */
+/* layout sanity */
 *, *::before, *::after { box-sizing: border-box; }
 
-/* Tokens (match app) */
+/* Tokens (aligned with other pages) */
 :root{
   --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
   --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
@@ -96,38 +79,29 @@
   --previewBg:#081228;
   --previewBorder:#27324a;
 
-  /* Wallpaper hooks */
+  /* Wallpaper hooks (required) */
   --wallpaper:url('');
   --wallpaper-shift:40%;
 }
 
-/* LIGHT THEME OVERRIDES (soft ivory palette) */
+/* Light theme overrides */
 html[data-theme="light"]{
-  --panel:#f2efe7;
-  --card:#ffffff;
-  --muted:#556070;
-  --text:#0f1623;
-  --bg:#f0ece4;
+  --panel:#f2efe7; --card:#ffffff; --muted:#556070; --text:#0f1623; --bg:#f0ece4;
   --shadow:0 10px 28px rgba(0,0,0,.08);
-
-  --panelBorder:#e6e2da;
-  --chipBg:#f6f3ec;
-  --chipBorder:#e3ded4;
-
-  --previewBg:#fffdf7;
-  --previewBorder:#ebe6db;
+  --panelBorder:#e6e2da; --chipBg:#f6f3ec; --chipBorder:#e3ded4;
+  --previewBg:#fffdf7; --previewBorder:#ebe6db;
 }
 
 html,body{height:100%}
 body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
   color:var(--text);
-  background:#404c69; /* simple fallback */
+  background:#404c69; /* consistent fallback */
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
   overflow-x:hidden;
 }
 
-/* Wallpaper layers (consistent across pages) */
+/* Wallpaper layers (consistent across app) */
 body::before{
   content:""; position:fixed; inset:0; z-index:-2;
   background-image: var(--wallpaper);
@@ -388,21 +362,22 @@ function renderNotes(){
 }
 renderBadges(); renderNotes();
 
-$('#addBadge').onclick=()=>{
-  const emoji = ($('#badgeEmoji').value||'').trim() || '🏅';
-  const label = ($('#badgeLbl').value||'').trim() || 'Badge';
+/* Adders */
+document.getElementById('addBadge').onclick=()=>{
+  const emoji = (document.getElementById('badgeEmoji').value||'').trim() || '🏅';
+  const label = (document.getElementById('badgeLbl').value||'').trim() || 'Badge';
   const item = {id:Math.random().toString(36).slice(2,10), emoji, label, date: new Date().toISOString()};
   Prof.pushBadge(id, item);
   Object.assign(prof, Prof.load(id));
-  $('#badgeEmoji').value=''; $('#badgeLbl').value='';
+  document.getElementById('badgeEmoji').value=''; document.getElementById('badgeLbl').value='';
   renderBadges();
 };
-$('#addNote').onclick=()=>{
-  const text = ($('#noteText').value||'').trim(); if(!text) return;
+document.getElementById('addNote').onclick=()=>{
+  const text = (document.getElementById('noteText').value||'').trim(); if(!text) return;
   const item = {id:Math.random().toString(36).slice(2,10), text, date:new Date().toISOString()};
   Prof.pushNote(id, item);
   Object.assign(prof, Prof.load(id));
-  $('#noteText').value='';
+  document.getElementById('noteText').value='';
   renderNotes();
 };
 
