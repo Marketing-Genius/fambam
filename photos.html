@@ -16,54 +16,70 @@
 <script src="wallpaper.js" defer></script>
 
 <script>
-/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap) */
+/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap, DOM-ready safe) */
 (function () {
-  var DARK_SRC = 'fambam.png';
+  var DARK_SRC  = 'fambam.png';
   var LIGHT_SRC = 'fambam2.png';
+  var currentTheme = { mode: 'dark', accent: '#22d3ee' };
 
-  function findLogo() {
-    return (
-      document.getElementById('logoImg') ||
-      document.querySelector('.brand img') ||
-      document.querySelector('header .title img') ||
-      document.querySelector('img[alt="Fambam"]') ||
-      Array.from(document.images).find(img =>
-        (img.src||'').endsWith('/'+DARK_SRC) || (img.src||'').endsWith('/'+LIGHT_SRC)
-      ) || null
-    );
-  }
-
-  function applyTheme(t) {
+  function applyThemeTokens(t){
     var mode = (t && t.mode === 'light') ? 'light' : 'dark';
     var accent = (t && t.accent) || '#22d3ee';
+    currentTheme = { mode: mode, accent: accent };
 
     document.documentElement.setAttribute('data-theme', mode);
     document.documentElement.style.setProperty('--accent', accent);
 
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
+  }
 
+  function findLogo(){
+    return (
+      document.getElementById('logoImg') ||
+      document.querySelector('.brand img') ||
+      document.querySelector('header img[alt="Fambam"]') ||
+      null
+    );
+  }
+
+  function swapLogo(){
     var logo = findLogo();
-    if (logo) {
-      var url = new URL(logo.src, location.href);
-      var base = url.pathname.replace(/[^/]+$/, '');
-      logo.src = (mode === 'light') ? (base + LIGHT_SRC) : (base + DARK_SRC);
-      var a = logo.closest('a');
-      if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
-    }
+    if (!logo) return;
+
+    // Keep the same folder the current src attribute came from
+    var curAttr = logo.getAttribute('src') || '';
+    var base = curAttr.replace(/[^/]*$/, '');  // strip filename
+    var file = (currentTheme.mode === 'light') ? LIGHT_SRC : DARK_SRC;
+    logo.setAttribute('src', base + file);
+
+    var a = logo.closest('a');
+    if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
   }
 
-  try {
+  // Initial tokens
+  try{
     var raw = localStorage.getItem('ui:theme');
-    var saved = raw ? JSON.parse(raw) : { mode: 'dark', accent: '#22d3ee' };
-    applyTheme(saved);
-  } catch (_) {
-    applyTheme({ mode: 'dark', accent: '#22d3ee' });
+    applyThemeTokens(raw ? JSON.parse(raw) : {mode:'dark',accent:'#22d3ee'});
+  }catch(_){ applyThemeTokens({mode:'dark',accent:'#22d3ee'}); }
+
+  // Swap as soon as DOM is ready (logo exists)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', swapLogo, { once:true });
+  } else {
+    swapLogo();
   }
 
+  // Live updates from other pages/tabs
   window.addEventListener('storage', function (e) {
     if (e.key !== 'ui:theme') return;
-    try { applyTheme(JSON.parse(e.newValue || '{}')); } catch (_) {}
+    try { applyThemeTokens(JSON.parse(e.newValue||'{}')); } catch(_){}
+    // Swap again after storage update
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', swapLogo, { once:true });
+    } else {
+      swapLogo();
+    }
   });
 })();
 </script>
@@ -96,7 +112,7 @@ body::before{
 }
 body::after{
   content:""; position:fixed; inset:0; z-index:-1;
-  background: rgba(64,76,105,.9); /* same overlay for both themes */
+  background: rgba(64,76,105,.9);
   pointer-events:none;
 }
 
@@ -163,7 +179,7 @@ html[data-theme="light"] .thumb{ background:#f6f3ec; border-color:#e3ded4; }
 html[data-theme="light"] .btn{ background:#fffdf7; border-color:#e3ded4; }
 .small{font-size:.9rem;color:var(--muted)}
 
-/* Hide file input completely (prevents iOS “Choose Files” pill) */
+/* Hide file input completely */
 input[type="file"].sr-only{ display:none !important; }
 
 /* Toast */
@@ -221,7 +237,7 @@ html[data-theme="light"] .toast{ background:#fffdf7; border-color:#e3ded4; }
   </footer>
 </div>
 
-<!-- Hidden picker (truly hidden) -->
+<!-- Hidden picker -->
 <input id="picker" type="file" accept="image/*,.heic,.heif" multiple class="sr-only"/>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
