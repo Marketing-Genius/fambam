@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -15,10 +15,12 @@
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
-<!-- THEME BOOT (Dark/Light + Accent + Auto Logo Swap) -->
 <script>
+/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap)
+   Reads localStorage `ui:theme` = { mode:"dark"|"light", accent:"#RRGGBB" }.
+   Applies immediately, syncs <meta name="theme-color">, swaps Fambam logo. */
 (function () {
-  var DARK_SRC  = 'fambam.png';
+  var DARK_SRC = 'fambam.png';
   var LIGHT_SRC = 'fambam2.png';
 
   function findLogo() {
@@ -27,28 +29,34 @@
       document.querySelector('.brand img') ||
       document.querySelector('header .title img') ||
       document.querySelector('img[alt="Fambam"]') ||
-      null
+      Array.from(document.images).find(img =>
+        (img.src||'').endsWith('/'+DARK_SRC) || (img.src||'').endsWith('/'+LIGHT_SRC)
+      ) || null
     );
   }
-  function swapLogoForMode(mode) {
-    var logo = findLogo(); if (!logo) return;
-    var cur = logo.getAttribute('src') || '';
-    var next = /fambam2?\.png$/i.test(cur)
-      ? cur.replace(/fambam2?\.png$/i, mode === 'light' ? 'fambam2.png' : 'fambam.png')
-      : (mode === 'light' ? LIGHT_SRC : DARK_SRC);
-    logo.setAttribute('src', next);
-    var a = logo.closest('a'); if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
-  }
+
   function applyTheme(t) {
-    var mode   = (t && t.mode === 'light') ? 'light' : 'dark';
+    var mode = (t && t.mode === 'light') ? 'light' : 'dark';
     var accent = (t && t.accent) || '#22d3ee';
+
     document.documentElement.setAttribute('data-theme', mode);
     document.documentElement.style.setProperty('--accent', accent);
+
+    // Browser UI color
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
-    swapLogoForMode(mode);
-    document.addEventListener('DOMContentLoaded', function(){ swapLogoForMode(mode); }, { once:true });
+
+    // Logo swap (if found)
+    var logo = findLogo();
+    if (logo) {
+      var url = new URL(logo.src, location.href);
+      var base = url.pathname.replace(/[^/]+$/, '');
+      logo.src = (mode === 'light') ? (base + LIGHT_SRC) : (base + DARK_SRC);
+      var a = logo.closest('a');
+      if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
+    }
   }
+
   try {
     var raw = localStorage.getItem('ui:theme');
     var saved = raw ? JSON.parse(raw) : { mode: 'dark', accent: '#22d3ee' };
@@ -56,6 +64,7 @@
   } catch (_) {
     applyTheme({ mode: 'dark', accent: '#22d3ee' });
   }
+
   window.addEventListener('storage', function (e) {
     if (e.key !== 'ui:theme') return;
     try { applyTheme(JSON.parse(e.newValue || '{}')); } catch (_) {}
@@ -64,44 +73,31 @@
 </script>
 
 <style>
-/* layout sanity */
-*, *::before, *::after { box-sizing: border-box; }
-
-/* Tokens (aligned with other pages) */
 :root{
-  --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
-  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
-
-  --panelBorder:#0b1224;
-  --chipBg:#0b1224;
-  --chipBorder:#334155;
-
-  --previewBg:#081228;
-  --previewBorder:#27324a;
-
-  /* Wallpaper hooks (required) */
+  --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+  /* required for wallpaper */
   --wallpaper:url('');
   --wallpaper-shift:40%;
 }
 
-/* Light theme overrides */
+/* Light palette overrides (soft ivory) */
 html[data-theme="light"]{
-  --panel:#f2efe7; --card:#ffffff; --muted:#556070; --text:#0f1623; --bg:#f0ece4;
+  --panel:#f2efe7;
+  --muted:#556070;
+  --text:#0f1623;
   --shadow:0 10px 28px rgba(0,0,0,.08);
-  --panelBorder:#e6e2da; --chipBg:#f6f3ec; --chipBorder:#e3ded4;
-  --previewBg:#fffdf7; --previewBorder:#ebe6db;
 }
 
 html,body{height:100%}
 body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
   color:var(--text);
-  background:#404c69; /* consistent fallback */
+  background:#404c69;              /* simple fallback (same as index) */
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
   overflow-x:hidden;
 }
 
-/* Wallpaper layers (consistent across app) */
+/* Wallpaper layers (match the rest of the app) */
 body::before{
   content:""; position:fixed; inset:0; z-index:-2;
   background-image: var(--wallpaper);
@@ -111,57 +107,52 @@ body::before{
 }
 body::after{
   content:""; position:fixed; inset:0; z-index:-1;
-  background: rgba(64,76,105,.9);
+  background: rgba(64,76,105,.9);   /* same overlay for BOTH themes */
   pointer-events:none;
 }
-html[data-theme="light"] body::after{ background: rgba(240,236,228,.85); }
 
-/* Layout */
+/* App shell */
 .app{max-width:980px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
-
-/* Panels */
 .panel{
-  background:var(--panel);
-  border:1px solid var(--panelBorder);
-  box-shadow:var(--shadow);
-  border-radius:var(--radius);
-  padding:14px;
-  backdrop-filter: blur(8px);
+  background:rgba(17,24,39,.6);
+  border:1px solid #0b1224; box-shadow:var(--shadow); border-radius:var(--radius);
+  padding:14px; backdrop-filter: blur(8px)
+}
+html[data-theme="light"] .panel{
+  background:rgba(255,255,255,.72); border-color:#e6e2da;
 }
 
-/* Header */
 header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
-.brand img{height:38px;display:block;cursor:pointer}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:38px;display:block}
 .title{font-weight:800}
 
 /* Hero */
 .hero{display:flex;gap:14px;align-items:center}
 .face{
   width:96px;height:96px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
-  background:var(--chipBg);border:3px solid var(--chipBorder);font-size:40px;font-weight:800;flex:0 0 auto
+  background:#0b1224;border:3px solid #334155;font-size:40px;font-weight:800;flex:0 0 auto
 }
+html[data-theme="light"] .face{ background:#f6f3ec; border-color:#d9d3c6; }
 .face img{width:100%;height:100%;object-fit:cover}
 .name{font-weight:800;font-size:1.4rem}
 .sub{color:var(--muted)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-
-/* Inputs & buttons */
-.input{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;color:var(--text);padding:8px 10px;font:inherit}
-.btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;color:var(--text);padding:8px 10px;font:inherit;cursor:pointer}
-
-/* Stats / badges / notes */
+.input{background:#0b1224;border:1px solid #334155;border-radius:12px;color:var(--text);padding:8px 10px;font:inherit}
+html[data-theme="light"] .input{ background:#fffdf7; border-color:#e3ded4; }
+.btn{background:#0b1224;border:1px solid #334155;border-radius:12px;color:var(--text);padding:8px 10px;font:inherit;cursor:pointer}
+html[data-theme="light"] .btn{ background:#fffdf7; border-color:#e3ded4; }
 .badges{display:flex;gap:8px;flex-wrap:wrap}
-.badge{display:inline-flex;gap:6px;align-items:center;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;padding:6px 10px}
+.badge{display:inline-flex;gap:6px;align-items:center;background:#0b1224;border:1px solid #334155;border-radius:999px;padding:6px 10px}
+html[data-theme="light"] .badge{ background:#fffdf7; border-color:#e3ded4; }
 .section{display:grid;gap:10px}
 .grid{display:grid;gap:12px}
 @media(min-width:860px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.stat{background:var(--chipBg);border:1px solid var(--previewBorder);border-radius:16px;padding:12px}
+.stat{background:#0b1224;border:1px solid #27324a;border-radius:16px;padding:12px}
+html[data-theme="light"] .stat{ background:#fffdf7; border-color:#ebe6db; }
 .stat .hd{font-weight:800;margin-bottom:6px}
-.note{background:var(--chipBg);border:1px solid var(--previewBorder);border-radius:12px;padding:10px}
-
-/* Footer */
-footer{opacity:.75;font-size:.85rem;text-align:center}
+.note{background:#0b1224;border:1px solid #27324a;border-radius:12px;padding:10px}
+html[data-theme="light"] .note{ background:#fffdf7; border-color:#ebe6db; }
 </style>
 </head>
 <body>
@@ -228,7 +219,7 @@ footer{opacity:.75;font-size:.85rem;text-align:center}
     </div>
   </section>
 
-  <footer>Works offline. Data stays on this device (local only).</footer>
+  <footer style="text-align:center;opacity:.7">Works offline. Data stays on this device (local only).</footer>
 </div>
 
 <script src="family.js?v=3.3.6"></script>
@@ -274,7 +265,7 @@ const accent = prof.accent || '#22d3ee';
 $('#accent').value = accent;
 
 const av = $('#avatar');
-av.style.borderColor = accent || 'var(--chipBorder)';
+av.style.borderColor = accent || '#334155';
 av.innerHTML = person.photo ? `<img src="${person.photo}" alt="">` : `<span>${initials(person.name)}</span>`;
 
 /* favorites */
@@ -345,7 +336,7 @@ $('#saveFav').onclick = ()=>{
 
 /* ---------- Badges & Notes ---------- */
 function renderBadges(){
-  const wrap = $('#badges'); wrap.innerHTML='';
+  const wrap = document.getElementById('badges'); wrap.innerHTML='';
   (prof.badges||[]).forEach(b=>{
     const chip=document.createElement('div'); chip.className='badge';
     chip.textContent = `${b.emoji||'🏅'} ${b.label||''}`;
@@ -353,7 +344,7 @@ function renderBadges(){
   });
 }
 function renderNotes(){
-  const wrap=$('#notes'); wrap.innerHTML='';
+  const wrap=document.getElementById('notes'); wrap.innerHTML='';
   (prof.notes||[]).forEach(n=>{
     const div=document.createElement('div'); div.className='note';
     div.textContent = n.text;
@@ -362,7 +353,6 @@ function renderNotes(){
 }
 renderBadges(); renderNotes();
 
-/* Adders */
 document.getElementById('addBadge').onclick=()=>{
   const emoji = (document.getElementById('badgeEmoji').value||'').trim() || '🏅';
   const label = (document.getElementById('badgeLbl').value||'').trim() || 'Badge';
@@ -381,10 +371,7 @@ document.getElementById('addNote').onclick=()=>{
   renderNotes();
 };
 
-/* SW */
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-}
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
 </script>
 </body>
 </html>
