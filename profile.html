@@ -16,58 +16,71 @@
 <script src="wallpaper.js" defer></script>
 
 <script>
-/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap)
+/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap, DOM-ready safe)
    Reads localStorage `ui:theme` = { mode:"dark"|"light", accent:"#RRGGBB" }.
-   Applies immediately, syncs <meta name="theme-color">, swaps Fambam logo. */
+   Applies tokens immediately, swaps the Fambam logo after DOM is ready. */
 (function () {
-  var DARK_SRC = 'fambam.png';
+  var DARK_SRC  = 'fambam.png';
   var LIGHT_SRC = 'fambam2.png';
+  var currentTheme = { mode:'dark', accent:'#22d3ee' };
 
-  function findLogo() {
-    return (
-      document.getElementById('logoImg') ||
-      document.querySelector('.brand img') ||
-      document.querySelector('header .title img') ||
-      document.querySelector('img[alt="Fambam"]') ||
-      Array.from(document.images).find(img =>
-        (img.src||'').endsWith('/'+DARK_SRC) || (img.src||'').endsWith('/'+LIGHT_SRC)
-      ) || null
-    );
-  }
-
-  function applyTheme(t) {
+  function applyThemeTokens(t){
     var mode = (t && t.mode === 'light') ? 'light' : 'dark';
     var accent = (t && t.accent) || '#22d3ee';
+    currentTheme = { mode:mode, accent:accent };
 
     document.documentElement.setAttribute('data-theme', mode);
     document.documentElement.style.setProperty('--accent', accent);
 
-    // Browser UI color
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
-
-    // Logo swap (if found)
-    var logo = findLogo();
-    if (logo) {
-      var url = new URL(logo.src, location.href);
-      var base = url.pathname.replace(/[^/]+$/, '');
-      logo.src = (mode === 'light') ? (base + LIGHT_SRC) : (base + DARK_SRC);
-      var a = logo.closest('a');
-      if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
-    }
   }
 
+  function findLogo(){
+    return (
+      document.getElementById('logoImg') ||
+      document.querySelector('.brand img') ||
+      document.querySelector('header img[alt="Fambam"]') ||
+      null
+    );
+  }
+
+  function swapLogo(){
+    var logo = findLogo();
+    if (!logo) return;
+
+    // Build path from the *attribute* (relative-safe)
+    var curAttr = logo.getAttribute('src') || '';
+    var base = curAttr.replace(/[^/]*$/, ''); // strip filename
+    var file = (currentTheme.mode === 'light') ? LIGHT_SRC : DARK_SRC;
+    logo.setAttribute('src', base + file);
+
+    var a = logo.closest('a');
+    if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
+  }
+
+  // Initial tokens
   try {
     var raw = localStorage.getItem('ui:theme');
-    var saved = raw ? JSON.parse(raw) : { mode: 'dark', accent: '#22d3ee' };
-    applyTheme(saved);
-  } catch (_) {
-    applyTheme({ mode: 'dark', accent: '#22d3ee' });
+    applyThemeTokens(raw ? JSON.parse(raw) : {mode:'dark',accent:'#22d3ee'});
+  } catch(_) { applyThemeTokens({mode:'dark',accent:'#22d3ee'}); }
+
+  // Swap as soon as DOM has the logo
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', swapLogo, {once:true});
+  } else {
+    swapLogo();
   }
 
-  window.addEventListener('storage', function (e) {
+  // Live updates when theme changes elsewhere
+  window.addEventListener('storage', function(e){
     if (e.key !== 'ui:theme') return;
-    try { applyTheme(JSON.parse(e.newValue || '{}')); } catch (_) {}
+    try { applyThemeTokens(JSON.parse(e.newValue||'{}')); } catch(_){}
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', swapLogo, {once:true});
+    } else {
+      swapLogo();
+    }
   });
 })();
 </script>
