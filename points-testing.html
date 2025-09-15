@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Fambam · Points (Test)</title>
+
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<!-- Universal wallpaper -->
+<link rel="stylesheet" href="wallpaper.css">
+<script src="wallpaper.js" defer></script>
+
+<!-- THEME BOOT (Dark/Light + Accent + Auto Logo Swap) -->
+<script>
+(function () {
+  var DARK_SRC='fambam.png', LIGHT_SRC='fambam2.png';
+  function findLogo(){
+    return document.getElementById('logoImg')
+        || document.querySelector('.brand img')
+        || document.querySelector('img[alt="Fambam"]')
+        || null;
+  }
+  function applyTheme(t){
+    var mode=(t&&t.mode==='light')?'light':'dark';
+    var accent=(t&&t.accent)||'#22d3ee';
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.style.setProperty('--accent', accent);
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', mode==='light'?'#f2efe7':'#0f172a');
+    var logo=findLogo();
+    if(logo){
+      var url=new URL(logo.src, location.href);
+      var base=url.pathname.replace(/[^/]+$/,'');
+      logo.src = (mode==='light') ? (base+LIGHT_SRC) : (base+DARK_SRC);
+      var a=logo.closest('a'); if(a && !a.getAttribute('href')) a.setAttribute('href','./index.html');
+    }
+  }
+  try{ applyTheme(JSON.parse(localStorage.getItem('ui:theme')||'{}')); }
+  catch{ applyTheme({mode:'dark',accent:'#22d3ee'}); }
+  addEventListener('storage', e=>{ if(e.key==='ui:theme') try{applyTheme(JSON.parse(e.newValue||'{}'))}catch{}; });
+})();
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Tokens */
+:root{
+  --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
+  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+
+  --panelBorder:#0b1224;
+  --chipBg:#0b1224;
+  --chipBorder:#334155;
+
+  --dropdownBg:#111827;
+  --dropdownBorder:#1f2937;
+
+  /* Wallpaper hooks */
+  --wallpaper:url('');
+  --wallpaper-shift:40%;
+}
+
+/* LIGHT THEME */
+html[data-theme="light"]{
+  --panel:#f2efe7;
+  --card:#ffffff;
+  --muted:#556070;
+  --text:#0f1623;
+  --bg:#f0ece4;
+  --shadow:0 10px 28px rgba(0,0,0,.08);
+
+  --panelBorder:#e6e2da;
+  --chipBg:#f6f3ec;
+  --chipBorder:#e3ded4;
+
+  --dropdownBg:#ffffff;
+  --dropdownBorder:#ebe7df;
+}
+
+html,body{height:100%}
+body{
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  color:var(--text); background:#404c69; -webkit-tap-highlight-color:transparent; touch-action:manipulation; overflow-x:hidden;
+}
+
+/* Wallpaper layers */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background-image: var(--wallpaper);
+  background-size: cover; background-repeat:no-repeat;
+  background-position: center var(--wallpaper-shift);
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background: rgba(64,76,105,.9);
+  pointer-events:none;
+}
+
+.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
+
+/* Panels */
+.panel{background:var(--panel);border:1px solid var(--panelBorder);box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
+
+/* Header */
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.h-left{display:flex;align-items:center;gap:14px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:38px;display:block;cursor:pointer}
+.title{font-weight:800}
+.title .small{font-weight:600;font-size:.9rem;color:var(--muted)}
+.menu-wrap{position:relative}
+.hamburger{font:inherit;cursor:pointer;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;color:var(--text);padding:10px 12px}
+.menu-dropdown{position:absolute; right:0; top:110%; min-width:240px; z-index:20; background:var(--dropdownBg); border:1px solid var(--dropdownBorder); border-radius:12px; box-shadow:var(--shadow); padding:6px; display:none;}
+.menu-dropdown.open{display:block}
+.menu-item{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
+.menu-item:hover{background:var(--chipBg)}
+
+/* Layout */
+.grid{display:grid;gap:14px;grid-template-columns:360px 1fr}
+@media(max-width:960px){.grid{grid-template-columns:1fr}}
+.section-title{font-weight:800;margin-bottom:8px}
+
+/* Leaderboard */
+.lb-list{display:grid;gap:10px}
+.lb-item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px;cursor:pointer}
+.lb-item.active{outline:2px solid var(--accent)}
+.person{display:flex;align-items:center;gap:10px}
+.face{width:42px;height:42px;border-radius:50%;background:var(--chipBg);border:2px solid var(--chipBorder);overflow:hidden;display:grid;place-items:center;font-weight:800}
+.face img{width:100%;height:100%;object-fit:cover}
+.score{font-weight:800}
+.small{font-size:.9rem;color:var(--muted)}
+
+/* Level chip */
+.levelchip{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--chipBg); border:1px solid var(--chipBorder);
+  border-radius:999px; padding:4px 8px; font-size:.85rem; color:var(--text);
+}
+
+/* Detail */
+.detail{display:grid;gap:12px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chipBg);border:1px solid var(--chipBorder);color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type="number"],input[type="text"],select,textarea{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit}
+.btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit;cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,var(--accent),color-mix(in oklab, var(--accent) 70%, #0891b2 30%));color:#001018;border:none;font-weight:800}
+.btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
+
+/* Ledger */
+.ledger{display:grid;gap:8px;max-height:320px;overflow:auto;padding-right:4px;-webkit-overflow-scrolling:touch}
+.entry{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--card);border:1px solid var(--panelBorder);border-radius:10px;padding:8px}
+.entry .muted{color:var(--muted);font-size:.9rem}
+.positive{color:#16a34a}
+.negative{color:#dc2626}
+
+/* Pending approvals */
+.pending{display:grid;gap:10px}
+.pending-item{display:grid;gap:8px;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px}
+
+.hint{opacity:.8;font-size:.9rem;text-align:center}
+.version{opacity:.6;font-size:.8rem;margin-top:6px}
+</style>
+</head>
+<body>
+  <div class="app">
+    <header class="panel">
+      <div class="h-left">
+        <a href="./index.html" class="brand" title="Home">
+          <img id="logoImg" src="fambam.png" alt="Fambam">
+        </a>
+        <div class="title">
+          <div style="font-size:1.6rem">Points (Test)</div>
+          <div class="small">Monthly levels (every 50 pts), seasonal leaderboard, and history.</div>
+        </div>
+      </div>
+      <div class="menu-wrap">
+        <button id="btnHamburger" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown">☰</button>
+        <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
+          <button class="menu-item" data-action="scan">Scan Week & Propose Awards</button>
+          <button class="menu-item" data-action="clearPending">Clear All Pending</button>
+          <button class="menu-item" data-action="resetBalances">Reset All Balances</button>
+          <button class="menu-item" data-action="about">About</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="grid">
+      <!-- Left: leaderboard -->
+      <div class="panel">
+        <div class="section-title">Leaderboard · <span id="monthLabel"></span></div>
+        <div id="lb" class="lb-list"></div>
+      </div>
+
+      <!-- Right: detail -->
+      <div class="panel detail">
+        <div class="row" style="justify-content:space-between">
+          <div class="section-title" id="kidTitle">Select a child</div>
+          <div class="badge">Weekly goal: 100</div>
+        </div>
+
+        <div class="row">
+          <input id="ptsDelta" type="number" value="10" step="1" min="-999" style="width:100px"/>
+          <input id="ptsReason" type="text" placeholder="Reason (e.g., Helped with dishes)" style="min-width:220px;flex:1"/>
+          <button id="btnGrant" class="btn-primary">Apply</button>
+        </div>
+
+        <div class="row" style="gap:6px">
+          <button class="btn" data-quick="+5">+5</button>
+          <button class="btn" data-quick="+10">+10</button>
+          <button class="btn" data-quick="+20">+20</button>
+          <button class="btn" data-quick="-5">−5</button>
+        </div>
+
+        <div>
+          <div class="section-title" style="margin-bottom:6px">Pending Awards</div>
+          <div id="pending" class="pending"></div>
+        </div>
+
+        <div>
+          <div class="section-title" style="margin-bottom:6px">Ledger</div>
+          <div id="ledger" class="ledger"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="hint">
+      Works offline. Data stays on this device (local only).
+      <div class="version">Points (Test) v0.2.0 — monthly seasons + levels</div>
+    </div>
+  </div>
+
+  <!-- Family store (fallback shim if not present) -->
+  <script src="family.js?v=3.3.6"></script>
+  <script>
+  if(!window.Family){
+    (function(){
+      const K={kids:'hub:family:kids'};
+      const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
+      window.Family={ getKids(){ return load(K.kids,[]); }, getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false);} };
+    })();
+  }
+  </script>
+
+  <script>
+/* ------- Config ------- */
+const POINTS_PER_DOT = 20;   // per completed day-dot in Chores
+const WEEK_CAP       = 100;  // per kid per week cap
+const LEVEL_STRIDE   = 50;   // every 50 pts = +1 level
+
+/* ------- Storage keys ------- */
+const PTS_BAL='pts:balances';                         // { kidId: number }  (ALL-TIME)
+const PTS_LED='pts:ledger';                           // [ {id,kidId,delta,reason,ts,source} ] (ALL-TIME)
+const PTS_PEN='pts:pending';                          // [ {id,kidId,delta,reason,weekISO,calc} ]
+const PTS_MBAL = (m)=>`pts:balances:${m}`;            // { kidId: number }  (MONTH-SCOPED)
+
+/* Chores keys (must match chores.html) */
+const CH_WEEK =(m)=>`ch:assign:${m}`;  // { [choreId]: kidId }
+const CH_DONE =(m)=>`ch:done:${m}`;    // { [choreId]: {Mon:true,...} }
+
+/* ------- Utilities ------- */
+const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
+const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const uid=()=>Math.random().toString(36).slice(2,10);
+const initials=n=>((n||'?').trim()[0]||'?').toUpperCase();
+
+/* Month helpers */
+function monthId(d=new Date()){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; // YYYY-MM
+}
+function monthLabelText(mid=monthId()){
+  const [Y,M]=mid.split('-').map(n=>+n);
+  const dt=new Date(Y,M-1,1);
+  return dt.toLocaleDateString(undefined,{month:'long', year:'numeric'});
+}
+
+/* Local Monday-of-week (no UTC shifts) */
+function localISO(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
+function startOfWeekMondayLocal(d=new Date()){const m=new Date(d.getFullYear(),d.getMonth(),d.getDate());const off=(m.getDay()+6)%7;m.setDate(m.getDate()-off);return m;}
+function thisMondayISO(){ return localISO(startOfWeekMondayLocal(new Date())); }
+function weekLabel(mISO){ const [Y,M,D]=mISO.split('-').map(Number); const s=new Date(Y,M-1,D); const e=new Date(s); e.setDate(e.getDate()+6); const f=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'}); return `${f(s)} – ${f(e)}`; }
+
+/* ------- State ------- */
+let activeKidId=null;
+const CURRENT_MONTH = monthId();
+
+/* ------- Family ------- */
+function kids(){ try{ return (Family.getActiveKids&&Family.getActiveKids())||[]; }catch{ return []; } }
+
+/* ------- Balances / Ledger (all-time + monthly) ------- */
+function allTimeBalances(){ return load(PTS_BAL, {}); }
+function setAllTimeBalances(b){ save(PTS_BAL,b); }
+
+function monthBalances(mid=CURRENT_MONTH){ return load(PTS_MBAL(mid), {}); }
+function setMonthBalances(b, mid=CURRENT_MONTH){ save(PTS_MBAL(mid), b); }
+
+function ledger(){ return load(PTS_LED, []); }
+function setLedger(a){ save(PTS_LED,a); }
+
+function pendings(){ return load(PTS_PEN, []); }
+function setPendings(a){ save(PTS_PEN,a); }
+
+/* ------- Levels / Ranks ------- */
+function levelFor(points){ return Math.floor((+points||0)/LEVEL_STRIDE); }
+
+function ranksForMonth(mid=CURRENT_MONTH){
+  const k=kids(); const mb=monthBalances(mid);
+  const rows = k.map(x=>({kid:x,score:(+mb[x.id]||0)})).sort((a,b)=>b.score-a.score);
+  let rank=0, prev=null, seen=0;
+  return rows.map(r=>{
+    seen++;
+    if(prev===null || r.score<prev){ rank=seen; prev=r.score; }
+    return {...r, rank};
+  });
+}
+function rankIcon(n){ return n===1?'🥇':n===2?'🥈':n===3?'🥉':`#${n}`; }
+
+/* ------- Rendering ------- */
+function renderLeaderboard(){
+  $('#monthLabel').textContent = monthLabelText(CURRENT_MONTH);
+
+  const lb=$('#lb'); lb.innerHTML='';
+  const rows = ranksForMonth(CURRENT_MONTH);
+
+  rows.forEach(({kid,score,rank})=>{
+    const row=document.createElement('div'); row.className='lb-item'; row.dataset.id=kid.id;
+    const lvl=levelFor(score);
+    row.innerHTML=`
+      <div class="person">
+        <div class="face">${kid.photo?`<img src="${kid.photo}" alt="">`:`<span>${initials(kid.name)}</span>`}</div>
+        <div style="display:flex;flex-direction:column">
+          <div style="font-weight:700">${rankIcon(rank)} ${kid.name}</div>
+          <div class="small" style="margin-top:2px"><span class="levelchip">Lv ${lvl}</span></div>
+        </div>
+      </div>
+      <div class="score">${score} pts</div>
+    `;
+    row.onclick=()=>{ activeKidId=kid.id; highlightActive(); renderDetail(); };
+    lb.appendChild(row);
+  });
+  highlightActive();
+}
+function highlightActive(){
+  $$('#lb .lb-item').forEach(r=>r.classList.toggle('active', r.dataset.id===activeKidId));
+}
+
+function renderDetail(){
+  const k=kids(); const kid=k.find(x=>x.id===activeKidId);
+  if(!kid){ $('#kidTitle').textContent='Select a child'; $('#ledger').innerHTML=''; $('#pending').innerHTML=''; return; }
+  const mb=monthBalances();
+  const pts=+mb[kid.id]||0;
+  const lvl=levelFor(pts);
+  $('#kidTitle').textContent = `${kid.name} · ${pts} pts · Lv ${lvl}`;
+  renderPending();
+  renderLedger();
+}
+
+function renderLedger(){
+  const wrap=$('#ledger'); wrap.innerHTML='';
+  if(!activeKidId){ wrap.innerHTML='<div class="small">Select a child to see history.</div>'; return; }
+  const rows=ledger().filter(e=>e.kidId===activeKidId).sort((a,b)=>b.ts-a.ts);
+  if(!rows.length){ wrap.innerHTML='<div class="small">No entries yet.</div>'; return; }
+  rows.forEach(e=>{
+    const div=document.createElement('div'); div.className='entry';
+    const when=new Date(e.ts).toLocaleString();
+    const sign=e.delta>=0?'+':'';
+    div.innerHTML=`<div><div>${e.reason||'(no reason)'} <span class="muted">· ${e.source||'manual'}</span></div><div class="muted">${when}</div></div>
+                   <div class="${e.delta>=0?'positive':'negative'}" style="font-weight:800">${sign}${e.delta}</div>`;
+    wrap.appendChild(div);
+  });
+}
+
+function renderPending(){
+  const wrap=$('#pending'); wrap.innerHTML='';
+  const list=pendings().filter(p=>!activeKidId || p.kidId===activeKidId);
+  if(!list.length){ wrap.innerHTML='<div class="small">No pending awards.</div>'; return; }
+  list.sort((a,b)=>a.kidId.localeCompare(b.kidId));
+  const kmap=new Map(kids().map(x=>[x.id,x]));
+  list.forEach(p=>{
+    const kid=kmap.get(p.kidId);
+    const el=document.createElement('div'); el.className='pending-item';
+    el.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="face" style="width:34px;height:34px">${kid?.photo?`<img src="${kid.photo}" alt="">`:`<span style="font-size:.9rem">${initials(kid?.name)}</span>`}</div>
+          <div><b>${kid?.name||'Unknown'}</b> · Week ${weekLabel(p.weekISO)}</div>
+        </div>
+        <div style="font-weight:800">${p.delta>0?'+':''}${p.delta} pts</div>
+      </div>
+      <div class="small">${p.reason || 'Weekly award from Chores'}${p.calc?` — ${p.calc}`:''}</div>
+      <div class="row">
+        <button class="btn-primary" data-approve>Approve</button>
+        <button class="btn-warn" data-reject>Reject</button>
+      </div>
+    `;
+    el.querySelector('[data-approve]').onclick=()=>approvePending(p.id);
+    el.querySelector('[data-reject]').onclick =()=>rejectPending(p.id);
+    wrap.appendChild(el);
+  });
+}
+
+/* ------- Balance & ledger ops ------- */
+function applyDelta(kidId, delta, reason, source='manual'){
+  delta = Number(delta)||0; if(!delta) return;
+
+  // 1) ALL-TIME
+  const all=allTimeBalances(); all[kidId]=(all[kidId]||0)+delta; setAllTimeBalances(all);
+
+  // 2) MONTHLY (current calendar month)
+  const mb=monthBalances(); mb[kidId]=(mb[kidId]||0)+delta; setMonthBalances(mb);
+
+  // Ledger (all-time)
+  const a=ledger(); a.push({id:uid(), kidId, delta, reason:reason||'', ts:Date.now(), source}); setLedger(a);
+
+  renderLeaderboard(); renderDetail();
+}
+
+/* ------- Pending approvals ------- */
+function approvePending(id){
+  const list=pendings();
+  const p=list.find(x=>x.id===id); if(!p) return;
+  applyDelta(p.kidId, p.delta, p.reason||'Chores award', 'chores');
+  setPendings(list.filter(x=>x.id!==id));
+  renderPending();
+}
+function rejectPending(id){
+  const list=pendings().filter(x=>x.id!==id); setPendings(list); renderPending();
+}
+
+/* ------- Import from Chores (proposal only) ------- */
+function scanWeekAndPropose(){
+  const mISO=thisMondayISO();
+  const assigns = load(CH_WEEK(mISO), null) || {};
+  const doneMap = load(CH_DONE(mISO),  {}) || {};
+
+  // per-kid dot count across assigned chores
+  const perKidDots = {};
+  for(const [choreId,kidId] of Object.entries(assigns)){
+    const days = doneMap[choreId] || {};
+    const count = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].reduce((n,k)=> n + (days[k]?1:0), 0);
+    perKidDots[kidId] = (perKidDots[kidId]||0) + count;
+  }
+
+  const newPendings = [];
+  const kset = new Set(kids().map(k=>k.id));
+  for(const kidId of kset){
+    const dots = perKidDots[kidId]||0;
+    const calcPts = Math.min(WEEK_CAP, dots * POINTS_PER_DOT);
+    if(calcPts<=0) continue;
+
+    const already = pendings().some(p=>p.kidId===kidId && p.weekISO===mISO);
+    if(already) continue;
+
+    newPendings.push({
+      id: uid(),
+      kidId,
+      delta: calcPts,
+      reason: 'Weekly Chores Award',
+      weekISO: mISO,
+      calc: `${dots} day${dots===1?'':'s'} × ${POINTS_PER_DOT} = ${calcPts}${calcPts===WEEK_CAP?' (capped)':''}`
+    });
+  }
+  if(!newPendings.length){ alert('No new awards found for this week.'); return; }
+  setPendings( pendings().concat(newPendings) );
+  renderPending();
+  alert(`Proposed ${newPendings.length} award${newPendings.length>1?'s':''} for week ${weekLabel(mISO)}.`);
+}
+
+/* ------- Header hamburger ------- */
+(function hamburger(){
+  const btn = $('#btnHamburger');
+  const dd  = $('#menuDropdown');
+  const open = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
+  const close= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
+
+  btn.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?close():open(); });
+  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) close(); });
+
+  dd.addEventListener('click', (e)=>{
+    const a = e.target.closest('.menu-item'); if(!a) return;
+    close();
+    const act = a.dataset.action;
+    if (act==='scan'){ scanWeekAndPropose(); }
+    else if (act==='clearPending'){ if(confirm('Clear ALL pending awards?')){ setPendings([]); renderPending(); } }
+    else if (act==='resetBalances'){
+      if(confirm('Reset ALL balances to 0? (Keeps ledger)')){
+        const bAll={}; kids().forEach(k=>bAll[k.id]=0); setAllTimeBalances(bAll);
+        const bMonth={}; kids().forEach(k=>bMonth[k.id]=0); setMonthBalances(bMonth);
+        renderLeaderboard(); renderDetail();
+      }
+    } else if (act==='about'){
+      alert('Monthly seasons: levels increase every 50 points and reset automatically each calendar month. Leaderboard shows the current month. All-time totals and the full ledger are still preserved.');
+    }
+  });
+})();
+
+/* ------- Wires ------- */
+$('#btnGrant').onclick = ()=>{
+  if(!activeKidId){ alert('Select a child first.'); return; }
+  const delta = parseInt(($('#ptsDelta').value||'0'), 10);
+  if(!delta) return;
+  applyDelta(activeKidId, delta, ($('#ptsReason').value||'').trim(), 'manual');
+  $('#ptsReason').value='';
+};
+$$('[data-quick]').forEach(b=>{
+  b.onclick=()=>{
+    if(!activeKidId){ alert('Select a child first.'); return; }
+    const v=parseInt(b.dataset.quick,10);
+    applyDelta(activeKidId, v, v>0? 'Quick award':'Quick adjustment', 'manual');
+  };
+});
+
+/* ------- Boot ------- */
+(function init(){
+  // Ensure every kid has ALL-TIME and MONTH entries
+  const all=allTimeBalances();
+  const mb = monthBalances();
+  kids().forEach(k=>{
+    if(typeof all[k.id]!=='number') all[k.id]=0;
+    if(typeof mb[k.id]!=='number')  mb[k.id]=0;
+  });
+  setAllTimeBalances(all);
+  setMonthBalances(mb);
+
+  renderLeaderboard();
+  renderDetail();
+})();
+
+/* Service Worker */
+if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  </script>
+</body>
+</html>
