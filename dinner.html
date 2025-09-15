@@ -223,7 +223,7 @@ textarea{min-height:88px;resize:vertical}
           </div>
         </div>
 
-        <div class="row dessert" style="grid-template-columns:92px 1fr; margin-top:14px">
+        <div class="row dessert" style="grid-template-columns:92px 1fr; margin-top:14px; position:relative; z-index:1">
           <div class="muted" style="color:var(--muted)">Dessert</div>
           <div style="display:flex;gap:8px;align-items:center">
             <select id="selDessert" style="display:none"></select>
@@ -549,11 +549,23 @@ function syncAndSave(){
   document.getElementById(id).onchange = syncAndSave;
 });
 
-// Dessert button fixed
+// Dessert button improved: handles empty list, toggles & focuses
 $('#btnDessert').onclick = ()=>{
-  const shown = $('#selDessert').style.display !== 'none';
-  if (shown){ $('#selDessert').style.display='none'; }
-  else { $('#selDessert').style.display=''; if(!$('#selDessert').value) $('#selDessert').selectedIndex=0; }
+  const desserts = load(LS.desserts, []);
+  if (!Array.isArray(desserts) || desserts.length === 0){
+    openManage(); // guide user to add dessert options
+    try{ document.getElementById('newDessert').focus(); }catch{}
+    return;
+  }
+  const sel = $('#selDessert');
+  const showing = sel.style.display !== 'none';
+  if (showing){
+    sel.style.display = 'none';
+  } else {
+    sel.style.display = '';
+    if(!sel.value) sel.selectedIndex = 0;
+    try{ sel.focus(); }catch{}
+  }
   syncAndSave();
 };
 
