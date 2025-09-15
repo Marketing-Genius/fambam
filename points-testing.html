@@ -143,14 +143,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
   border-radius:999px; padding:4px 8px; font-size:.85rem; color:var(--text);
 }
 
-/* Detail */
+/* Detail (kid-friendly: view-only) */
 .detail{display:grid;gap:12px}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chipBg);border:1px solid var(--chipBorder);color:var(--muted)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-input[type="number"],input[type="text"],select,textarea{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit}
-.btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit;cursor:pointer}
-.btn-primary{background:linear-gradient(180deg,var(--accent),color-mix(in oklab, var(--accent) 70%, #0891b2 30%));color:#001018;border:none;font-weight:800}
-.btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 
 /* Ledger */
 .ledger{display:grid;gap:8px;max-height:320px;overflow:auto;padding-right:4px;-webkit-overflow-scrolling:touch}
@@ -162,6 +158,17 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
 /* Pending approvals */
 .pending{display:grid;gap:10px}
 .pending-item{display:grid;gap:8px;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px}
+
+/* Modal (Admin Settings) */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.modal{width:min(720px,100%);max-height:90vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--dropdownBorder);border-radius:16px;box-shadow:var(--shadow)}
+.modal header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--dropdownBorder);position:sticky;top:0;background:inherit}
+.modal .body{padding:12px 14px;display:grid;gap:12px;overflow:auto;max-height:70vh}
+.modal .footer{padding:12px 14px;border-top:1px solid var(--dropdownBorder);display:flex;justify-content:space-between;gap:10px}
+input[type="number"],input[type="text"],select,textarea{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit}
+.btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit;cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,var(--accent),color-mix(in oklab, var(--accent) 70%, #0891b2 30%));color:#001018;border:none;font-weight:800}
+.btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
 
 .hint{opacity:.8;font-size:.9rem;text-align:center}
 .version{opacity:.6;font-size:.8rem;margin-top:6px}
@@ -182,6 +189,7 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
       <div class="menu-wrap">
         <button id="btnHamburger" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown">☰</button>
         <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
+          <button class="menu-item" data-action="admin">Admin Settings</button>
           <button class="menu-item" data-action="scan">Scan Week & Propose Awards</button>
           <button class="menu-item" data-action="clearPending">Clear All Pending</button>
           <button class="menu-item" data-action="resetBalances">Reset All Balances</button>
@@ -197,24 +205,11 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
         <div id="lb" class="lb-list"></div>
       </div>
 
-      <!-- Right: detail -->
+      <!-- Right: detail (kid-friendly: view only) -->
       <div class="panel detail">
         <div class="row" style="justify-content:space-between">
           <div class="section-title" id="kidTitle">Select a child</div>
           <div class="badge">Weekly goal: 100</div>
-        </div>
-
-        <div class="row">
-          <input id="ptsDelta" type="number" value="10" step="1" min="-999" style="width:100px"/>
-          <input id="ptsReason" type="text" placeholder="Reason (e.g., Helped with dishes)" style="min-width:220px;flex:1"/>
-          <button id="btnGrant" class="btn-primary">Apply</button>
-        </div>
-
-        <div class="row" style="gap:6px">
-          <button class="btn" data-quick="+5">+5</button>
-          <button class="btn" data-quick="+10">+10</button>
-          <button class="btn" data-quick="+20">+20</button>
-          <button class="btn" data-quick="-5">−5</button>
         </div>
 
         <div>
@@ -231,7 +226,37 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Points (Test) v0.2.0 — monthly seasons + levels</div>
+      <div class="version">Points (Test) v0.3.0 — kid-safe view + Admin modal</div>
+    </div>
+  </div>
+
+  <!-- Admin Settings Modal (grant points) -->
+  <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
+    <div class="modal">
+      <header>
+        <div id="adminTitle" style="font-weight:800">Admin Settings</div>
+        <button id="adminClose" class="btn">✖</button>
+      </header>
+      <div class="body">
+        <div style="font-weight:700">Grant / Adjust Points</div>
+        <div class="row" style="flex-wrap:wrap;gap:10px">
+          <select id="adminKid" title="Choose child" style="min-width:180px"></select>
+          <input id="adminDelta" type="number" value="10" step="1" min="-999" style="width:110px"/>
+          <input id="adminReason" type="text" placeholder="Reason (e.g., Helped with dishes)" style="min-width:240px;flex:1"/>
+          <button id="adminApply" class="btn-primary">Apply</button>
+        </div>
+        <div class="row" style="gap:6px">
+          <button class="btn" data-admin-quick="+5">+5</button>
+          <button class="btn" data-admin-quick="+10">+10</button>
+          <button class="btn" data-admin-quick="+20">+20</button>
+          <button class="btn" data-admin-quick="-5">−5</button>
+        </div>
+        <div class="small">Tip: choose a kid, set delta and reason, then Apply. These changes affect the monthly leaderboard and all-time totals (ledger preserved).</div>
+      </div>
+      <div class="footer">
+        <div class="small">No PIN (yet). Intended for an adult to use.</div>
+        <div><button id="adminDone" class="btn">Done</button></div>
+      </div>
     </div>
   </div>
 
@@ -249,19 +274,19 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
 
   <script>
 /* ------- Config ------- */
-const POINTS_PER_DOT = 20;   // per completed day-dot in Chores
-const WEEK_CAP       = 100;  // per kid per week cap
-const LEVEL_STRIDE   = 50;   // every 50 pts = +1 level
+const POINTS_PER_DOT = 20;
+const WEEK_CAP       = 100;
+const LEVEL_STRIDE   = 50;
 
 /* ------- Storage keys ------- */
-const PTS_BAL='pts:balances';                         // { kidId: number }  (ALL-TIME)
-const PTS_LED='pts:ledger';                           // [ {id,kidId,delta,reason,ts,source} ] (ALL-TIME)
-const PTS_PEN='pts:pending';                          // [ {id,kidId,delta,reason,weekISO,calc} ]
-const PTS_MBAL = (m)=>`pts:balances:${m}`;            // { kidId: number }  (MONTH-SCOPED)
+const PTS_BAL='pts:balances';                         // ALL-TIME
+const PTS_LED='pts:ledger';                           // ALL-TIME ledger
+const PTS_PEN='pts:pending';
+const PTS_MBAL = (m)=>`pts:balances:${m}`;            // MONTHLY
 
-/* Chores keys (must match chores.html) */
-const CH_WEEK =(m)=>`ch:assign:${m}`;  // { [choreId]: kidId }
-const CH_DONE =(m)=>`ch:done:${m}`;    // { [choreId]: {Mon:true,...} }
+/* Chores keys */
+const CH_WEEK =(m)=>`ch:assign:${m}`;
+const CH_DONE =(m)=>`ch:done:${m}`;
 
 /* ------- Utilities ------- */
 const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
@@ -271,16 +296,10 @@ const uid=()=>Math.random().toString(36).slice(2,10);
 const initials=n=>((n||'?').trim()[0]||'?').toUpperCase();
 
 /* Month helpers */
-function monthId(d=new Date()){
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; // YYYY-MM
-}
-function monthLabelText(mid=monthId()){
-  const [Y,M]=mid.split('-').map(n=>+n);
-  const dt=new Date(Y,M-1,1);
-  return dt.toLocaleDateString(undefined,{month:'long', year:'numeric'});
-}
+function monthId(d=new Date()){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function monthLabelText(mid=monthId()){ const [Y,M]=mid.split('-').map(n=>+n); const dt=new Date(Y,M-1,1); return dt.toLocaleDateString(undefined,{month:'long', year:'numeric'}); }
 
-/* Local Monday-of-week (no UTC shifts) */
+/* Local week helpers */
 function localISO(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
 function startOfWeekMondayLocal(d=new Date()){const m=new Date(d.getFullYear(),d.getMonth(),d.getDate());const off=(m.getDay()+6)%7;m.setDate(m.getDate()-off);return m;}
 function thisMondayISO(){ return localISO(startOfWeekMondayLocal(new Date())); }
@@ -293,7 +312,7 @@ const CURRENT_MONTH = monthId();
 /* ------- Family ------- */
 function kids(){ try{ return (Family.getActiveKids&&Family.getActiveKids())||[]; }catch{ return []; } }
 
-/* ------- Balances / Ledger (all-time + monthly) ------- */
+/* ------- Balances / Ledger ------- */
 function allTimeBalances(){ return load(PTS_BAL, {}); }
 function setAllTimeBalances(b){ save(PTS_BAL,b); }
 
@@ -308,7 +327,6 @@ function setPendings(a){ save(PTS_PEN,a); }
 
 /* ------- Levels / Ranks ------- */
 function levelFor(points){ return Math.floor((+points||0)/LEVEL_STRIDE); }
-
 function ranksForMonth(mid=CURRENT_MONTH){
   const k=kids(); const mb=monthBalances(mid);
   const rows = k.map(x=>({kid:x,score:(+mb[x.id]||0)})).sort((a,b)=>b.score-a.score);
@@ -324,10 +342,8 @@ function rankIcon(n){ return n===1?'🥇':n===2?'🥈':n===3?'🥉':`#${n}`; }
 /* ------- Rendering ------- */
 function renderLeaderboard(){
   $('#monthLabel').textContent = monthLabelText(CURRENT_MONTH);
-
   const lb=$('#lb'); lb.innerHTML='';
   const rows = ranksForMonth(CURRENT_MONTH);
-
   rows.forEach(({kid,score,rank})=>{
     const row=document.createElement('div'); row.className='lb-item'; row.dataset.id=kid.id;
     const lvl=levelFor(score);
@@ -346,9 +362,7 @@ function renderLeaderboard(){
   });
   highlightActive();
 }
-function highlightActive(){
-  $$('#lb .lb-item').forEach(r=>r.classList.toggle('active', r.dataset.id===activeKidId));
-}
+function highlightActive(){ $$('#lb .lb-item').forEach(r=>r.classList.toggle('active', r.dataset.id===activeKidId)); }
 
 function renderDetail(){
   const k=kids(); const kid=k.find(x=>x.id===activeKidId);
@@ -412,10 +426,10 @@ function applyDelta(kidId, delta, reason, source='manual'){
   // 1) ALL-TIME
   const all=allTimeBalances(); all[kidId]=(all[kidId]||0)+delta; setAllTimeBalances(all);
 
-  // 2) MONTHLY (current calendar month)
+  // 2) MONTHLY
   const mb=monthBalances(); mb[kidId]=(mb[kidId]||0)+delta; setMonthBalances(mb);
 
-  // Ledger (all-time)
+  // Ledger
   const a=ledger(); a.push({id:uid(), kidId, delta, reason:reason||'', ts:Date.now(), source}); setLedger(a);
 
   renderLeaderboard(); renderDetail();
@@ -439,7 +453,6 @@ function scanWeekAndPropose(){
   const assigns = load(CH_WEEK(mISO), null) || {};
   const doneMap = load(CH_DONE(mISO),  {}) || {};
 
-  // per-kid dot count across assigned chores
   const perKidDots = {};
   for(const [choreId,kidId] of Object.entries(assigns)){
     const days = doneMap[choreId] || {};
@@ -472,7 +485,10 @@ function scanWeekAndPropose(){
   alert(`Proposed ${newPendings.length} award${newPendings.length>1?'s':''} for week ${weekLabel(mISO)}.`);
 }
 
-/* ------- Header hamburger ------- */
+/* ------- Hamburger / Modals ------- */
+function show(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
+function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
+
 (function hamburger(){
   const btn = $('#btnHamburger');
   const dd  = $('#menuDropdown');
@@ -486,7 +502,8 @@ function scanWeekAndPropose(){
     const a = e.target.closest('.menu-item'); if(!a) return;
     close();
     const act = a.dataset.action;
-    if (act==='scan'){ scanWeekAndPropose(); }
+    if (act==='admin'){ openAdmin(); }
+    else if (act==='scan'){ scanWeekAndPropose(); }
     else if (act==='clearPending'){ if(confirm('Clear ALL pending awards?')){ setPendings([]); renderPending(); } }
     else if (act==='resetBalances'){
       if(confirm('Reset ALL balances to 0? (Keeps ledger)')){
@@ -495,24 +512,44 @@ function scanWeekAndPropose(){
         renderLeaderboard(); renderDetail();
       }
     } else if (act==='about'){
-      alert('Monthly seasons: levels increase every 50 points and reset automatically each calendar month. Leaderboard shows the current month. All-time totals and the full ledger are still preserved.');
+      alert('Monthly seasons: levels increase every 50 points and reset automatically each calendar month. This page is kid-friendly; use Admin Settings to grant/adjust points.');
     }
   });
 })();
 
-/* ------- Wires ------- */
-$('#btnGrant').onclick = ()=>{
-  if(!activeKidId){ alert('Select a child first.'); return; }
-  const delta = parseInt(($('#ptsDelta').value||'0'), 10);
+/* ------- Admin Modal ------- */
+const adminModal = $('#adminModal');
+$('#adminClose').onclick = ()=> hide(adminModal);
+$('#adminDone').onclick  = ()=> hide(adminModal);
+
+function populateAdminKidSelect(){
+  const sel = $('#adminKid'); sel.innerHTML='';
+  const list = kids();
+  list.forEach(k=>{
+    const o=document.createElement('option');
+    o.value=k.id; o.textContent=k.name;
+    sel.appendChild(o);
+  });
+  if(activeKidId){ sel.value = activeKidId; }
+  if(!sel.value && list[0]) sel.value=list[0].id;
+}
+function openAdmin(){ populateAdminKidSelect(); show(adminModal); }
+
+$('#adminApply').onclick = ()=>{
+  const kidId = $('#adminKid').value;
+  if(!kidId){ alert('Choose a child.'); return; }
+  const delta = parseInt(($('#adminDelta').value||'0'), 10);
   if(!delta) return;
-  applyDelta(activeKidId, delta, ($('#ptsReason').value||'').trim(), 'manual');
-  $('#ptsReason').value='';
+  applyDelta(kidId, delta, ($('#adminReason').value||'').trim(), 'admin');
+  $('#adminReason').value='';
 };
-$$('[data-quick]').forEach(b=>{
+
+$$('[data-admin-quick]').forEach(b=>{
   b.onclick=()=>{
-    if(!activeKidId){ alert('Select a child first.'); return; }
-    const v=parseInt(b.dataset.quick,10);
-    applyDelta(activeKidId, v, v>0? 'Quick award':'Quick adjustment', 'manual');
+    const kidId = $('#adminKid').value;
+    if(!kidId){ alert('Choose a child.'); return; }
+    const v=parseInt(b.dataset.adminQuick,10);
+    applyDelta(kidId, v, v>0? 'Quick award':'Quick adjustment', 'admin');
   };
 });
 
