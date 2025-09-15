@@ -11,12 +11,11 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
-<!-- Universal wallpaper -->
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
-<!-- THEME BOOT (Dark/Light + Accent + Auto Logo Swap) -->
 <script>
+/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap) */
 (function () {
   var DARK_SRC='fambam.png', LIGHT_SRC='fambam2.png';
   function findLogo(){
@@ -64,23 +63,15 @@
   /* Wallpaper hooks */
   --wallpaper:url('');
   --wallpaper-shift:40%;
-}
 
+  /* Leader accent (set at runtime) */
+  --leader-accent: transparent;
+}
 /* LIGHT THEME */
 html[data-theme="light"]{
-  --panel:#f2efe7;
-  --card:#ffffff;
-  --muted:#556070;
-  --text:#0f1623;
-  --bg:#f0ece4;
-  --shadow:0 10px 28px rgba(0,0,0,.08);
-
-  --panelBorder:#e6e2da;
-  --chipBg:#f6f3ec;
-  --chipBorder:#e3ded4;
-
-  --dropdownBg:#ffffff;
-  --dropdownBorder:#ebe7df;
+  --panel:#f2efe7; --card:#ffffff; --muted:#556070; --text:#0f1623; --bg:#f0ece4; --shadow:0 10px 28px rgba(0,0,0,.08);
+  --panelBorder:#e6e2da; --chipBg:#f6f3ec; --chipBorder:#e3ded4;
+  --dropdownBg:#ffffff; --dropdownBorder:#ebe7df;
 }
 
 html,body{height:100%}
@@ -88,7 +79,6 @@ body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
   color:var(--text); background:#404c69; -webkit-tap-highlight-color:transparent; touch-action:manipulation; overflow-x:hidden;
 }
-
 /* Wallpaper layers */
 body::before{
   content:""; position:fixed; inset:0; z-index:-2;
@@ -96,16 +86,12 @@ body::before{
   background-size: cover; background-repeat:no-repeat;
   background-position: center var(--wallpaper-shift);
 }
-body::after{
-  content:""; position:fixed; inset:0; z-index:-1;
-  background: rgba(64,76,105,.9);
-  pointer-events:none;
-}
+body::after{ content:""; position:fixed; inset:0; z-index:-1; background: rgba(64,76,105,.9); pointer-events:none; }
 
+/* App + leader glow */
 .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
-
-/* Panels */
 .panel{background:var(--panel);border:1px solid var(--panelBorder);box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
+.leader-on .panel{ box-shadow: 0 0 0 2px var(--leader-accent), var(--shadow); }
 
 /* Header */
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -128,22 +114,18 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 
 /* Leaderboard */
 .lb-list{display:grid;gap:10px}
-.lb-item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px;cursor:pointer}
+.lb-item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px;cursor:pointer;position:relative}
 .lb-item.active{outline:2px solid var(--accent)}
+.lb-item.leader{ border-color: var(--leader-accent); box-shadow: 0 0 0 2px var(--leader-accent); }
+.lb-item.leader .face{ border-color: var(--leader-accent); }
 .person{display:flex;align-items:center;gap:10px}
 .face{width:42px;height:42px;border-radius:50%;background:var(--chipBg);border:2px solid var(--chipBorder);overflow:hidden;display:grid;place-items:center;font-weight:800}
 .face img{width:100%;height:100%;object-fit:cover}
 .score{font-weight:800}
 .small{font-size:.9rem;color:var(--muted)}
+.levelchip{display:inline-flex;align-items:center;gap:6px;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;padding:4px 8px;font-size:.85rem;color:var(--text)}
 
-/* Level chip */
-.levelchip{
-  display:inline-flex;align-items:center;gap:6px;
-  background:var(--chipBg); border:1px solid var(--chipBorder);
-  border-radius:999px; padding:4px 8px; font-size:.85rem; color:var(--text);
-}
-
-/* Detail (kid-friendly: view-only) */
+/* Detail (view-only) */
 .detail{display:grid;gap:12px}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chipBg);border:1px solid var(--chipBorder);color:var(--muted)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -175,7 +157,7 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
 </style>
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="appRoot">
     <header class="panel">
       <div class="h-left">
         <a href="./index.html" class="brand" title="Home">
@@ -226,11 +208,11 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Points (Test) v0.3.0 — kid-safe view + Admin modal</div>
+      <div class="version">Points (Test) v0.4.0 — leader highlight + encouragement</div>
     </div>
   </div>
 
-  <!-- Admin Settings Modal (grant points) -->
+  <!-- Admin Settings Modal -->
   <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
     <div class="modal">
       <header>
@@ -251,16 +233,16 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
           <button class="btn" data-admin-quick="+20">+20</button>
           <button class="btn" data-admin-quick="-5">−5</button>
         </div>
-        <div class="small">Tip: choose a kid, set delta and reason, then Apply. These changes affect the monthly leaderboard and all-time totals (ledger preserved).</div>
+        <div class="small">No PIN (yet). Intended for an adult to use.</div>
       </div>
       <div class="footer">
-        <div class="small">No PIN (yet). Intended for an adult to use.</div>
+        <div></div>
         <div><button id="adminDone" class="btn">Done</button></div>
       </div>
     </div>
   </div>
 
-  <!-- Family store (fallback shim if not present) -->
+  <!-- Family store -->
   <script src="family.js?v=3.3.6"></script>
   <script>
   if(!window.Family){
@@ -294,6 +276,13 @@ const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const uid=()=>Math.random().toString(36).slice(2,10);
 const initials=n=>((n||'?').trim()[0]||'?').toUpperCase();
+const firstSymbol = s => (s||'').trim() ? [...(s+'')][0] : '';
+
+/* Profile mini-store (to read accent + favorite animal) */
+const Prof = {
+  key:id=>`prof:${id}`,
+  load(id){ try{return JSON.parse(localStorage.getItem(this.key(id)))||{}}catch{return{}} }
+};
 
 /* Month helpers */
 function monthId(d=new Date()){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
@@ -343,16 +332,45 @@ function rankIcon(n){ return n===1?'🥇':n===2?'🥈':n===3?'🥉':`#${n}`; }
 function renderLeaderboard(){
   $('#monthLabel').textContent = monthLabelText(CURRENT_MONTH);
   const lb=$('#lb'); lb.innerHTML='';
+
   const rows = ranksForMonth(CURRENT_MONTH);
-  rows.forEach(({kid,score,rank})=>{
-    const row=document.createElement('div'); row.className='lb-item'; row.dataset.id=kid.id;
+  const leader = rows[0]; // first in sorted list (ties still OK)
+  const leaderId = leader?.kid?.id;
+  const leaderProf = leaderId ? Prof.load(leaderId) : {};
+  const leaderAccent = leaderProf.accent || getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#22d3ee';
+  const leaderAnimal = firstSymbol(leaderProf?.favorites?.animal) || '';
+
+  // Paint the page with leader's accent
+  const app = document.getElementById('appRoot');
+  if (leader) {
+    document.documentElement.style.setProperty('--leader-accent', leaderAccent);
+    app.classList.add('leader-on');
+  } else {
+    document.documentElement.style.setProperty('--leader-accent', 'transparent');
+    app.classList.remove('leader-on');
+  }
+
+  rows.forEach(({kid,score,rank}, idx)=>{
+    const row=document.createElement('div');
     const lvl=levelFor(score);
+    const isLeader = idx===0; // visual leader slot
+
+    // Encourage non-leaders
+    let encouragement = '';
+    if (!isLeader && leader) {
+      const diff = Math.max(0, (leader.score||0) - score);
+      if (diff>0) encouragement = `${diff} pts behind ${leader.kid.name} — keep going!`;
+    }
+
+    row.className='lb-item' + (isLeader?' leader':'');
+    row.dataset.id=kid.id;
     row.innerHTML=`
       <div class="person">
-        <div class="face">${kid.photo?`<img src="${kid.photo}" alt="">`:`<span>${initials(kid.name)}</span>`}</div>
+        <div class="face" style="${isLeader?`border-color:${leaderAccent}`:''}">${kid.photo?`<img src="${kid.photo}" alt="">`:`<span>${initials(kid.name)}</span>`}</div>
         <div style="display:flex;flex-direction:column">
-          <div style="font-weight:700">${rankIcon(rank)} ${kid.name}</div>
+          <div style="font-weight:700">${rankIcon(rank)} ${isLeader?'👑 ':''}${kid.name}${isLeader && leaderAnimal?` ${leaderAnimal}`:''}</div>
           <div class="small" style="margin-top:2px"><span class="levelchip">Lv ${lvl}</span></div>
+          ${!isLeader && encouragement ? `<div class="small" style="margin-top:2px">${encouragement}</div>` : ''}
         </div>
       </div>
       <div class="score">${score} pts</div>
@@ -360,6 +378,7 @@ function renderLeaderboard(){
     row.onclick=()=>{ activeKidId=kid.id; highlightActive(); renderDetail(); };
     lb.appendChild(row);
   });
+
   highlightActive();
 }
 function highlightActive(){ $$('#lb .lb-item').forEach(r=>r.classList.toggle('active', r.dataset.id===activeKidId)); }
@@ -420,7 +439,7 @@ function renderPending(){
 }
 
 /* ------- Balance & ledger ops ------- */
-function applyDelta(kidId, delta, reason, source='manual'){
+function applyDelta(kidId, delta, reason, source='admin'){
   delta = Number(delta)||0; if(!delta) return;
 
   // 1) ALL-TIME
