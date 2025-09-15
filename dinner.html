@@ -418,7 +418,7 @@ function saveWeekPlan(mISO,plan){save(LS.week(mISO),plan)}
 function seedFoodsIfNeeded(){
   let foods=load(LS.foods,null);
   if(!Array.isArray(foods)||foods.length<10){
-    foods=["🍕 Pizza","🌮 Tacos","🍝 Spaghetti","🍗 Chicken Nuggets","🥪 Sandwiches","🌭 Hot Dogs","🍔 Burgers","🥗 Caesar Salad","🍛 Curry & Rice","🥟 Potstickers","🥔 Baked Potatoes","🍜 Ramen","🥙 Pita & Hummus","🐟 Baked Fish","🍲 Soup","🥦 Veggie Stir-Fry"];
+    foods=["🍕 Pizza","🌮 Tacos","🍝 Spaghetti","🍗 Chicken Nuggets","🥪 Sandwiches","🌭 Hot Dogs","🍔 Burgers","🥗 Caesar Salad","🍛 Curry & Rice","🥟 Potstickers","🥔 Baked Potatoes","🍜 Ramen","🥙 Pita & Hummus","🐟 Baked Fish","🍲 Soup","🥦 Veggie Stir-Fry","🍟 French Fries","🥗 Salad","🥦 Mixed Veggies","🌽 Corn","🥔 Potatoes"];
     save(LS.foods,foods);
   }
   let desserts=load(LS.desserts,null);
@@ -493,10 +493,8 @@ function render(){
   $('#parMain').textContent  = '— Choose item —';
   $('#parSide').textContent  = '— Choose item —';
 
-  // dessert toggle
-  const hasDess = !!day.dessert;
-  $('#selDessert').style.display = hasDess ? '' : 'none';
-  $('#btnDessert').textContent = hasDess ? 'Remove' : 'Add dessert';
+  // dessert choose helper
+  $('#dessChoose').classList.toggle('hidden', !!day.dessert);
 
   // recipes links
   buildRecipeLinks('kids', day.kids.main);
@@ -549,25 +547,8 @@ function syncAndSave(){
   document.getElementById(id).onchange = syncAndSave;
 });
 
-// Dessert button improved: handles empty list, toggles & focuses
-$('#btnDessert').onclick = ()=>{
-  const desserts = load(LS.desserts, []);
-  if (!Array.isArray(desserts) || desserts.length === 0){
-    openManage(); // guide user to add dessert options
-    try{ document.getElementById('newDessert').focus(); }catch{}
-    return;
-  }
-  const sel = $('#selDessert');
-  const showing = sel.style.display !== 'none';
-  if (showing){
-    sel.style.display = 'none';
-  } else {
-    sel.style.display = '';
-    if(!sel.value) sel.selectedIndex = 0;
-    try{ sel.focus(); }catch{}
-  }
-  syncAndSave();
-};
+// Dessert always visible; no toggle needed
+
 
 /* ---------- Notes (per-day aggregated) ---------- */
 function getNotes(){ return load(LS.notes, {}); }
