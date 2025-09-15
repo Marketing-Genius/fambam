@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -95,9 +96,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .menu-item:hover{background:var(--card)}
 
 /* Week bar */
-.weekbar{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
-.navseg{display:flex;align-items:center;gap:8px}
-.btn{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:8px 12px;color:var(--text);font:inherit;cursor:pointer}
+.weekbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.weekbtn{background:var(--card);border:1px solid var(--ring);color:var(--text);padding:8px 12px;border-radius:12px;cursor:pointer}
+.weekbtn.active{outline:2px solid var(--accent); background:#132135}
+.navbtn{background:var(--card);border:1px solid var(--ring);color:var(--text);padding:8px 10px;border-radius:12px;cursor:pointer}
+.weekspacer{flex:1}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--card);border:1px solid var(--ring);color:var(--muted)}
 
 /* Layout */
@@ -107,20 +110,21 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 /* Left: editor */
 .card{background:var(--panel);border:1px solid var(--ring-soft);border-radius:16px;padding:12px}
 .card h3{margin:0 0 8px 0}
+.card .topline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.pillbar{display:flex;gap:8px;align-items:center}
 .row{display:grid;grid-template-columns:92px 1fr 1fr;gap:10px;align-items:center}
 @media(max-width:720px){.row{grid-template-columns:88px 1fr}}
 .tile-select{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--ring);border-radius:14px;padding:12px;min-height:54px}
 .tile-select .choose{opacity:.72}
 .choose.hidden{display:none}
 
-/* Smaller vertical footprint */
-.card .row + .row{margin-top:6px}
-
-/* Right: recipes */
-.rpanel{background:var(--panel);border:1px solid var(--ring-soft);border-radius:16px;padding:12px;display:grid;gap:10px}
-.rpanel .section{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:10px}
+/* Right: recipes + groceries */
+.rgrid{display:grid; gap:10px; grid-template-columns:1fr; }
+.rcard{background:var(--panel);border:1px solid var(--ring-soft);border-radius:16px;padding:12px;display:grid;gap:10px}
+.section{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:10px}
 .linkbar{display:flex;flex-wrap:wrap;gap:8px}
 .a-btn{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:8px 10px;color:var(--text);text-decoration:none}
+.grobox{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:10px;max-height:220px;overflow:auto;white-space:pre-wrap}
 
 /* Modals (fixed overlay) */
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
@@ -137,6 +141,14 @@ textarea{min-height:88px;resize:vertical}
 
 .hint{opacity:.8;font-size:.9rem;text-align:center}
 .version{opacity:.6;font-size:.8rem;margin-top:6px}
+
+/* Ratings modal */
+.kidrow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:10px}
+.starsel{font-size:22px; letter-spacing:2px; cursor:pointer}
+.starsel span{opacity:.55}
+.starsel span.on{opacity:1}
+.face{width:38px;height:38px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-weight:800;border:1px solid var(--ring);overflow:hidden}
+.face img{width:100%;height:100%;object-fit:cover}
 </style>
 </head>
 <body>
@@ -165,29 +177,25 @@ textarea{min-height:88px;resize:vertical}
       </div>
     </header>
 
-    <!-- Week nav -->
-    <section class="panel weekbar">
-      <div class="navseg">
-        <button id="btnPrev" class="btn" title="Previous day">◀</button>
-        <span id="dayLabel" class="badge">—</span>
-        <button id="btnNext" class="btn" title="Next day">▶</button>
-        <button id="btnToday" class="btn">Today</button>
-      </div>
+    <!-- Week nav: arrows + 7 day buttons + Today + week label -->
+    <section class="panel weekbar" id="weekbar">
+      <button id="wPrev" class="navbtn" title="Previous week">◀</button>
+      <div id="weekDays" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      <button id="wToday" class="navbtn">Today</button>
+      <button id="wNext" class="navbtn" title="Next week">▶</button>
+      <div class="weekspacer"></div>
       <div class="badge">Week of <b id="weekLabel">—</b></div>
     </section>
 
     <section class="grid">
       <!-- Left: editor -->
       <div class="card">
-        <h3 style="margin-bottom:4px">Selections</h3>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-          <select id="rateSel" title="How did dinner go?">
-            <option value="">— rating —</option>
-            <option value="1">👍</option>
-            <option value="0">😐</option>
-            <option value="-1">👎</option>
-          </select>
-          <button id="btnNotes" class="btn">Notes</button>
+        <div class="topline">
+          <h3 style="margin-bottom:0">Selections</h3>
+          <div class="pillbar">
+            <button id="btnRatings" class="hamburger" title="Per-kid dinner ratings">Ratings</button>
+            <button id="btnNotes" class="hamburger">Notes</button>
+          </div>
         </div>
 
         <div class="row">
@@ -218,29 +226,40 @@ textarea{min-height:88px;resize:vertical}
           <div class="muted" style="color:var(--muted)">Dessert</div>
           <div style="display:flex;gap:8px;align-items:center">
             <select id="selDessert" style="display:none"></select>
-            <button id="btnDessert" class="btn">Add dessert</button>
+            <button id="btnDessert" class="hamburger">Add dessert</button>
           </div>
         </div>
       </div>
 
-      <!-- Right: recipes helper -->
-      <div class="rpanel">
-        <div style="font-weight:800">Recipes</div>
-        <div class="section">
-          <div style="font-weight:700" id="kidsRecTitle">Kids recipes</div>
-          <div class="linkbar" id="kidsLinks"></div>
+      <!-- Right: Recipes + Groceries -->
+      <div class="rgrid">
+        <div class="rcard">
+          <div style="font-weight:800">Recipes</div>
+          <div class="section">
+            <div style="font-weight:700" id="kidsRecTitle">Kids recipes</div>
+            <div class="linkbar" id="kidsLinks"></div>
+          </div>
+          <div class="section">
+            <div style="font-weight:700" id="parRecTitle">Parents recipes</div>
+            <div class="linkbar" id="parLinks"></div>
+          </div>
+          <div class="small" style="opacity:.75">Opens in your browser (Allrecipes, YouTube).</div>
         </div>
-        <div class="section">
-          <div style="font-weight:700" id="parRecTitle">Parents recipes</div>
-          <div class="linkbar" id="parLinks"></div>
+        <div class="rcard">
+          <div style="font-weight:800">Groceries</div>
+          <div id="groPreview" class="grobox">—</div>
+          <div class="linkbar">
+            <button id="openGroModal" class="hamburger">Open full list</button>
+            <button id="groCopyInline" class="hamburger">Copy</button>
+            <button id="groDownloadInline" class="hamburger">Download .txt</button>
+          </div>
         </div>
-        <div class="small" style="opacity:.75">Opens in your browser (Allrecipes, YouTube).</div>
       </div>
     </section>
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Dinner Planner v2.3.1 (bugfixes)</div>
+      <div class="version">Dinner Planner v2.4.0</div>
     </div>
   </div>
 
@@ -249,28 +268,28 @@ textarea{min-height:88px;resize:vertical}
     <div class="modal">
       <header>
         <div id="manageTitle" style="font-weight:800">Manage Menus</div>
-        <button id="manageClose" class="btn">✖</button>
+        <button id="manageClose" class="hamburger">✖</button>
       </header>
       <div class="body">
         <div style="font-weight:700">Food Options (for Main & Side)</div>
         <div id="foodList" class="list"></div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input id="newFood" type="text" placeholder="Add food (e.g., 🍕 Pizza)"/>
-          <button id="addFood" class="btn">Add</button>
+          <button id="addFood" class="hamburger">Add</button>
         </div>
 
         <div style="font-weight:700">Dessert Options</div>
         <div id="dessertList" class="list"></div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input id="newDessert" type="text" placeholder="Add dessert (e.g., 🍨 Ice Cream)"/>
-          <button id="addDessert" class="btn">Add</button>
+          <button id="addDessert" class="hamburger">Add</button>
         </div>
 
         <div style="font-weight:700">Pantry / Staples (excluded from grocery list)</div>
         <textarea id="pantryBox" placeholder="e.g., salt, pepper, ketchup, olive oil"></textarea>
       </div>
       <div class="footer">
-        <button id="manageSave" class="btn">Done</button>
+        <button id="manageSave" class="hamburger">Done</button>
       </div>
     </div>
   </div>
@@ -280,7 +299,7 @@ textarea{min-height:88px;resize:vertical}
     <div class="modal">
       <header>
         <div id="tplTitle" style="font-weight:800">Templates</div>
-        <button id="tplClose" class="btn">✖</button>
+        <button id="tplClose" class="hamburger">✖</button>
       </header>
       <div class="body">
         <div style="font-weight:700">Built-ins</div>
@@ -289,11 +308,11 @@ textarea{min-height:88px;resize:vertical}
         <div class="list" id="tplUser"></div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input id="tplName" type="text" placeholder="Template name (e.g., Week: Pizza Friday)"/>
-          <button id="tplSave" class="btn">Save Current as Template</button>
+          <button id="tplSave" class="hamburger">Save Current as Template</button>
         </div>
       </div>
       <div class="footer">
-        <button id="tplApplyDone" class="btn">Done</button>
+        <button id="tplApplyDone" class="hamburger">Done</button>
       </div>
     </div>
   </div>
@@ -303,12 +322,12 @@ textarea{min-height:88px;resize:vertical}
     <div class="modal">
       <header>
         <div id="groTitle" style="font-weight:800">Grocery List</div>
-        <button id="groClose" class="btn">✖</button>
+        <button id="groClose" class="hamburger">✖</button>
       </header>
       <div class="body" id="groBody"></div>
       <div class="footer">
-        <button id="groCopy" class="btn">Copy</button>
-        <button id="groDownload" class="btn">Download .txt</button>
+        <button id="groCopy" class="hamburger">Copy</button>
+        <button id="groDownload" class="hamburger">Download .txt</button>
       </div>
     </div>
   </div>
@@ -318,11 +337,25 @@ textarea{min-height:88px;resize:vertical}
     <div class="modal">
       <header>
         <div id="dayNotesTitle" style="font-weight:800">Food Notes</div>
-        <button id="dayNotesClose" class="btn">✖</button>
+        <button id="dayNotesClose" class="hamburger">✖</button>
       </header>
       <div class="body" id="dayNotesBody"></div>
       <div class="footer">
-        <button id="dayNotesDone" class="btn">Done</button>
+        <button id="dayNotesDone" class="hamburger">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ratings Modal (per-kid) -->
+  <div class="modal-backdrop" id="rateModal" aria-hidden="true" role="dialog" aria-labelledby="rateTitle">
+    <div class="modal">
+      <header>
+        <div id="rateTitle" style="font-weight:800">Rate tonight's dinner</div>
+        <button id="rateClose" class="hamburger">✖</button>
+      </header>
+      <div class="body" id="rateBody"></div>
+      <div class="footer">
+        <button id="rateSave" class="hamburger">Save ratings</button>
       </div>
     </div>
   </div>
@@ -345,7 +378,7 @@ function weekLabelText(mISO){const [Y,M,D]=mISO.split('-').map(n=>+n);const s=ne
 function niceDay(mISO,idx){const dt=new Date(mISO+'T00:00:00');dt.setDate(dt.getDate()+idx);return dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});}
 
 /* Model */
-function emptyDay(){return {kids:{main:"",side:""},parents:{main:"",side:""},dessert:"",rating:null}}
+function emptyDay(){return {kids:{main:"",side:""},parents:{main:"",side:""},dessert:"",rating:null,ratings:{}}}
 function loadWeekPlan(mISO){let p=load(LS.week(mISO),null);if(!p){p={days:{}};DAYS.forEach(d=>p.days[d]=emptyDay());save(LS.week(mISO),p);}return p;}
 function saveWeekPlan(mISO,plan){save(LS.week(mISO),plan)}
 
@@ -365,16 +398,35 @@ function seedFoodsIfNeeded(){
 }
 
 /* ---------- State ---------- */
-let currentIndex = (function(){
-  const day = (new Date().getDay()+6)%7; // Mon=0..Sun=6
-  return day;
-})();
+let state = {
+  weekStart: startOfWeekMondayLocal(new Date()),
+  selectedIndex: (new Date().getDay()+6)%7 // 0..6
+};
+
+function mondayISO(){ return localISO(state.weekStart); }
+function dayKey(){ return DAYS[state.selectedIndex]; }
+
+/* ---------- Weekbar ---------- */
+function renderWeekbar(){
+  $('#weekLabel').textContent = weekLabelText(mondayISO());
+  const daysWrap = $('#weekDays'); daysWrap.innerHTML='';
+  for(let i=0;i<7;i++){
+    const btn=document.createElement('button'); btn.className='weekbtn';
+    btn.textContent = niceDay(mondayISO(), i);
+    if(i===state.selectedIndex) btn.classList.add('active');
+    btn.onclick=()=>{ state.selectedIndex=i; render(); };
+    daysWrap.appendChild(btn);
+  }
+}
+$('#wPrev').onclick = ()=>{ state.weekStart.setDate(state.weekStart.getDate()-7); state.selectedIndex=0; render(); };
+$('#wNext').onclick = ()=>{ state.weekStart.setDate(state.weekStart.getDate()+7); state.selectedIndex=0; render(); };
+$('#wToday').onclick= ()=>{ state.weekStart = startOfWeekMondayLocal(new Date()); state.selectedIndex=(new Date().getDay()+6)%7; render(); };
 
 /* ---------- Rendering ---------- */
-function fillOptions(sel, list, selected, allowBlank=false){
+function fillOptions(sel, list, selected){
   sel.innerHTML='';
   const ph = '— Choose item —';
-  const arr = allowBlank? [ph, ...list] : [ph, ...list];
+  const arr = [ph, ...list];
   arr.forEach(v=>{
     const o=document.createElement('option');
     o.value = (v===ph?'':v); o.textContent=v;
@@ -382,26 +434,23 @@ function fillOptions(sel, list, selected, allowBlank=false){
     sel.appendChild(o);
   });
 }
-function dayKey(){ return DAYS[currentIndex]; }
 
 function render(){
-  const mISO=thisMondayISO();
-  $('#weekLabel').textContent=weekLabelText(mISO);
-  // No duplicate weekday — single string like "Sat, Sep 13"
-  $('#dayLabel').textContent = niceDay(mISO,currentIndex);
+  renderWeekbar();
 
+  const mISO=mondayISO();
   const plan=loadWeekPlan(mISO);
   const foods=load(LS.foods,[]), desserts=load(LS.desserts,[]);
   const day=plan.days[dayKey()] || emptyDay();
 
   // populate selects
-  fillOptions($('#selKidsMain'), foods, day.kids.main, true);
-  fillOptions($('#selKidsSide'), foods, day.kids.side, true);
-  fillOptions($('#selParMain'),  foods, day.parents.main, true);
-  fillOptions($('#selParSide'),  foods, day.parents.side, true);
-  fillOptions($('#selDessert'),  desserts, day.dessert, true);
+  fillOptions($('#selKidsMain'), foods, day.kids.main);
+  fillOptions($('#selKidsSide'), foods, day.kids.side);
+  fillOptions($('#selParMain'),  foods, day.parents.main);
+  fillOptions($('#selParSide'),  foods, day.parents.side);
+  fillOptions($('#selDessert'),  desserts, day.dessert);
 
-  // pill captions show only when blank (remove duplication)
+  // pill captions
   const km = !!day.kids.main, ks = !!day.kids.side, pm = !!day.parents.main, ps = !!day.parents.side;
   $('#kidsMain').classList.toggle('hidden', km);
   $('#kidsSide').classList.toggle('hidden', ks);
@@ -417,12 +466,12 @@ function render(){
   $('#selDessert').style.display = hasDess ? '' : 'none';
   $('#btnDessert').textContent = hasDess ? 'Remove' : 'Add dessert';
 
-  // rating
-  $('#rateSel').value = (day.rating==null)? '' : String(day.rating);
-
-  // recipes links (Allrecipes + YouTube only)
+  // recipes links
   buildRecipeLinks('kids', day.kids.main);
   buildRecipeLinks('par',  day.parents.main);
+
+  // groceries preview
+  $('#groPreview').textContent = groceryText();
 }
 
 function buildRecipeLinks(kind, label){
@@ -451,7 +500,7 @@ function buildRecipeLinks(kind, label){
 
 /* ---------- Save wires ---------- */
 function syncAndSave(){
-  const mISO=thisMondayISO();
+  const mISO=mondayISO();
   const plan=loadWeekPlan(mISO);
   const d=plan.days[dayKey()];
   d.kids.main    = $('#selKidsMain').value;
@@ -460,15 +509,15 @@ function syncAndSave(){
   d.parents.side = $('#selParSide').value;
   if ($('#selDessert').style.display!=='none') d.dessert = $('#selDessert').value || '';
   else d.dessert='';
-  d.rating = ($('#rateSel').value===''? null : parseInt($('#rateSel').value,10));
   saveWeekPlan(mISO, plan);
-  render(); // refresh captions + links
+  render(); // refresh captions + links + groceries
 }
 
-['selKidsMain','selKidsSide','selParMain','selParSide','selDessert','rateSel'].forEach(id=>{
+['selKidsMain','selKidsSide','selParMain','selParSide','selDessert'].forEach(id=>{
   document.getElementById(id).onchange = syncAndSave;
 });
 
+// Dessert button fixed
 $('#btnDessert').onclick = ()=>{
   const shown = $('#selDessert').style.display !== 'none';
   if (shown){ $('#selDessert').style.display='none'; }
@@ -480,22 +529,20 @@ $('#btnDessert').onclick = ()=>{
 function getNotes(){ return load(LS.notes, {}); }
 function setNotes(map){ save(LS.notes, map); }
 function openDayNotes(){
-  const mISO=thisMondayISO(); const plan=loadWeekPlan(mISO); const x=plan.days[dayKey()];
+  const mISO=mondayISO(); const plan=loadWeekPlan(mISO); const x=plan.days[dayKey()];
   const items=[x.kids.main,x.kids.side,x.parents.main,x.parents.side,x.dessert].filter(Boolean);
   const body=$('#dayNotesBody'); body.innerHTML = items.length? '' : '<div style="opacity:.7">No items selected for this day.</div>';
   const n=getNotes();
   items.forEach(label=>{
     const has = !!(n[label] && (n[label].global||'').trim());
     const row=document.createElement('div'); row.className='item';
-    row.innerHTML=`<div>${escapeHtml(label)} ${has?'<span class="badge" style="margin-left:6px">has notes</span>':''}</div><button class="btn">Edit</button>`;
+    row.innerHTML=`<div>${escapeHtml(label)} ${has?'<span class="badge" style="margin-left:6px">has notes</span>':''}</div><button class="hamburger">Edit</button>`;
     row.querySelector('button').onclick=()=>openNotesEditor(label, openDayNotes);
     body.appendChild(row);
   });
   show($('#dayNotesModal'));
 }
 $('#btnNotes').onclick = openDayNotes;
-
-// close/done now wired
 document.getElementById('dayNotesClose').onclick = ()=> hide(document.getElementById('dayNotesModal'));
 document.getElementById('dayNotesDone').onclick  = ()=> hide(document.getElementById('dayNotesModal'));
 
@@ -512,6 +559,51 @@ function openNotesEditor(label, onSaved){
   setNotes(map);
   if(onSaved) onSaved();
 }
+
+/* ---------- Ratings (per-kid modal) ---------- */
+function openRatings(){
+  const mISO=mondayISO(); const plan=loadWeekPlan(mISO); const x=plan.days[dayKey()];
+  const kids = (window.Family?.getActiveKids?.() || []);
+  const body = $('#rateBody'); body.innerHTML='';
+  if (!kids.length){
+    const warn=document.createElement('div'); warn.textContent='No kids added yet. Add kids in Admin.'; body.appendChild(warn);
+  }
+  kids.forEach(k=>{
+    const row=document.createElement('div'); row.className='kidrow'; row.dataset.id=k.id;
+    const existing = x.ratings?.[k.id] || {stars:0, note:''};
+    row.innerHTML = `
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="face">${k.photo?`<img src="${k.photo}" alt="">`:(k.name||'?').trim().charAt(0).toUpperCase()}</span>
+        <div style="font-weight:800">${escapeHtml(k.name||'Kid')}</div>
+      </div>
+      <div class="starsel" data-kid="${k.id}">
+        <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+      </div>
+      <input type="text" placeholder="optional note" value="${escapeHtml(existing.note||'')}" data-type="note" data-kid="${k.id}" style="flex:1; padding:8px 10px; border-radius:10px; border:1px solid var(--ring); background:var(--card); color:var(--text);" />
+    `;
+    body.appendChild(row);
+    const starsel = row.querySelector('.starsel');
+    const setStars = (n)=>{ starsel.querySelectorAll('span').forEach(s=>s.classList.toggle('on', Number(s.dataset.v)<=n)); starsel.dataset.val=n; };
+    setStars(existing.stars||0);
+    starsel.querySelectorAll('span').forEach(s=> s.addEventListener('click', ()=> setStars(Number(s.dataset.v)) ));
+  });
+  show($('#rateModal'));
+}
+$('#btnRatings').onclick = openRatings;
+$('#rateClose').onclick = ()=> hide($('#rateModal'));
+$('#rateSave').onclick = ()=>{
+  const mISO=mondayISO(); const plan=loadWeekPlan(mISO); const x=plan.days[dayKey()];
+  const ratings={};
+  $$('.starsel').forEach(sel=>{
+    const id = sel.dataset.kid;
+    const stars = Number(sel.dataset.val||0);
+    const note = ($(`input[data-type="note"][data-kid="${CSS.escape(id)}"]`)?.value || '').trim();
+    if (stars>0 || note) ratings[id] = { stars, note };
+  });
+  x.ratings = ratings;
+  saveWeekPlan(mISO, plan);
+  hide($('#rateModal'));
+};
 
 /* ---------- Hamburger / Modals ---------- */
 function show(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
@@ -533,7 +625,7 @@ function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); 
     else if(act==='manage') openManage();
     else if(act==='reset'){
       if(confirm('Clear all entries for this week?')){
-        const plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay()); save(LS.week(thisMondayISO()),plan); render();
+        const plan={days:{}};DAYS.forEach(d=>plan.days[d]=emptyDay()); save(LS.week(mondayISO()),plan); render();
       }
     }
   });
@@ -549,7 +641,7 @@ function buildFoodList(){
   const foods=load(LS.foods,[]);
   foods.forEach((f,idx)=>{
     const row=document.createElement('div');row.className='item';
-    row.innerHTML=`<input class="btn" value="${escapeHtml(f)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>Notes</button><button class="btn" data-rm>Remove</button></div>`;
+    row.innerHTML=`<input value="${escapeHtml(f)}"/><div style="display:flex;gap:8px"><button class="hamburger" data-notes>Notes</button><button class="hamburger" data-rm>Remove</button></div>`;
     wrap.appendChild(row);
     row.querySelector('[data-notes]').onclick=()=>openNotesEditor(f, buildFoodList);
     row.querySelector('input').oninput=e=>{foods[idx]=e.target.value;save(LS.foods,foods);render();};
@@ -562,7 +654,7 @@ function buildDessertList(){
   const ds=load(LS.desserts,[]);
   ds.forEach((d,idx)=>{
     const row=document.createElement('div');row.className='item';
-    row.innerHTML=`<input class="btn" value="${escapeHtml(d)}"/><div style="display:flex;gap:8px"><button class="btn" data-notes>Notes</button><button class="btn" data-rm>Remove</button></div>`;
+    row.innerHTML=`<input value="${escapeHtml(d)}"/><div style="display:flex;gap:8px"><button class="hamburger" data-notes>Notes</button><button class="hamburger" data-rm>Remove</button></div>`;
     wrap.appendChild(row);
     row.querySelector('[data-notes]').onclick=()=>openNotesEditor(d, buildDessertList);
     row.querySelector('input').oninput=e=>{ds[idx]=e.target.value;save(LS.desserts,ds);render();};
@@ -573,12 +665,12 @@ function buildDessertList(){
 
 /* Templates */
 const tplModal=$('#tplModal'); $('#tplClose').onclick=()=>hide(tplModal); $('#tplApplyDone').onclick=()=>hide(tplModal);
-$('#tplSave').onclick=()=>{const name=($('#tplName').value||'').trim();if(!name)return alert('Name your template');const plan=loadWeekPlan(thisMondayISO());const t=load(LS.templates,[]);t.push({id:uid(),name,plan});save(LS.templates,t);$('#tplName').value='';buildTplLists();}
+$('#tplSave').onclick=()=>{const name=($('#tplName').value||'').trim();if(!name)return alert('Name your template');const plan=loadWeekPlan(mondayISO());const t=load(LS.templates,[]);t.push({id:uid(),name,plan});save(LS.templates,t);$('#tplName').value='';buildTplLists();}
 function openTemplates(){buildTplLists();show(tplModal)}
 function buildTplLists(){
   const built=$('#tplBuiltins');built.innerHTML='';
   const pizza=document.createElement('div');pizza.className='item';
-  pizza.innerHTML=`<div>🍕 Pizza Friday</div><button class="btn" data-apply>Apply</button>`;
+  pizza.innerHTML=`<div>🍕 Pizza Friday</div><button class="hamburger" data-apply>Apply</button>`;
   pizza.querySelector('[data-apply]').onclick=()=>{applyPizzaFriday();};
   built.appendChild(pizza);
 
@@ -590,18 +682,18 @@ function buildTplLists(){
   }else{
     tpls.forEach(t=>{
       const row=document.createElement('div');row.className='item';
-      row.innerHTML=`<div>${escapeHtml(t.name)}</div><div style="display:flex;gap:8px"><button class="btn" data-apply>Apply</button><button class="btn" data-del>Delete</button></div>`;
+      row.innerHTML=`<div>${escapeHtml(t.name)}</div><div style="display:flex;gap:8px"><button class="hamburger" data-apply>Apply</button><button class="hamburger" data-del>Delete</button></div>`;
       wrap.appendChild(row);
-      row.querySelector('[data-apply]').onclick=()=>{save(LS.week(thisMondayISO()),t.plan);render();};
+      row.querySelector('[data-apply]').onclick=()=>{save(LS.week(mondayISO()),t.plan);render();};
       row.querySelector('[data-del]').onclick=()=>{const arr=load(LS.templates,[]).filter(x=>x!==t);save(LS.templates,arr);buildTplLists();};
     });
   }
 }
 function applyPizzaFriday(){
-  const plan=loadWeekPlan(thisMondayISO());
+  const plan=loadWeekPlan(mondayISO());
   plan.days["Fri"].kids.main="🍕 Pizza";
   plan.days["Fri"].parents.main="🍕 Pizza";
-  saveWeekPlan(thisMondayISO(),plan); render();
+  saveWeekPlan(mondayISO(),plan); render();
 }
 
 /* Groceries / share */
@@ -611,29 +703,33 @@ function openGroceries(){
   const body=$('#groBody'); body.innerHTML=''; body.appendChild(pre); show(groModal);
 }
 $('#groCopy').onclick=()=>navigator.clipboard.writeText(groceryText()).then(()=>alert('Grocery list copied.'));
-$('#groDownload').onclick=()=>{const blob=new Blob([groceryText()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fambam-Groceries-${thisMondayISO()}.txt`;a.click();URL.revokeObjectURL(a.href);};
+$('#groDownload').onclick=()=>{const blob=new Blob([groceryText()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fambam-Groceries-${mondayISO()}.txt`;a.click();URL.revokeObjectURL(a.href);};
+// Inline buttons
+$('#openGroModal').onclick = openGroceries;
+$('#groCopyInline').onclick = ()=>navigator.clipboard.writeText(groceryText()).then(()=>alert('Copied.'));
+$('#groDownloadInline').onclick = ()=>{const blob=new Blob([groceryText()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fambam-Groceries-${mondayISO()}.txt`;a.click();URL.revokeObjectURL(a.href);};
 
 function groceryText(){
-  const plan=loadWeekPlan(thisMondayISO());
+  const plan=loadWeekPlan(mondayISO());
   const pantry=new Set(load(LS.pantry,[]).map(s=>s.toLowerCase()));
   const buckets={"Kids mains":{}, "Kids sides":{}, "Parents mains":{}, "Parents sides":{}, "Desserts":{}};
   const bump=(b,name)=>{if(!name)return;const clean=name.replace(/^[^\w]+/,'').trim();if(!clean)return;if(pantry.has(clean.toLowerCase()))return;buckets[b][clean]=(buckets[b][clean]||0)+1;};
   DAYS.forEach(d=>{const x=plan.days[d]||emptyDay();bump("Kids mains",x.kids.main);bump("Kids sides",x.kids.side);bump("Parents mains",x.parents.main);bump("Parents sides",x.parents.side);bump("Desserts",x.dessert);});
-  const lines=[`🛒 Fambam Groceries — ${$('#weekLabel').textContent}`];
+  const lines=[];
   for(const [section,items] of Object.entries(buckets)){
     const names=Object.keys(items).sort((a,b)=>a.localeCompare(b));
     if(!names.length)continue;
-    lines.push(`\n${section}`); names.forEach(n=>lines.push(`- ${n}${items[n]>1?` ×${items[n]}`:''}`));
+    lines.push(`${section}`); names.forEach(n=>lines.push(`- ${n}${items[n]>1?` ×${items[n]}`:''}`));
   }
-  if(pantry.size){lines.push(`\n(Excluded pantry: ${[...pantry].join(', ')})`);}
+  if(!lines.length) return 'No grocery items yet.';
   return lines.join('\n');
 }
 function planSummaryText(){
-  const plan=loadWeekPlan(thisMondayISO());
+  const plan=loadWeekPlan(mondayISO());
   const lines=[`🍽️ Fambam Dinner Plan — ${$('#weekLabel').textContent}`];
   DAYS.forEach(d=>{
     const x=plan.days[d];
-    const r=(x.rating==null)?'':(x.rating===1?' 👍':(x.rating===-1?' 👎':' 😐'));
+    const r=''; // legacy day rating removed in favor of per-kid
     const kids=[x.kids.main,x.kids.side].filter(Boolean).join(' + ');
     const pars=[x.parents.main,x.parents.side].filter(Boolean).join(' + ');
     const des=x.dessert?` • Dessert: ${x.dessert}`:'';
@@ -650,11 +746,6 @@ async function shareText(content){
   try{ await navigator.clipboard.writeText(content); alert('Copied to clipboard.'); }
   catch{ alert('Share unavailable. Copy/paste this:\n\n'+content); }
 }
-
-/* ---------- Day nav ---------- */
-$('#btnPrev').onclick = ()=>{ currentIndex=(currentIndex+6)%7; render(); };
-$('#btnNext').onclick = ()=>{ currentIndex=(currentIndex+1)%7; render(); };
-$('#btnToday').onclick = ()=>{ currentIndex=(new Date().getDay()+6)%7; render(); };
 
 /* ---------- Boot ---------- */
 seedFoodsIfNeeded();
