@@ -164,6 +164,28 @@ html[data-theme="light"] .slot.editing{ background:rgba(15,22,35,.04); }
   will-change: transform,left,top;
 }
 
+/* Stop iOS text selection / interactions while dragging */
+.dragging, .dragging * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.dragging { touch-action: none; cursor: grabbing; }
+
+/* Drag ghost: keep exact size of the picked card */
+.drag-ghost{
+  position: fixed;
+  left: 0; top: 0;
+  transform: translate(-50%,-50%) scale(.98);
+  z-index: 9999;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 22px rgba(0,0,0,.35));
+  opacity: .96;
+  overflow: hidden;           /* never grow by content */
+  box-sizing: border-box;
+}
+   
 /* Shared preview surfaces */
 .bf-box,.dp-box,.ch-box,.pt-box,.fam-box{
   margin-top:6px; width:100%;
@@ -1202,30 +1224,26 @@ const DND = {
 };
 
 function attachLongPressDrag(tileEl, index){
-  // Prevent native drag & context menu / link-preview callout
   tileEl.addEventListener('dragstart', e=>e.preventDefault());
   tileEl.addEventListener('contextmenu', e=>e.preventDefault(), {passive:false});
 
-  let savedHref = null;   // we temporarily remove href to suppress iOS preview
+  let savedHref = null;
   let tapNavigate = false;
 
   const onDown = (e)=>{
-    if (isEditing) return;         // respect Edit Mode
-    if (e.button === 2) return;    // ignore right-click
+    if (isEditing) return;
+    if (e.button === 2) return;
     const point = getPoint(e);
 
-    // Temporarily remove href to block iOS link preview during long-press
     if (tileEl.hasAttribute('href')) {
       savedHref = tileEl.getAttribute('href');
       tileEl.removeAttribute('href');
-    } else {
-      savedHref = null;
-    }
+    } else savedHref = null;
 
     DND.startX = point.x; DND.startY = point.y;
     DND.moved = false; DND.pickIndex = index; DND.hoverIndex = index;
-    DND.preview = null;
-    tapNavigate = true;            // assume tap unless drag begins
+    DND.preview = null; tapNavigate = true;
+
     DND.timer = setTimeout(()=> beginDrag(tileEl, point), DND.pressMs);
 
     window.addEventListener('pointermove', onMove, {passive:false});
@@ -1234,7 +1252,7 @@ function attachLongPressDrag(tileEl, index){
 
   const onMove = (e)=>{
     const p = getPoint(e);
-    // If user moves finger before long-press delay, cancel (let them scroll)
+
     if (!DND.active){
       if (dist(DND.startX,DND.startY,p.x,p.y) > DND.cancelMovePx){
         tapNavigate = false;
@@ -1242,8 +1260,10 @@ function attachLongPressDrag(tileEl, index){
       }
       return;
     }
+    // we are dragging: block selection/scroll
     e.preventDefault();
-    tapNavigate = false;  // this is now a drag, not a tap
+    tapNavigate = false;
+
     positionGhost(p);
     const idx = slotIndexFromPoint(p.x, p.y);
     if (idx !== -1 && idx !== DND.hoverIndex){
@@ -1258,17 +1278,11 @@ function attachLongPressDrag(tileEl, index){
   const onUp = (e)=>{
     window.removeEventListener('pointermove', onMove);
 
-    // If drag never began and timer still pending, treat as a normal tap
     if (!DND.active){
       cancelPress(tileEl, savedHref);
-      if (tapNavigate && savedHref){
-        // Manual navigation to preserve normal behavior
-        location.href = savedHref;
-      }
+      if (tapNavigate && savedHref) location.href = savedHref;
       return;
     }
-
-    // Drop
     endDrag();
     restoreHref(tileEl, savedHref);
   };
@@ -1317,39 +1331,65 @@ function restoreHref(el, href){
   }
 }
 
+// Add to your DND state object if not present:
+DND.shield = null;
+
 function beginDrag(tileEl, point){
   DND.active = true;
   try{ navigator.vibrate && navigator.vibrate(7); }catch(_){}
-  // Create ghost
+  document.body.classList.add('dragging');
+
+  // Transparent shield to swallow interactions under the finger
+  const shield = document.createElement('div');
+  shield.style.cssText = 'position:fixed;inset:0;z-index:9998;background:transparent;pointer-events:auto;cursor:grabbing';
+  document.body.appendChild(shield);
+  DND.shield = shield;
+
+  // Clone and size EXACTLY like the source card
   const rect = tileEl.getBoundingClientRect();
   const clone = tileEl.cloneNode(true);
   clone.classList.add('drag-ghost');
-  clone.style.left = point.x + 'px';
-  clone.style.top  = point.y + 'px';
+  clone.style.width     = rect.width  + 'px';
+  clone.style.height    = rect.height + 'px';
+  clone.style.minWidth  = rect.width  + 'px';
+  clone.style.minHeight = rect.height + 'px';
+  clone.style.maxWidth  = rect.width  + 'px';
+  clone.style.maxHeight = rect.height + 'px';
+  clone.style.left      = point.x + 'px';
+  clone.style.top       = point.y + 'px';
   document.body.appendChild(clone);
   DND.ghost = clone;
 
-  // First preview = original order
   renderGrid(projectOrder(slots, DND.pickIndex, DND.hoverIndex));
   highlightSlot(DND.hoverIndex);
 }
 
 function endDrag(){
-  if (DND.preview){
+  if (DND.preview) {
     slots = DND.preview.slice();
     saveSlots(slots);
   }
   cleanupDrag();
   renderGrid();
 }
-function cancelPress(){
-  clearTimeout(DND.timer); DND.timer=null;
-}
+
 function cleanupDrag(){
-  DND.active=false; DND.timer=null; DND.preview=null;
-  const g=DND.ghost; if(g && g.parentNode) g.parentNode.removeChild(g);
-  DND.ghost=null;
-  $$('.slot').forEach(s=>s.classList.remove('drag-target'));
+  clearTimeout(DND.timer); DND.timer = null;
+  if (DND.ghost && DND.ghost.remove) DND.ghost.remove();
+  DND.ghost = null;
+  if (DND.shield && DND.shield.remove) DND.shield.remove();
+  DND.shield = null;
+  document.body.classList.remove('dragging');
+  DND.active = false; DND.preview = null;
+}
+
+function cancelPress(tileEl, hrefToRestore){
+  clearTimeout(DND.timer); DND.timer=null;
+  restoreHref(tileEl, hrefToRestore);
+}
+
+function restoreHref(el, href){
+  if (href !== null) el.setAttribute('href', href);
 }
 function positionGhost(p){
   if (!DND.ghost) return;
