@@ -48,9 +48,10 @@
 </script>
 
 <style>
+/* --- layout sanity --- */
 *, *::before, *::after { box-sizing: border-box; }
 
-/* Base tokens */
+/* Base tokens (overridden by [data-theme]) */
 :root{
   --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
   --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
@@ -66,14 +67,13 @@
   --previewBorder:#27324a;
 }
 
-/* LIGHT THEME */
+/* LIGHT THEME OVERRIDES (soft ivory palette) */
 html[data-theme="light"]{
   --panel:#f2efe7; --card:#ffffff; --muted:#556070; --text:#0f1623; --bg:#f0ece4;
   --shadow:0 10px 28px rgba(0,0,0,.08);
   --panelBorder:#e6e2da; --tileBorder:#ebe7df; --glassHeader: rgba(255,255,255,.72);
   --chipBg:#f6f3ec; --chipBorder:#e3ded4; --previewBg:#fffdf7; --previewBorder:#ebe6db;
 }
-
 html,body{height:100%}
 body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
@@ -82,21 +82,30 @@ body{
 /* Wallpaper */
 body::before{
   content:""; position:fixed; inset:0; z-index:-2;
-  background-image: var(--wallpaper); background-size: cover; background-repeat:no-repeat;
-  background-position: center var(--wallpaper-shift); transform: translateZ(0);
+  background-image: var(--wallpaper);
+  background-size: cover; background-repeat:no-repeat;
+  background-position: center var(--wallpaper-shift);
+  transform: translateZ(0);
 }
 body::after{
-  content:""; position:fixed; inset:0; z-index:-1; background: rgba(64,76,105,.9); pointer-events:none;
+  content:""; position:fixed; inset:0; z-index:-1;
+  background: rgba(64,76,105,.9);
+  pointer-events:none;
 }
 
 /* App */
-.app{ min-height: 100svh; display:flex; flex-direction:column; gap:18px; padding:20px; max-width:1100px; margin:0 auto; }
+.app{
+  min-height: 100svh;
+  display:flex; flex-direction:column; gap:18px;
+  padding:20px; max-width:1100px; margin:0 auto;
+}
 /* Header */
 header{
   position:relative; z-index: 9000; isolation:isolate;
   display:flex;justify-content:space-between;align-items:center;
   background:var(--glassHeader); border:1px solid var(--panelBorder);
-  border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; backdrop-filter: blur(8px);
+  border-radius:var(--radius); box-shadow:var(--shadow); padding:16px;
+  backdrop-filter: blur(8px);
 }
 .title{display:flex;align-items:center;gap:10px}
 .title img{height:38px;display:block}
@@ -104,14 +113,19 @@ header{
 .hamburger{font:inherit;cursor:pointer;background:var(--chipBg);color:var(--text);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px}
 .menu-dropdown{
   position:absolute;right:0;top:110%;min-width:260px;z-index:9002 !important;
-  background:var(--panel);border:1px solid var(--panelBorder);border-radius:12px;box-shadow:var(--shadow);padding:6px;display:none
+  background:var(--panel);border:1px solid var(--panelBorder);border-radius:12px;
+  box-shadow:var(--shadow);padding:6px;display:none
 }
 .menu-dropdown.open{display:block}
 .menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
 .menu-item:hover{background:var(--chipBg)}
 
 /* Grid */
-#slots{ margin-top:12px; display:grid; gap:16px; grid-template-columns:repeat(4, minmax(0,1fr)); grid-auto-rows: var(--slotH); }
+#slots{
+  margin-top:12px; display:grid; gap:16px;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  grid-auto-rows: var(--slotH);
+}
 @media(max-width:860px){ #slots{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
 .slot{ height: var(--slotH); border-radius:16px; position:relative; }
 .slot.editing{ outline:2px dashed var(--chipBorder); background:rgba(2,6,23,.06); }
@@ -124,17 +138,19 @@ html[data-theme="light"] .slot.editing{ background:rgba(15,22,35,.04); }
 
 /* Tile */
 .tile{
-  position:relative; display:flex;flex-direction:column;gap:10px;align-items:flex-start;
-  background:var(--card);border:1px solid var(--tileBorder); border-radius:16px;padding:16px;
-  text-decoration:none;color:var(--text); box-shadow:var(--shadow);backdrop-filter: blur(4px);
+  position:relative;
+  display:flex;flex-direction:column;gap:10px;align-items:flex-start;
+  background:var(--card);border:1px solid var(--tileBorder);
+  border-radius:16px;padding:16px;text-decoration:none;color:var(--text);
+  box-shadow:var(--shadow);backdrop-filter: blur(4px);
   height:100%; overflow:hidden;
 }
 .tile .emoji{font-size:36px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.12))}
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
 
-/* Shared preview boxes */
-.bf-box,.dp-box,.ch-box,.pt-box,.fam-box,.st-box{
+/* Shared preview surfaces */
+.bf-box,.dp-box,.ch-box,.pt-box,.fam-box{
   margin-top:6px; width:100%;
   background:var(--previewBg); border:1px solid var(--previewBorder);
   border-radius:16px; padding:12px;
@@ -145,9 +161,9 @@ html[data-theme="light"] .slot.editing{ background:rgba(15,22,35,.04); }
 /* Breakfast preview */
 .bf-date{font-size:.9rem;font-weight:800}
 .bf-empty{opacity:.8;font-size:.95rem;margin-top:10px}
-.bf-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; margin-top:10px }
+.bf-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; margin-top:10px; }
 .bf-item{ display:flex; align-items:center; gap:10px; min-height:40px; }
-.bf-face{ width:34px; height:34px; border-radius:50%; overflow:hidden; display:grid; place-items:center; flex:0 0 auto; background:#334155; color:#e5e7eb; font-size:.95rem; font-weight:800 }
+.bf-face{ width:34px; height:34px; border-radius:50%; overflow:hidden; display:grid; place-items:center; flex:0 0 auto; background:#334155; color:#e5e7eb; font-size:.95rem; font-weight:800; }
 html[data-theme="light"] .bf-face{ background:#e3e0d8; color:#1b2432; }
 .bf-face img{width:100%;height:100%;object-fit:cover}
 .bf-emoji{font-size:1.4rem; line-height:1}
@@ -163,29 +179,22 @@ html[data-theme="light"] .bf-face{ background:#e3e0d8; color:#1b2432; }
 /* Chores preview */
 .ch-title{font-size:.95rem;font-weight:800}
 .ch-empty{opacity:.8;font-size:.95rem;margin-top:10px}
-.ch-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; margin-top:10px }
+.ch-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; margin-top:10px; }
 .ch-item{display:flex; align-items:center; gap:10px; min-height:40px}
 .ch-task{font-size:1.2rem; line-height:1;}
 
 /* Points preview (2×2 leaderboard) */
 .pt-title{font-size:.95rem;font-weight:800}
 .pt-empty{opacity:.8;font-size:.95rem;margin-top:10px}
-.pt-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; margin-top:10px }
+.pt-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; margin-top:10px; }
 .pt-item{display:flex; align-items:center; gap:10px; min-height:40px}
 .pt-score{font-weight:800;}
 
 /* Family preview */
 .fam-title{font-size:.95rem;font-weight:800}
 .fam-sub{opacity:.9;font-size:.95rem;margin-top:4px;min-height:1.2em}
-.fam-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; margin-top:10px }
+.fam-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; margin-top:10px; }
 .fam-item{display:flex; align-items:center; gap:10px; min-height:40px}
-
-/* Store preview (NEW) */
-.st-title{font-size:.95rem;font-weight:800}
-.st-empty{opacity:.8;font-size:.95rem;margin-top:10px}
-.st-row{display:flex; align-items:center; justify-content:space-between; margin-top:10px}
-.st-name{display:flex; align-items:center; gap:8px; font-weight:700}
-.st-cost{font-weight:800}
 
 /* Edit affordances */
 .tile .minus{
@@ -209,13 +218,14 @@ html[data-theme="light"] .bf-face{ background:#e3e0d8; color:#1b2432; }
 
 /* Subtle "open" arrow on Photos card */
 .photos-arrow{
-  position:absolute; right:10px; bottom:10px; width:38px; height:38px;
-  border-radius:50%; border:2px solid #fff; background:rgba(0,0,0,.2); color:#fff;
-  display:grid; place-items:center; font-size:18px; line-height:1; opacity:.2; transition:opacity .2s, transform .2s; pointer-events:none;
+  position:absolute; right:10px; bottom:10px;
+  width:38px; height:38px; border-radius:50%; border:2px solid #fff;
+  background:rgba(0,0,0,.2); color:#fff; display:grid; place-items:center;
+  font-size:18px; line-height:1; opacity:.2; transition:opacity .2s, transform .2s; pointer-events:none;
 }
 .tile.photos-card:hover .photos-arrow{ opacity:.6; transform:translateY(-1px); }
 
-/* Modal + forms + edit bar */
+/* Modal + form + edit bar */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal{width:min(900px,100%);background:var(--panel);border:1px solid var(--panelBorder);border-radius:16px;box-shadow:var(--shadow)}
@@ -240,6 +250,16 @@ html[data-theme="light"] .bf-face{ background:#e3e0d8; color:#1b2432; }
 #editBar{display:none; align-items:center; justify-content:space-between;margin-top:6px; padding:10px 12px; border-radius:12px;background:rgba(17,24,39,.65); border:1px solid var(--panelBorder);}
 html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
 #editBar.show{display:flex}
+
+/* --- NEW: drag & drop affordances --- */
+.slot.drag-target{ outline:2px solid var(--accent); outline-offset:2px; }
+.drag-ghost{
+  position:fixed; pointer-events:none; z-index:9999;
+  transform: translate(-50%,-50%) scale(.98);
+  filter: drop-shadow(0 10px 22px rgba(0,0,0,.35));
+  width: clamp(180px, 40vw, 320px); /* responsive ghost size */
+  opacity:.95;
+}
 </style>
 </head>
 <body>
@@ -268,7 +288,7 @@ html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
       </div>
     </div>
 
-    <!-- Grid -->
+    <!-- Fixed grid of 16 slots -->
     <main id="slots" aria-label="Home grid"></main>
   </div>
 
@@ -323,7 +343,7 @@ html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
               </div>
               <div class="row">
                 <label>Accent</label>
-                <input type="color" id="accentPicker" class="btn" value="#22d3ee" style="padding:6px 8px; width:60px; height:36px;">
+                <input id="accentPicker" type="color" class="btn" value="#22d3ee" style="padding:6px 8px; width:60px; height:36px;">
                 <button id="accentReset" class="btn">Reset</button>
               </div>
               <div class="row" style="opacity:.8">Accent affects buttons, outlines, and focus rings across the app.</div>
@@ -420,6 +440,7 @@ html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
 <!-- Family Store -->
 <script src="family.js?v=3.3.6"></script>
 <script>
+// Fallback Family shim if family.js failed
 if (!window.Family) {
   console.warn('family.js not loaded — using fallback Family shim.');
   (function(){
@@ -460,7 +481,7 @@ if (!window.Family) {
 })();
 </script>
 
-<!-- Wallpaper utilities -->
+<!-- Wallpaper utilities (shared helper + safe fallback) -->
 <script>
 function pickWallpaper(){
   const input = document.getElementById('wallpaper-picker');
@@ -502,7 +523,7 @@ function compressImage(file, maxSide=2400, quality=.85){
 }
 </script>
 
-<!-- Menu + All Pages -->
+<!-- Menu + PIN gate + All Pages -->
 <script>
 (function menu(){
   const btn = document.getElementById('btnMenu');
@@ -551,17 +572,25 @@ function requestPinUI(onSuccess){
   function close(){ m.style.display='none'; m.setAttribute('aria-hidden','true'); input.value=''; ok.onclick = x.onclick = null; input.onkeydown=null; }
   function open(){
     m.style.display='flex'; m.setAttribute('aria-hidden','false');
-    setTimeout(()=>{ input.focus(); if (input.setSelectionRange) input.setSelectionRange(input.value.length, input.value.length); }, 50);
+    setTimeout(()=>{
+      input.focus();
+      if (input.setSelectionRange) {
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    }, 50);
   }
+
   function trySubmit(){
     const pin = (input.value||'').trim();
     if (!/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
     if (Family.verifyPin(pin)) { close(); onSuccess(); }
     else { alert('Incorrect PIN.'); input.focus(); input.select(); }
   }
+
   ok.onclick = trySubmit;
   input.onkeydown = (e)=>{ if(e.key==='Enter') trySubmit(); };
   x.onclick = close;
+
   open();
 }
 window.addEventListener('load', ()=>{
@@ -572,7 +601,7 @@ window.addEventListener('load', ()=>{
 });
 </script>
 
-<!-- Admin modal logic (Parents/Kids/Global) -->
+<!-- Admin modal logic (incl. Global Settings) -->
 <script>
 const modal = document.getElementById('adminModal');
 document.getElementById('adminClose')?.addEventListener('click', closeAdmin);
@@ -644,7 +673,7 @@ function buildKids(){
 }
 /* helpers */
 function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
-function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
 function pickPhoto(kind, id){
   const input = document.getElementById('file-picker');
   input.removeAttribute('capture');
@@ -674,7 +703,7 @@ function compress(file, maxSide=256, quality=0.8){
   });
 }
 
-/* Global Settings */
+/* --------- Global Settings (Theme + Wallpaper) ---------- */
 function initGlobalSettings(){
   try{
     const raw = localStorage.getItem('ui:theme');
@@ -716,21 +745,19 @@ function setTheme(patch){
 }
 </script>
 
-<!-- Home grid logic -->
+<!-- Home grid logic (slots + editing + Photos + Breakfast + Dinner + Chores + Points + Family previews) -->
 <script>
 const SLOT_KEY = 'hub:home:slots:v2';
 const SLOTS_TOTAL = 16;
 
-/* NEW: Store card included */
 const CARDS = [
-  {id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast',       hint:''},
-  {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner',   hint:'Weekly plan'},
-  {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',           hint:'Weekly rotation'},
-  {id:'points',    href:'./points.html',    emoji:'⭐', label:'Points',           hint:'Leaderboard'},
-  {id:'store',     href:'./store.html',     emoji:'🛒', label:'Store',            hint:'Redeem rewards'}, <!-- added -->
-  {id:'family',    href:'./family.html',    emoji:'👨‍👩‍👧‍👦', label:'Family',      hint:'Profiles'},
-  {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar',  hint:'Events & activities'},
-  {id:'photos',    href:'./photos.html',    emoji:'🖼️', label:'Photos',           hint:'Slideshow'}
+  {id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast', hint:''},
+  {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner', hint:'Weekly plan'},
+  {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',          hint:'Weekly rotation'},
+  {id:'points',    href:'./points.html',    emoji:'⭐', label:'Points',          hint:'Leaderboard'},
+  {id:'family',    href:'./family.html',    emoji:'👨‍👩‍👧‍👦', label:'Family',    hint:'Profiles'},
+  {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar', hint:'Events & activities'},
+  {id:'photos',    href:'./photos.html',    emoji:'🖼️', label:'Photos',          hint:'Slideshow'}
 ];
 const byId = Object.fromEntries(CARDS.map(c=>[c.id,c]));
 
@@ -739,7 +766,7 @@ function loadSlots(){
     const v=JSON.parse(localStorage.getItem(SLOT_KEY));
     if(Array.isArray(v)) return v.slice(0,SLOTS_TOTAL).concat(Array(SLOTS_TOTAL).fill(null)).slice(0,SLOTS_TOTAL);
   }catch{}
-  const seed = ['breakfast','dinner','chores','calendar','points','family','store']; /* seed includes Store */
+  const seed = ['breakfast','dinner','chores','calendar','points','family'];
   return seed.concat(Array(SLOTS_TOTAL-seed.length).fill(null));
 }
 function saveSlots(a){ localStorage.setItem(SLOT_KEY, JSON.stringify(a)); }
@@ -752,6 +779,7 @@ let selectedFromSlot = -1;
 const $ = (s,e=document)=>e.querySelector(s);
 const $$= (s,e=document)=>[...e.querySelectorAll(s)];
 
+/* Photos util */
 function safelyGetPhotoList(){
   try{ const arr = JSON.parse(localStorage.getItem('photos:list')) || []; return Array.isArray(arr)?arr:[]; }
   catch{ return []; }
@@ -792,18 +820,17 @@ function choreIconFromName(label){
   return first || s.charAt(0).toUpperCase();
 }
 
-/* Store items accessor (safe) */
-function storeItems(){ try{ const a=JSON.parse(localStorage.getItem('store:items')||'[]'); return Array.isArray(a)?a:[]; }catch{ return []; } }
-
-function renderGrid(){
+/* === renderGrid (now accepts an optional preview order) === */
+function renderGrid(previewOrder=null){
+  const order = Array.isArray(previewOrder) ? previewOrder : slots;
   const wrap = $('#slots'); wrap.innerHTML='';
   for(let i=0;i<SLOTS_TOTAL;i++){
     const div = document.createElement('div');
     div.className = 'slot' + (isEditing?' editing':'');
     div.dataset.pos = i;
-    const id = slots[i];
+    const id = order[i];
     if(id && byId[id]){
-      const t = renderTile(byId[id], i);
+      const t = renderTile(byId[id], i, order);
       if(isEditing){
         t.addEventListener('click', (ev)=>{
           ev.preventDefault(); ev.stopPropagation();
@@ -813,12 +840,14 @@ function renderGrid(){
         });
       }
       div.appendChild(t);
-    } else if (isEditing){
-      const add = document.createElement('button');
-      add.className='add-btn'; add.textContent='+';
-      add.title='Add card';
-      add.onclick=(ev)=>{ ev.stopPropagation(); openAddRemove(i); };
-      div.appendChild(add);
+    } else {
+      if(isEditing){
+        const add = document.createElement('button');
+        add.className='add-btn'; add.textContent='+';
+        add.title='Add card';
+        add.onclick=(ev)=>{ ev.stopPropagation(); openAddRemove(i); };
+        div.appendChild(add);
+      }
     }
     div.addEventListener('click', ()=>{
       if(!isEditing || selectedCardId==null) return;
@@ -834,9 +863,9 @@ function renderGrid(){
   }
 }
 
-function renderTile(c, slotIndex){
+function renderTile(c, slotIndex, orderRef){
   const a = document.createElement('a');
-  a.href = c.href; a.className='tile';
+  a.href = c.href; a.className='tile'; a.draggable=false;
 
   if(c.id === 'photos'){
     const list = safelyGetPhotoList();
@@ -848,7 +877,8 @@ function renderTile(c, slotIndex){
         <div class="photos-arrow">➔</div>
         <button class="minus" type="button">−</button>`;
       const img = a.querySelector('img');
-      let idx = 0; img.src = list[0];
+      let idx = 0;
+      img.src = list[0];
       const cadence = Number(localStorage.getItem('photos:cadence_ms')) || 10000;
       const timer = setInterval(()=>{ idx=(idx+1)%list.length; img.src=list[idx]; }, cadence);
       a.addEventListener('click',()=>clearInterval(timer),{once:true});
@@ -875,12 +905,14 @@ function renderTile(c, slotIndex){
       const emptyMsg = a.querySelector('.bf-empty');
       const grid = a.querySelector('.bf-grid');
       if (entries.length){
-        emptyMsg.style.display='none'; grid.style.display='grid';
+        emptyMsg.style.display='none';
+        grid.style.display='grid';
         const byName = (id)=> (kids.find(k=>k.id===id)?.name || '').toLowerCase();
         entries.sort((a,b)=> byName(a[0]).localeCompare(byName(b[0])));
         for(const [kidId, idx] of entries.slice(0,4)){
           const kid = kids.find(k=>k.id===kidId);
-          const choice = menu?.[idx]; if(!choice) continue;
+          const choice = menu?.[idx];
+          if(!choice) continue;
           const cell = document.createElement('div');
           cell.className='bf-item';
           const face = kid?.photo
@@ -913,7 +945,8 @@ function renderTile(c, slotIndex){
       const emptyMsg = a.querySelector('.dp-empty');
       const rowsWrap = a.querySelector('.dp-rows');
       if (data){
-        const kidsIcons = [], parsIcons = [];
+        const kidsIcons = [];
+        const parsIcons = [];
         const kMain = emojiFromLabel(data.kids?.main);
         const kSide = emojiFromLabel(data.kids?.side);
         const pMain = emojiFromLabel(data.parents?.main);
@@ -926,7 +959,8 @@ function renderTile(c, slotIndex){
         if (dEmoji){ kidsIcons.push(dEmoji); parsIcons.push(dEmoji); }
         const hasAny = kidsIcons.length || parsIcons.length;
         if (hasAny){
-          emptyMsg.style.display='none'; rowsWrap.style.display='grid';
+          emptyMsg.style.display='none';
+          rowsWrap.style.display='grid';
           a.querySelector('.dp-icons[data-row="kids"]').innerHTML = kidsIcons.map(e=>`<span>${e}</span>`).join('');
           a.querySelector('.dp-icons[data-row="parents"]').innerHTML = parsIcons.map(e=>`<span>${e}</span>`).join('');
         }
@@ -959,7 +993,8 @@ function renderTile(c, slotIndex){
       const empty = a.querySelector('.ch-empty');
       const grid  = a.querySelector('.ch-grid');
       if(entries.length){
-        empty.style.display='none'; grid.style.display='grid';
+        empty.style.display='none';
+        grid.style.display='grid';
         const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
         entries.sort((a,b)=> nameOf(a[0]).localeCompare(nameOf(b[0])));
         for(const [kidId, labels] of entries.slice(0,4)){
@@ -991,9 +1026,11 @@ function renderTile(c, slotIndex){
       const kids = (Family.getKids?.() || []);
       const grid = a.querySelector('.pt-grid');
       const empty = a.querySelector('.pt-empty');
+
       const pairs = Object.entries(balances).filter(([,v])=> typeof v==='number');
       if(pairs.length){
-        empty.style.display='none'; grid.style.display='grid';
+        empty.style.display='none';
+        grid.style.display='grid';
         const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
         pairs.sort((a,b)=> b[1]-a[1] || nameOf(a[0]).localeCompare(nameOf(b[0])));
         for(const [kidId, pts] of pairs.slice(0,4)){
@@ -1008,33 +1045,6 @@ function renderTile(c, slotIndex){
         }
       }
     }catch(err){ console.warn('Points preview error', err); }
-
-  } else if (c.id === 'store') {
-    /* NEW: Store preview — show featured (most expensive) item if any */
-    a.innerHTML = `
-      <div class="label">Store</div>
-      <div class="st-box">
-        <div class="st-title">Featured reward</div>
-        <div class="st-empty">No items yet — tap Store.</div>
-        <div class="st-row" style="display:none">
-          <div class="st-name"><span class="st-emoji">🎁</span><span class="st-label"></span></div>
-          <div class="st-cost"></div>
-        </div>
-      </div>
-      <button class="minus" type="button">−</button>
-    `;
-    try{
-      const list = storeItems();
-      if (list && list.length){
-        const featured = list.slice().sort((a,b)=>(+b.cost||0)-(+a.cost||0))[0];
-        const row = a.querySelector('.st-row');
-        a.querySelector('.st-empty').style.display='none';
-        row.style.display='flex';
-        a.querySelector('.st-emoji').textContent = featured.emoji || '🎁';
-        a.querySelector('.st-label').textContent = featured.name || 'Reward';
-        a.querySelector('.st-cost').textContent  = `${Number(featured.cost)||0} pts`;
-      }
-    }catch(err){ console.warn('Store preview error', err); }
 
   } else if (c.id === 'family') {
     a.innerHTML = `
@@ -1107,10 +1117,14 @@ function renderTile(c, slotIndex){
       slots[slotIndex]=null; selectedCardId=null; selectedFromSlot=-1; saveSlots(slots); renderGrid();
     });
   }
+
+  // --- NEW: long-press drag wiring (disabled in Edit Mode) ---
+  if (!isEditing) attachLongPressDrag(a, slotIndex);
+
   return a;
 }
 
-/* Edit mode + modals */
+/* ----- Edit controls / modal helpers ----- */
 function toggleEdit(on){
   isEditing = !!on;
   $('#editBar').classList.toggle('show', isEditing);
@@ -1164,6 +1178,136 @@ function showModal(id, show){
 }
 document.getElementById('aboutOk')?.addEventListener('click',()=>showModal('aboutModal',false));
 document.getElementById('aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
+
+/* ===== NEW: Long-press drag controller ===== */
+const DND = {
+  active:false, startX:0, startY:0, moved:false, timer:null,
+  pickIndex:-1, hoverIndex:-1, ghost:null, preview:null,
+  pressMs:400, cancelMovePx:8
+};
+
+function attachLongPressDrag(tileEl, index){
+  // Prevent native drag image
+  tileEl.addEventListener('dragstart', e=>e.preventDefault());
+
+  const onDown = (e)=>{
+    if (isEditing) return; // respect Edit Mode
+    if (e.button===2) return; // right-click
+    const point = getPoint(e);
+    DND.startX = point.x; DND.startY = point.y; DND.moved = false; DND.pickIndex = index; DND.hoverIndex = index;
+    DND.preview = null;
+    DND.timer = setTimeout(()=> beginDrag(tileEl, point), DND.pressMs);
+    window.addEventListener('pointermove', onMove, {passive:false});
+    window.addEventListener('pointerup', onUp, {passive:false, once:true});
+  };
+
+  const onMove = (e)=>{
+    const p = getPoint(e);
+    if (!DND.active){
+      if (dist(DND.startX,DND.startY,p.x,p.y) > DND.cancelMovePx){
+        // user is scrolling/tapping; cancel long-press
+        cancelPress();
+      }
+      return;
+    }
+    e.preventDefault();
+    positionGhost(p);
+    const idx = slotIndexFromPoint(p.x, p.y);
+    if (idx !== -1 && idx !== DND.hoverIndex){
+      DND.hoverIndex = idx;
+      const proj = projectOrder(slots, DND.pickIndex, DND.hoverIndex);
+      DND.preview = proj;
+      renderGrid(proj);
+      highlightSlot(idx);
+    }
+  };
+
+  const onUp = (e)=>{
+    window.removeEventListener('pointermove', onMove);
+    if (!DND.active){ cancelPress(); return; }
+    endDrag();
+  };
+
+  tileEl.addEventListener('pointerdown', onDown, {passive:true});
+}
+
+function beginDrag(tileEl, point){
+  DND.active = true;
+  try{ navigator.vibrate && navigator.vibrate(7); }catch(_){}
+  // Create ghost
+  const rect = tileEl.getBoundingClientRect();
+  const clone = tileEl.cloneNode(true);
+  clone.classList.add('drag-ghost');
+  clone.style.left = point.x + 'px';
+  clone.style.top  = point.y + 'px';
+  document.body.appendChild(clone);
+  DND.ghost = clone;
+
+  // First preview = original order
+  renderGrid(projectOrder(slots, DND.pickIndex, DND.hoverIndex));
+  highlightSlot(DND.hoverIndex);
+}
+
+function endDrag(){
+  if (DND.preview){
+    slots = DND.preview.slice();
+    saveSlots(slots);
+  }
+  cleanupDrag();
+  renderGrid();
+}
+function cancelPress(){
+  clearTimeout(DND.timer); DND.timer=null;
+}
+function cleanupDrag(){
+  DND.active=false; DND.timer=null; DND.preview=null;
+  const g=DND.ghost; if(g && g.parentNode) g.parentNode.removeChild(g);
+  DND.ghost=null;
+  $$('.slot').forEach(s=>s.classList.remove('drag-target'));
+}
+function positionGhost(p){
+  if (!DND.ghost) return;
+  DND.ghost.style.left = p.x + 'px';
+  DND.ghost.style.top  = p.y + 'px';
+}
+function getPoint(e){
+  const t = (e.touches && e.touches[0]) || e;
+  return { x: t.clientX, y: t.clientY };
+}
+function dist(x1,y1,x2,y2){ const dx=x2-x1, dy=y2-y1; return Math.hypot(dx,dy); }
+function slotIndexFromPoint(x,y){
+  const slotsEls = $$('#slots .slot');
+  let best=-1, bestArea=0;
+  for(let i=0;i<slotsEls.length;i++){
+    const r = slotsEls[i].getBoundingClientRect();
+    if (x>=r.left && x<=r.right && y>=r.top && y<=r.bottom){
+      // inside: pick immediately
+      return i;
+    }
+    // else consider closest overlap heuristic
+    const area = overlapArea(r, x, y);
+    if (area>bestArea){ bestArea=area; best=i; }
+  }
+  return best;
+}
+function overlapArea(r, x, y){
+  // simple proximity score: inverse of distance to center
+  const cx=(r.left+r.right)/2, cy=(r.top+r.bottom)/2;
+  const d=Math.max(1, Math.hypot(cx-x, cy-y));
+  return 1/d;
+}
+function highlightSlot(i){
+  $$('#slots .slot').forEach((el,idx)=> el.classList.toggle('drag-target', idx===i));
+}
+function projectOrder(arr, from, to){
+  if (from===to) return arr.slice();
+  const out = arr.slice();
+  const item = out[from];
+  out.splice(from,1);
+  out.splice(to,0,item);
+  // maintain length with nulls if needed
+  return out.slice(0, SLOTS_TOTAL);
+}
 </script>
 
 <!-- Boot + SW -->
