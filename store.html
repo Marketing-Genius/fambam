@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Fambam · Store</title>
+
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<!-- Universal wallpaper -->
+<link rel="stylesheet" href="wallpaper.css">
+<script src="wallpaper.js" defer></script>
+
+<!-- THEME BOOT (mode + accent + auto logo swap) -->
+<script>
+(function () {
+  var DARK_SRC='fambam.png', LIGHT_SRC='fambam2.png';
+  function findLogo(){
+    return document.getElementById('logoImg')
+        || document.querySelector('.brand img')
+        || document.querySelector('img[alt="Fambam"]')
+        || null;
+  }
+  function applyTheme(t){
+    var mode=(t&&t.mode==='light')?'light':'dark';
+    var accent=(t&&t.accent)||'#22d3ee';
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.style.setProperty('--accent', accent);
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', mode==='light'?'#f2efe7':'#0f172a');
+    var logo=findLogo();
+    if(logo){
+      var url=new URL(logo.src, location.href);
+      var base=url.pathname.replace(/[^/]+$/,'');
+      logo.src = (mode==='light') ? (base+LIGHT_SRC) : (base+DARK_SRC);
+      var a=logo.closest('a'); if(a && !a.getAttribute('href')) a.setAttribute('href','./index.html');
+    }
+  }
+  try{ applyTheme(JSON.parse(localStorage.getItem('ui:theme')||'{}')); }
+  catch{ applyTheme({mode:'dark',accent:'#22d3ee'}); }
+  addEventListener('storage', e=>{ if(e.key==='ui:theme') try{applyTheme(JSON.parse(e.newValue||'{}'))}catch{}; });
+})();
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Tokens */
+:root{
+  --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
+  --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+  --ring:#334155; --ring-soft:#1f2937;
+
+  --wallpaper:url(''); --wallpaper-shift:40%;
+}
+html[data-theme="light"]{
+  --panel:#f2efe7; --card:#ffffff; --muted:#556070; --text:#0f1623;
+  --shadow:0 10px 28px rgba(0,0,0,.08);
+  --ring:#e3ded4; --ring-soft:#ebe6db;
+}
+
+html,body{height:100%}
+body{
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  color:var(--text); background:#404c69; -webkit-tap-highlight-color:transparent; touch-action:manipulation; overflow-x:hidden;
+}
+/* Wallpaper layers */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background-image: var(--wallpaper); background-size:cover; background-repeat:no-repeat; background-position:center var(--wallpaper-shift);
+}
+body::after{ content:""; position:fixed; inset:0; z-index:-1; background:rgba(64,76,105,.9); pointer-events:none; }
+
+/* Shell */
+.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:16px;grid-template-rows:auto auto 1fr auto}
+.panel{background:var(--panel);border:1px solid var(--ring);box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
+
+/* Header */
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.h-left{display:flex;align-items:center;gap:14px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:38px;display:block;cursor:pointer}
+.title{font-weight:800}
+.title .small{font-weight:600;font-size:.9rem;color:var(--muted)}
+.menu-wrap{position:relative}
+.hamburger{font:inherit;cursor:pointer;background:var(--card);border:1px solid var(--ring);border-radius:12px;color:var(--text);padding:10px 12px}
+.menu-dropdown{position:absolute;right:0;top:110%;min-width:240px;z-index:50;background:var(--panel);border:1px solid var(--ring);border-radius:12px;box-shadow:var(--shadow);padding:6px;display:none}
+.menu-dropdown.open{display:block}
+.menu-item{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
+.menu-item:hover{background:var(--card)}
+
+/* Top bar */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.kidpick{display:flex;align-items:center;gap:10px}
+.select{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:8px 10px;color:var(--text);font:inherit}
+
+/* Layout */
+.grid{display:grid;gap:14px;grid-template-columns:1fr 360px}
+@media(max-width:960px){.grid{grid-template-columns:1fr}}
+.section-title{font-weight:800;margin-bottom:8px}
+
+/* Store grid */
+.store{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:700px){.store{grid-template-columns:1fr}}
+.item{display:grid;gap:8px;background:var(--card);border:1px solid var(--ring-soft);border-radius:14px;padding:12px}
+.item .hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.item .name{font-weight:800}
+.item .cost{font-weight:700}
+.btn{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:8px 10px;color:var(--text);font:inherit;cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,var(--accent),color-mix(in oklab, var(--accent) 70%, #0891b2 30%));color:#001018;border:none;font-weight:800}
+.small{font-size:.9rem;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--card);border:1px solid var(--ring);color:var(--muted)}
+
+/* Sidebar */
+.side{display:grid;gap:10px}
+.card{background:var(--panel);border:1px solid var(--ring-soft);border-radius:14px;padding:12px}
+.row{display:flex;align-items:center;justify-content:space-between}
+
+/* Modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.modal{width:min(900px,100%);max-height:90vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--ring);border-radius:16px;box-shadow:var(--shadow)}
+.modal header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--ring);position:sticky;top:0;background:inherit}
+.modal .body{padding:12px 14px;display:grid;gap:12px;overflow:auto;max-height:70vh}
+.modal .footer{padding:12px 14px;border-top:1px solid var(--ring);display:flex;justify-content:space-between;gap:10px}
+.input{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:8px 10px;color:var(--text);font:inherit}
+.list{display:grid;gap:8px}
+.rowx{display:grid;grid-template-columns:1fr 120px auto;gap:8px;align-items:center;background:var(--card);border:1px solid var(--ring-soft);border-radius:12px;padding:8px}
+
+/* Pending list */
+.pending{display:grid;gap:10px}
+.pending-item{display:grid;gap:8px;background:var(--card);border:1px solid var(--ring-soft);border-radius:12px;padding:10px}
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="panel">
+      <div class="h-left">
+        <a href="./index.html" class="brand" title="Home">
+          <img id="logoImg" src="fambam.png" alt="Fambam">
+        </a>
+        <div class="title">
+          <div style="font-size:1.6rem">Store</div>
+          <div class="small">Redeem points for rewards. Parents approve redemptions.</div>
+        </div>
+      </div>
+      <div class="menu-wrap">
+        <button id="btnHamburger" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown">☰</button>
+        <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
+          <button class="menu-item" data-action="admin">Admin Settings</button>
+          <button class="menu-item" data-action="pending">Pending Redemptions</button>
+          <button class="menu-item" data-action="seed">Load Default Items</button>
+          <button class="menu-item" data-action="about">About</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Kid selector / status -->
+    <section class="panel topbar">
+      <div class="kidpick">
+        <label for="kidSel" class="small">Child</label>
+        <select id="kidSel" class="select"></select>
+      </div>
+      <div class="row" style="gap:10px">
+        <div id="ptsBadge" class="badge">— pts</div>
+        <div id="lvlBadge" class="badge">Lv —</div>
+        <div id="infoBadge" class="badge">Monthly season</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <!-- Storefront -->
+      <div class="panel">
+        <div class="section-title">Rewards</div>
+        <div id="store" class="store"></div>
+        <div class="small" style="margin-top:6px">Tap “Redeem” to request an item. A parent will approve it.</div>
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="side">
+        <div class="card">
+          <div class="section-title">Your Activity</div>
+          <div class="row"><div class="small">Pending requests</div><div id="cntPending" class="small">0</div></div>
+          <div class="row"><div class="small">Approved this month</div><div id="cntApproved" class="small">0</div></div>
+        </div>
+        <div class="card">
+          <div class="section-title">Pending (yours)</div>
+          <div id="myPending" class="pending"></div>
+        </div>
+      </aside>
+    </section>
+
+    <div class="small" style="opacity:.8;text-align:center">
+      Works offline. Data stays on this device (local only).
+    </div>
+  </div>
+
+  <!-- Admin Settings -->
+  <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
+    <div class="modal">
+      <header>
+        <div id="adminTitle" style="font-weight:800">Admin Settings</div>
+        <button id="adminClose" class="btn">✖</button>
+      </header>
+      <div class="body">
+        <div style="font-weight:700">Store Items</div>
+        <div id="itemList" class="list"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input id="newEmoji" class="input" placeholder="😀" style="width:84px">
+          <input id="newName" class="input" placeholder="Item name (e.g., Extra Screen Time)">
+          <input id="newCost" class="input" placeholder="Cost" type="number" min="1" style="width:140px">
+          <button id="addItem" class="btn-primary">Add</button>
+        </div>
+        <div class="small">Tip: Use emoji to make items fun. Edit costs inline.</div>
+      </div>
+      <div class="footer">
+        <div><button id="seedDefaults" class="btn">Seed Defaults</button></div>
+        <div><button id="adminDone" class="btn">Done</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Modal (all kids) -->
+  <div class="modal-backdrop" id="pendingModal" aria-hidden="true" role="dialog" aria-labelledby="pendingTitle">
+    <div class="modal">
+      <header>
+        <div id="pendingTitle" style="font-weight:800">Pending Redemptions</div>
+        <button id="pendingClose" class="btn">✖</button>
+      </header>
+      <div class="body" id="pendingBody"></div>
+      <div class="footer">
+        <div class="small">Approve to deduct points (monthly & all-time).</div>
+        <div><button id="pendingDone" class="btn">Done</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Family store -->
+  <script src="family.js?v=3.3.6"></script>
+  <script>
+  if(!window.Family){
+    (function(){
+      const K={kids:'hub:family:kids'};
+      const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
+      window.Family={ getKids(){ return load(K.kids,[]); }, getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false);} };
+    })();
+  }
+  </script>
+
+<script>
+/* ---------- Storage keys ---------- */
+const STORE_ITEMS='store:items';    // [{id,emoji,name,cost}]
+const STORE_ORDERS='store:orders';  // [{id,kidId,itemId,label,cost,ts,status:'pending'|'approved'|'rejected'}]
+
+/* Points system keys (reusing from points) */
+const PTS_BAL='pts:balances';                         // all-time
+const PTS_LED='pts:ledger';
+const PTS_MBAL = (m)=>`pts:balances:${m}`;            // monthly
+
+/* Utilities */
+const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
+const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const uid=()=>Math.random().toString(36).slice(2,10);
+function monthId(d=new Date()){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+const CURRENT_MONTH = monthId();
+const LEVEL_STRIDE = 50;
+function levelFor(points){ return Math.floor((+points||0)/LEVEL_STRIDE); }
+const initials=n=>((n||'?').trim()[0]||'?').toUpperCase();
+
+/* Profiles (to maybe show emoji later) */
+const Prof = { key:id=>`prof:${id}`, load(id){ try{return JSON.parse(localStorage.getItem(this.key(id)))||{}}catch{return{}} } };
+
+/* Data access */
+function kids(){ try{ return (Family.getActiveKids&&Family.getActiveKids())||[]; }catch{ return []; } }
+
+function allTimeBalances(){ return load(PTS_BAL, {}); }
+function setAllTimeBalances(b){ save(PTS_BAL,b); }
+
+function monthBalances(mid=CURRENT_MONTH){ return load(PTS_MBAL(mid), {}); }
+function setMonthBalances(b, mid=CURRENT_MONTH){ save(PTS_MBAL(mid), b); }
+
+function ledger(){ return load(PTS_LED, []); }
+function setLedger(a){ save(PTS_LED,a); }
+
+function items(){ return load(STORE_ITEMS, []); }
+function setItems(a){ save(STORE_ITEMS, a); }
+
+function orders(){ return load(STORE_ORDERS, []); }
+function setOrders(a){ save(STORE_ORDERS, a); }
+
+/* Seed defaults */
+function seedDefaults(){
+  if(items().length) return;
+  setItems([
+    {id:uid(), emoji:'🕹️', name:'Extra screen time (1 hr)', cost:500},
+    {id:uid(), emoji:'💎', name:'Robux (500)', cost:1000},
+    {id:uid(), emoji:'🍕', name:'Choose Friday family meal', cost:600},
+    {id:uid(), emoji:'🍰', name:'Choose dessert (any dinner)', cost:400},
+    {id:uid(), emoji:'🎬', name:'Go to the movies', cost:2000},
+    {id:uid(), emoji:'🎮', name:'New game night pick', cost:800}
+  ]);
+}
+
+/* Apply delta (deduct on approval) */
+function applyDelta(kidId, delta, reason, source='store'){
+  delta = Number(delta)||0; if(!delta) return;
+  const all = allTimeBalances(); all[kidId]=(all[kidId]||0)+delta; setAllTimeBalances(all);
+  const mb  = monthBalances();   mb[kidId]=(mb[kidId]||0)+delta;  setMonthBalances(mb);
+  const a   = ledger();          a.push({id:uid(), kidId, delta, reason:reason||'', ts:Date.now(), source}); setLedger(a);
+}
+
+/* State */
+let currentKidId=null;
+
+/* Render: top bar */
+function renderTop(){
+  const sel=$('#kidSel'); sel.innerHTML='';
+  const list=kids();
+  list.forEach(k=>{ const o=document.createElement('option'); o.value=k.id; o.textContent=k.name; sel.appendChild(o); });
+  if(currentKidId) sel.value=currentKidId;
+  if(!sel.value && list[0]) sel.value=list[0].id;
+  currentKidId = sel.value || null;
+
+  const mb=monthBalances(); const pts=+(mb[currentKidId]||0);
+  $('#ptsBadge').textContent = `${pts} pts
+  $('#lvlBadge').textContent = `Lv ${levelFor(pts)}`;
+
+  renderStore();
+  renderMyPending();
+  renderSidebarCounts();
+}
+
+/* Render: store grid */
+function renderStore(){
+  const wrap=$('#store'); wrap.innerHTML='';
+  const list=items();
+  const mb=monthBalances(); const pts=+(mb[currentKidId]||0);
+
+  if(!list.length){
+    wrap.innerHTML='<div class="small">No items yet. Parents can add items in Admin Settings.</div>';
+    return;
+  }
+
+  list.forEach(it=>{
+    const can = pts>=it.cost;
+    const div=document.createElement('div'); div.className='item';
+    div.innerHTML=`
+      <div class="hd">
+        <div class="name">${it.emoji||'🎁'} ${it.name}</div>
+        <div class="cost">${it.cost} pts</div>
+      </div>
+      <div class="small">Requires approval</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-primary" ${can?'':'disabled'} data-redeem="${it.id}">Redeem</button>
+      </div>
+    `;
+    div.querySelector('[data-redeem]')?.addEventListener('click', ()=>{
+      if(!currentKidId) return alert('Choose a child first.');
+      const order={ id:uid(), kidId:currentKidId, itemId:it.id, label:it.name, cost:it.cost, ts:Date.now(), status:'pending' };
+      setOrders( orders().concat([order]) );
+      renderMyPending(); renderSidebarCounts();
+      alert('Redemption request sent for approval.');
+    });
+    wrap.appendChild(div);
+  });
+}
+
+/* Render: my pending list */
+function renderMyPending(){
+  const wrap=$('#myPending'); wrap.innerHTML='';
+  if(!currentKidId){ wrap.innerHTML='<div class="small">Choose a child.</div>'; return; }
+  const mine=orders().filter(o=>o.kidId===currentKidId && o.status==='pending').sort((a,b)=>b.ts-a.ts);
+  if(!mine.length){ wrap.innerHTML='<div class="small">No pending requests.</div>'; return; }
+  mine.forEach(o=>{
+    const div=document.createElement('div'); div.className='pending-item';
+    const when=new Date(o.ts).toLocaleString();
+    div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center">
+      <div><b>${o.label}</b><div class="small">${when}</div></div>
+      <div class="badge">${o.cost} pts</div>
+    </div>`;
+    wrap.appendChild(div);
+  });
+}
+
+/* Sidebar counts */
+function renderSidebarCounts(){
+  const mineAll = orders().filter(o=>o.kidId===currentKidId);
+  $('#cntPending').textContent  = mineAll.filter(o=>o.status==='pending').length;
+  const midStart = new Date(CURRENT_MONTH + '-01T00:00:00');
+  const approveThisMonth = mineAll.filter(o=>o.status==='approved' && o.ts>=midStart.getTime()).length;
+  $('#cntApproved').textContent = approveThisMonth;
+}
+
+/* ---------- Admin: items ---------- */
+const adminModal=$('#adminModal');
+function show(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
+function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
+$('#adminClose').onclick=()=>hide(adminModal);
+$('#adminDone').onclick =()=>hide(adminModal);
+$('#seedDefaults').onclick=()=>{ seedDefaults(); buildAdminList(); renderStore(); };
+
+function openAdmin(){ buildAdminList(); show(adminModal); }
+
+function buildAdminList(){
+  const wrap=$('#itemList'); wrap.innerHTML='';
+  const list=items();
+  if(!list.length){ wrap.innerHTML='<div class="small">No items yet — add some below or “Seed Defaults”.</div>'; }
+  list.forEach((it,idx)=>{
+    const row=document.createElement('div'); row.className='rowx';
+    row.innerHTML=`
+      <input class="input" value="${it.emoji||''}" style="width:84px">
+      <input class="input" value="${it.name}">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="input" value="${it.cost}" type="number" min="1" style="width:120px">
+        <button class="btn" data-del>Remove</button>
+      </div>
+    `;
+    const [emEl, nmEl] = row.querySelectorAll('input');
+    const costEl = row.querySelectorAll('input')[2];
+
+    emEl.oninput = ()=>{ const a=items(); a[idx].emoji=emEl.value; setItems(a); renderStore(); };
+    nmEl.oninput = ()=>{ const a=items(); a[idx].name =nmEl.value; setItems(a); renderStore(); };
+    costEl.onchange=()=>{ const a=items(); a[idx].cost = Math.max(1, parseInt(costEl.value||'1',10)); setItems(a); renderStore(); };
+
+    row.querySelector('[data-del]').onclick=()=>{ const a=items(); a.splice(idx,1); setItems(a); buildAdminList(); renderStore(); };
+
+    wrap.appendChild(row);
+  });
+
+  $('#addItem').onclick=()=>{
+    const emoji = ($('#newEmoji').value||'').trim() || '🎁';
+    const name  = ($('#newName').value||'').trim();
+    const cost  = Math.max(1, parseInt(($('#newCost').value||'0'),10));
+    if(!name) return alert('Enter a name.');
+    const a=items(); a.push({id:uid(), emoji, name, cost}); setItems(a);
+    $('#newEmoji').value=''; $('#newName').value=''; $('#newCost').value='';
+    buildAdminList(); renderStore();
+  };
+}
+
+/* ---------- Pending modal (all kids) ---------- */
+const pendingModal=$('#pendingModal');
+$('#pendingClose').onclick=()=>hide(pendingModal);
+$('#pendingDone').onclick =()=>hide(pendingModal);
+
+function openPending(){
+  const body=$('#pendingBody'); body.innerHTML='';
+  const list=orders().filter(o=>o.status==='pending').sort((a,b)=>a.ts-b.ts);
+  if(!list.length){ body.innerHTML='<div class="small">No pending redemptions.</div>'; show(pendingModal); return; }
+
+  const kmap=new Map(kids().map(k=>[k.id,k]));
+  list.forEach(o=>{
+    const kid=kmap.get(o.kidId);
+    const div=document.createElement('div'); div.className='pending-item';
+    const when=new Date(o.ts).toLocaleString();
+    div.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:50%;background:var(--card);border:1px solid var(--ring);display:grid;place-items:center;overflow:hidden">
+            ${kid?.photo?`<img src="${kid.photo}" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-weight:800">${initials(kid?.name)}</span>`}
+          </div>
+          <div><b>${kid?.name||'Unknown'}</b><div class="small">${when}</div></div>
+        </div>
+        <div class="badge">${o.cost} pts</div>
+      </div>
+      <div class="small">${o.label}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-primary" data-approve>Approve</button>
+        <button class="btn" data-reject>Reject</button>
+      </div>
+    `;
+    div.querySelector('[data-approve]').onclick=()=>{
+      // Check balance first
+      const mb=monthBalances(); const pts=+(mb[o.kidId]||0);
+      if(pts < o.cost){ alert('Not enough points to approve.'); return; }
+      applyDelta(o.kidId, -o.cost, `Redeemed: ${o.label}`, 'store');
+      const arr=orders(); const idx=arr.findIndex(x=>x.id===o.id); if(idx>=0){ arr[idx].status='approved'; setOrders(arr); }
+      openPending(); renderTop();
+    };
+    div.querySelector('[data-reject]').onclick=()=>{
+      const arr=orders(); const idx=arr.findIndex(x=>x.id===o.id); if(idx>=0){ arr[idx].status='rejected'; setOrders(arr); }
+      openPending(); renderTop();
+    };
+    body.appendChild(div);
+  });
+  show(pendingModal);
+}
+
+/* ---------- Hamburger ---------- */
+(function hamburger(){
+  const btn=$('#btnHamburger'), dd=$('#menuDropdown');
+  const open=()=>{dd.classList.add('open');btn.setAttribute('aria-expanded','true');dd.setAttribute('aria-hidden','false');};
+  const close=()=>{dd.classList.remove('open');btn.setAttribute('aria-expanded','false');dd.setAttribute('aria-hidden','true');};
+  btn.addEventListener('click',e=>{e.stopPropagation(); dd.classList.contains('open')?close():open();});
+  document.addEventListener('click',e=>{ if(!dd.contains(e.target) && e.target!==btn) close(); });
+  dd.addEventListener('click',e=>{
+    const a=e.target.closest('.menu-item'); if(!a) return; close();
+    const act=a.dataset.action;
+    if(act==='admin') openAdmin();
+    else if(act==='pending') openPending();
+    else if(act==='seed'){ seedDefaults(); renderStore(); alert('Defaults loaded.'); }
+    else if(act==='about'){ alert('Kids can request items; parents approve in Pending. On approval, points are deducted from monthly and all-time, and the ledger records the redemption. Items & requests are stored locally.'); }
+  });
+})();
+
+/* ---------- Wires ---------- */
+$('#kidSel').onchange = ()=>{ currentKidId = $('#kidSel').value || null; renderTop(); };
+
+/* ---------- Boot ---------- */
+(function init(){
+  // Ensure balances entries exist for current month & all-time
+  const all=allTimeBalances(); const mb=monthBalances();
+  kids().forEach(k=>{ if(typeof all[k.id]!=='number') all[k.id]=0; if(typeof mb[k.id]!=='number') mb[k.id]=0; });
+  setAllTimeBalances(all); setMonthBalances(mb);
+
+  // Don’t auto-seed; parent can via menu. (Call seedDefaults() here if you want them by default)
+  renderTop();
+})();
+</script>
+</body>
+</html>
