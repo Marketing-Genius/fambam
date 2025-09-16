@@ -419,12 +419,12 @@ function saveWeekPlan(mISO,plan){save(LS.week(mISO),plan)}
 function seedFoodsIfNeeded(){
   let foods=load(LS.foods,null);
   if(!Array.isArray(foods)||foods.length<10){
-    foods=["🍕 Pizza","🌮 Tacos","🍝 Spaghetti","🍗 Chicken Nuggets","🥪 Sandwiches","🌭 Hot Dogs","🍔 Burgers","🥗 Caesar Salad","🍛 Curry & Rice","🥟 Potstickers","🥔 Baked Potatoes","🍜 Ramen","🥙 Pita & Hummus","🐟 Baked Fish","🍲 Soup","🥦 Veggie Stir-Fry","🍟 French Fries","🥗 Salad","🥦 Mixed Veggies","🌽 Corn","🥔 Potatoes"];
+    foods=["🍕 Pizza","🌮 Tacos","🌯 Burritos","🍝 Spaghetti","🍗 Chicken Nuggets","🥪 Sandwiches","🌭 Hot Dogs","🍔 Burgers","🥗 Salad","🥟 Potstickers","🥔 Potatoes","🍜 Ramen","🥙 Pita & Hummus","🐟 Fish","🍲 Soup","🥦 Veggies","🍟 French Fries","🌽 Corn","🥔 Potatoes","🥞 Pancakes","🧇 Waffles","🍳 Eggs","🍎 Apples","🍉 Watermelon","🫐 Blueberries","🍌 Banana","🍈 Melon","🥒 Cucumber","🥕 Carrots"];
     save(LS.foods,foods);
   }
   let desserts=load(LS.desserts,null);
   if(!Array.isArray(desserts)||desserts.length<3){
-    desserts=["🍪 Cookies","🍨 Ice Cream","🍰 Cake","🍓 Berries & Cream","🥧 Pie"];
+    desserts=["🍪 Cookies","🍦 Ice Cream","🍰 Cake","🍓 Berries & Cream","🥧 Pie","🍫 Candy","🧁 Cupcake"];
     save(LS.desserts,desserts);
   }
   if(load(LS.pantry,null)==null){ save(LS.pantry,["salt","pepper","ketchup","mustard","olive oil","butter"]); }
