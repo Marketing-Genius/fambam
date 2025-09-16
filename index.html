@@ -149,6 +149,21 @@ html[data-theme="light"] .slot.editing{ background:rgba(15,22,35,.04); }
 .tile .label{font-weight:800}
 .tile .hint{opacity:.8}
 
+/* Prevent iOS long-press link preview/callout on tiles */
+.tile { -webkit-touch-callout: none; }
+
+/* Drag ghost is sized explicitly via JS (width/height inline) */
+.drag-ghost{
+  position:fixed;
+  pointer-events:none;
+  z-index:9999;
+  transform: translate(-50%,-50%) scale(.98);
+  filter: drop-shadow(0 10px 22px rgba(0,0,0,.35));
+  opacity:.96;
+  overflow:hidden;            /* hide any overflow content */
+  will-change: transform,left,top;
+}
+
 /* Shared preview surfaces */
 .bf-box,.dp-box,.ch-box,.pt-box,.fam-box{
   margin-top:6px; width:100%;
@@ -1187,30 +1202,48 @@ const DND = {
 };
 
 function attachLongPressDrag(tileEl, index){
-  // Prevent native drag image
+  // Prevent native drag & context menu / link-preview callout
   tileEl.addEventListener('dragstart', e=>e.preventDefault());
+  tileEl.addEventListener('contextmenu', e=>e.preventDefault(), {passive:false});
+
+  let savedHref = null;   // we temporarily remove href to suppress iOS preview
+  let tapNavigate = false;
 
   const onDown = (e)=>{
-    if (isEditing) return; // respect Edit Mode
-    if (e.button===2) return; // right-click
+    if (isEditing) return;         // respect Edit Mode
+    if (e.button === 2) return;    // ignore right-click
     const point = getPoint(e);
-    DND.startX = point.x; DND.startY = point.y; DND.moved = false; DND.pickIndex = index; DND.hoverIndex = index;
+
+    // Temporarily remove href to block iOS link preview during long-press
+    if (tileEl.hasAttribute('href')) {
+      savedHref = tileEl.getAttribute('href');
+      tileEl.removeAttribute('href');
+    } else {
+      savedHref = null;
+    }
+
+    DND.startX = point.x; DND.startY = point.y;
+    DND.moved = false; DND.pickIndex = index; DND.hoverIndex = index;
     DND.preview = null;
+    tapNavigate = true;            // assume tap unless drag begins
     DND.timer = setTimeout(()=> beginDrag(tileEl, point), DND.pressMs);
+
     window.addEventListener('pointermove', onMove, {passive:false});
     window.addEventListener('pointerup', onUp, {passive:false, once:true});
   };
 
   const onMove = (e)=>{
     const p = getPoint(e);
+    // If user moves finger before long-press delay, cancel (let them scroll)
     if (!DND.active){
       if (dist(DND.startX,DND.startY,p.x,p.y) > DND.cancelMovePx){
-        // user is scrolling/tapping; cancel long-press
-        cancelPress();
+        tapNavigate = false;
+        cancelPress(tileEl, savedHref);
       }
       return;
     }
     e.preventDefault();
+    tapNavigate = false;  // this is now a drag, not a tap
     positionGhost(p);
     const idx = slotIndexFromPoint(p.x, p.y);
     if (idx !== -1 && idx !== DND.hoverIndex){
@@ -1224,11 +1257,64 @@ function attachLongPressDrag(tileEl, index){
 
   const onUp = (e)=>{
     window.removeEventListener('pointermove', onMove);
-    if (!DND.active){ cancelPress(); return; }
+
+    // If drag never began and timer still pending, treat as a normal tap
+    if (!DND.active){
+      cancelPress(tileEl, savedHref);
+      if (tapNavigate && savedHref){
+        // Manual navigation to preserve normal behavior
+        location.href = savedHref;
+      }
+      return;
+    }
+
+    // Drop
     endDrag();
+    restoreHref(tileEl, savedHref);
   };
 
   tileEl.addEventListener('pointerdown', onDown, {passive:true});
+}
+
+function beginDrag(tileEl, point){
+  DND.active = true;
+  try{ navigator.vibrate && navigator.vibrate(7); }catch(_){}
+
+  // Create a visually identical ghost sized to the original rect
+  const rect = tileEl.getBoundingClientRect();
+  const clone = tileEl.cloneNode(true);
+  clone.classList.add('drag-ghost');
+  clone.style.left   = point.x + 'px';
+  clone.style.top    = point.y + 'px';
+  clone.style.width  = rect.width  + 'px';
+  clone.style.height = rect.height + 'px';
+  document.body.appendChild(clone);
+  DND.ghost = clone;
+
+  // Initial preview is original order
+  renderGrid(projectOrder(slots, DND.pickIndex, DND.hoverIndex));
+  highlightSlot(DND.hoverIndex);
+}
+
+function endDrag(){
+  if (DND.preview){
+    slots = DND.preview.slice();
+    saveSlots(slots);
+  }
+  cleanupDrag();
+  renderGrid();
+}
+
+function cancelPress(tileEl, hrefToRestore){
+  clearTimeout(DND.timer); DND.timer=null;
+  restoreHref(tileEl, hrefToRestore);
+}
+
+function restoreHref(el, href){
+  if (href !== null){
+    // restore only if we actually removed it
+    el.setAttribute('href', href);
+  }
 }
 
 function beginDrag(tileEl, point){
