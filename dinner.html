@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Fambam · Dinner Planner</title>
+<title>Fambam · Dinner Planner v2.5.4</title>
 
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -240,7 +240,7 @@ textarea{min-height:88px;resize:vertical}
 
     <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Dinner Planner v2.5.2</div>
+      <div class="version">Dinner Planner v2.5.4</div>
     </div>
   </div>
 
@@ -406,7 +406,7 @@ function cleanLabel(s){ return (s||'').replace(/^[^\w]+/,'').trim().toLowerCase(
 const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 function localISO(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
 function startOfWeekMondayLocal(d=new Date()){const m=new Date(d.getFullYear(),d.getMonth(),d.getDate());const off=(m.getDay()+6)%7;m.setDate(m.getDate()-off);return m;}
-function thisMondayISO(){return localISO(startOfWeekMondayLocal(new Date()));}
+function mondayISO(d){return localISO(d||state.weekStart);}
 function weekLabelText(mISO){const [Y,M,D]=mISO.split('-').map(n=>+n);const s=new Date(Y,M-1,D);const e=new Date(s);e.setDate(e.getDate()+6);const f=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});return `${f(s)} – ${f(e)}`;}
 function niceDay(mISO,idx){const dt=new Date(mISO+'T00:00:00');dt.setDate(dt.getDate()+idx);return dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});}
 
@@ -436,16 +436,16 @@ let state = {
   selectedIndex: (new Date().getDay()+6)%7 // 0..6
 };
 
-function mondayISO(){ return localISO(state.weekStart); }
 function dayKey(){ return DAYS[state.selectedIndex]; }
 
 /* ---------- Weekbar ---------- */
 function renderWeekbar(){
-  $('#weekLabel').textContent = weekLabelText(mondayISO());
+  const mISO = mondayISO();
+  $('#weekLabel').textContent = weekLabelText(mISO);
   const daysWrap = $('#weekDays'); daysWrap.innerHTML='';
   for(let i=0;i<7;i++){
     const btn=document.createElement('button'); btn.className='weekbtn';
-    btn.textContent = niceDay(mondayISO(), i);
+    btn.textContent = niceDay(mISO, i);
     if(i===state.selectedIndex) btn.classList.add('active');
     btn.onclick=()=>{ state.selectedIndex=i; render(); };
     daysWrap.appendChild(btn);
@@ -605,7 +605,7 @@ $('#rateSave').onclick = ()=>{
   $$('.starsel').forEach(sel=>{
     const id = sel.dataset.kid;
     const stars = Number(sel.dataset.val||0);
-    const note = ($(`input[data-type="note"][data-kid="${CSS.escape(id)}"]`)?.value || '').trim();
+    const note = ($(`input[data-type="note"][data-kid="${id}"]`)?.value || '').trim();
     if (stars>0 || note) ratings[id] = { stars, note };
   });
   x.ratings = ratings;
@@ -772,10 +772,11 @@ function groceryText(){
   for(const [section,items] of Object.entries(buckets)){
     const names=Object.keys(items).sort((a,b)=>a.localeCompare(b));
     if(!names.length)continue;
-    lines.push(`${section}`); names.forEach(n=>lines.push(`- ${n}${items[n]>1?` + ' ×' + '${items[n]}' : ''}`));
+    lines.push(`${section}`);
+    names.forEach(n=>lines.push(`- ${n}${items[n]>1 ? ` ×${items[n]}` : ''}`));
   }
   if(!lines.length) return 'No grocery items yet.';
-  return lines.join('\n');
+  return lines.join('\\n');
 }
 function planSummaryText(){
   const plan=loadWeekPlan(mondayISO());
@@ -787,7 +788,7 @@ function planSummaryText(){
     const des=x.dessert?` • Dessert: ${x.dessert}`:'';
     lines.push(`${d}: Kids ${kids||'—'} | Parents ${pars||'—'}${des}`)
   });
-  return lines.join('\n');
+  return lines.join('\\n');
 }
 async function shareText(content){
   try{ if(navigator.share){ await navigator.share({text:content}); return; } }catch{}
@@ -796,7 +797,7 @@ async function shareText(content){
   const href=isIOS?`sms:&body=${encoded}`:`sms:?body=${encoded}`;
   try{ location.href=href; return; }catch{}
   try{ await navigator.clipboard.writeText(content); alert('Copied to clipboard.'); }
-  catch{ alert('Share unavailable. Copy/paste this:\n\n'+content); }
+  catch{ alert('Share unavailable. Copy/paste this:\\n\\n'+content); }
 }
 
 /* ---------- Boot ---------- */
