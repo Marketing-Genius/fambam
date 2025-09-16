@@ -185,6 +185,23 @@ html[data-theme="light"] .slot.editing{ background:rgba(15,22,35,.04); }
   overflow: hidden;           /* never grow by content */
   box-sizing: border-box;
 }
+
+/* while dragging, lock page scroll */
+html.drag-lock, body.drag-lock {
+  overflow: hidden !important;
+  overscroll-behavior: contain;
+}
+
+/* make sure the shield doesn't allow touch scrolling */
+.drag-shield {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: transparent;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grabbing;
+}
    
 /* Shared preview surfaces */
 .bf-box,.dp-box,.ch-box,.pt-box,.fam-box{
@@ -1250,30 +1267,32 @@ function attachLongPressDrag(tileEl, index){
     window.addEventListener('pointerup', onUp, {passive:false, once:true});
   };
 
-  const onMove = (e)=>{
-    const p = getPoint(e);
+const onMove = (e)=>{
+  const p = getPoint(e);
 
-    if (!DND.active){
-      if (dist(DND.startX,DND.startY,p.x,p.y) > DND.cancelMovePx){
-        tapNavigate = false;
-        cancelPress(tileEl, savedHref);
-      }
-      return;
+  if (!DND.active){
+    if (dist(DND.startX,DND.startY,p.x,p.y) > DND.cancelMovePx){
+      tapNavigate = false;
+      cancelPress(tileEl, savedHref);
     }
-    // we are dragging: block selection/scroll
-    e.preventDefault();
-    tapNavigate = false;
+    return;
+  }
 
-    positionGhost(p);
-    const idx = slotIndexFromPoint(p.x, p.y);
-    if (idx !== -1 && idx !== DND.hoverIndex){
-      DND.hoverIndex = idx;
-      const proj = projectOrder(slots, DND.pickIndex, DND.hoverIndex);
-      DND.preview = proj;
-      renderGrid(proj);
-      highlightSlot(idx);
-    }
-  };
+  // DRAGGING: block native scroll/selection; control scroll ourselves
+  e.preventDefault();
+  updateEdgeScroll(p.y);
+
+  positionGhost(p);
+
+  const idx = slotIndexFromPoint(p.x, p.y);
+  if (idx !== -1 && idx !== DND.hoverIndex){
+    DND.hoverIndex = idx;
+    const proj = projectOrder(slots, DND.pickIndex, DND.hoverIndex);
+    DND.preview = proj;
+    renderGrid(proj);
+    highlightSlot(idx);
+  }
+};
 
   const onUp = (e)=>{
     window.removeEventListener('pointermove', onMove);
@@ -1290,20 +1309,46 @@ function attachLongPressDrag(tileEl, index){
   tileEl.addEventListener('pointerdown', onDown, {passive:true});
 }
 
+// extra DND state
+DND.shield = null;
+DND.autoscrollDir = 0;
+DND.autoscrollRAF = 0;
+
 function beginDrag(tileEl, point){
   DND.active = true;
   try{ navigator.vibrate && navigator.vibrate(7); }catch(_){}
 
-  // Create a visually identical ghost sized to the original rect
+  // lock page scroll
+  document.documentElement.classList.add('drag-lock');
+  document.body.classList.add('drag-lock');
+  document.body.classList.add('dragging');
+
+  // shield to swallow touches/clicks (prevents native scroll/selection)
+  const shield = document.createElement('div');
+  shield.className = 'drag-shield';
+  document.body.appendChild(shield);
+  DND.shield = shield;
+
+  // ghost sized exactly like the source card
   const rect = tileEl.getBoundingClientRect();
   const clone = tileEl.cloneNode(true);
   clone.classList.add('drag-ghost');
-  clone.style.left   = point.x + 'px';
-  clone.style.top    = point.y + 'px';
-  clone.style.width  = rect.width  + 'px';
-  clone.style.height = rect.height + 'px';
+  Object.assign(clone.style, {
+    width: rect.width + 'px',
+    height: rect.height + 'px',
+    minWidth: rect.width + 'px',
+    minHeight: rect.height + 'px',
+    maxWidth: rect.width + 'px',
+    maxHeight: rect.height + 'px',
+    left: point.x + 'px',
+    top: point.y + 'px'
+  });
   document.body.appendChild(clone);
   DND.ghost = clone;
+
+  renderGrid(projectOrder(slots, DND.pickIndex, DND.hoverIndex));
+  highlightSlot(DND.hoverIndex);
+}
 
   // Initial preview is original order
   renderGrid(projectOrder(slots, DND.pickIndex, DND.hoverIndex));
@@ -1369,18 +1414,29 @@ function endDrag(){
     slots = DND.preview.slice();
     saveSlots(slots);
   }
+  setAutoscroll(0);
   cleanupDrag();
   renderGrid();
 }
 
 function cleanupDrag(){
   clearTimeout(DND.timer); DND.timer = null;
+
+  if (DND.autoscrollRAF) { cancelAnimationFrame(DND.autoscrollRAF); DND.autoscrollRAF = 0; }
+  DND.autoscrollDir = 0;
+
   if (DND.ghost && DND.ghost.remove) DND.ghost.remove();
   DND.ghost = null;
+
   if (DND.shield && DND.shield.remove) DND.shield.remove();
   DND.shield = null;
+
   document.body.classList.remove('dragging');
-  DND.active = false; DND.preview = null;
+  document.documentElement.classList.remove('drag-lock');
+  document.body.classList.remove('drag-lock');
+
+  DND.active = false;
+  DND.preview = null;
 }
 
 function cancelPress(tileEl, hrefToRestore){
@@ -1425,6 +1481,28 @@ function overlapArea(r, x, y){
 function highlightSlot(i){
   $$('#slots .slot').forEach((el,idx)=> el.classList.toggle('drag-target', idx===i));
 }
+function setAutoscroll(dir){
+  if (dir === DND.autoscrollDir) return;
+  DND.autoscrollDir = dir;
+
+  if (DND.autoscrollRAF) { cancelAnimationFrame(DND.autoscrollRAF); DND.autoscrollRAF = 0; }
+  if (!dir) return;
+
+  const speed = 16; // px per frame
+  const step = ()=> {
+    if (!DND.active || !DND.autoscrollDir) { DND.autoscrollRAF = 0; return; }
+    window.scrollBy(0, DND.autoscrollDir * speed);
+    DND.autoscrollRAF = requestAnimationFrame(step);
+  };
+  DND.autoscrollRAF = requestAnimationFrame(step);
+}
+function updateEdgeScroll(clientY){
+  const edge = 80; // px from top/bottom
+  if (clientY < edge) setAutoscroll(-1);
+  else if (clientY > (window.innerHeight - edge)) setAutoscroll(1);
+  else setAutoscroll(0);
+}
+   
 function projectOrder(arr, from, to){
   if (from===to) return arr.slice();
   const out = arr.slice();
