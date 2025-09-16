@@ -327,7 +327,7 @@ function renderTop(){
   currentKidId = sel.value || null;
 
   const mb=monthBalances(); const pts=+(mb[currentKidId]||0);
-  $('#ptsBadge').textContent = `${pts} pts
+  $('#ptsBadge').textContent = `${pts} pts`;
   $('#lvlBadge').textContent = `Lv ${levelFor(pts)}`;
 
   renderStore();
