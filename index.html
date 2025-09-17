@@ -163,6 +163,8 @@ html[data-theme="light"] .slot.editing{ background:rgba(15,22,35,.04); }
   overflow:hidden;            /* hide any overflow content */
   will-change: transform,left,top;
 }
+/* blocks native scroll gestures that compete with long-press */
+#slots, #slots .tile { touch-action: none; }
 
 /* Stop iOS text selection / interactions while dragging */
 .dragging, .dragging * {
@@ -1325,7 +1327,7 @@ function attachLongPressDrag(tileEl, index){
     restoreHref(tileEl, savedHref);
   };
 
-  tileEl.addEventListener('pointerdown', onDown, {passive:true});
+  tileEl.addEventListener('pointerdown', onDown, {passive:false});
 }
 
 function beginDrag(tileEl, point){
