@@ -14,8 +14,7 @@
 <script src="wallpaper.js" defer></script>
 
 <script>
-/* THEME BOOT + logo swap (copy this into other pages)
-   Applies saved theme immediately and swaps header logo for light mode. */
+/* THEME BOOT + logo swap (copy this into other pages) */
 (function themeBoot(){
   try{
     const raw = localStorage.getItem('ui:theme');
@@ -163,7 +162,7 @@ html[data-theme="light"] .slot.editing{ background:rgba(15,22,35,.04); }
   overflow:hidden;            /* hide any overflow content */
   will-change: transform,left,top;
 }
-/* blocks native scroll gestures that compete with long-press */
+/* Block native scroll gestures that compete with long-press */
 #slots, #slots .tile { touch-action: none; }
 
 /* Stop iOS text selection / interactions while dragging */
@@ -307,15 +306,8 @@ html[data-theme="light"] .bf-face{ background:#e3e0d8; color:#1b2432; }
 html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
 #editBar.show{display:flex}
 
-/* --- NEW: drag & drop affordances --- */
+/* Drag target outline during preview */
 .slot.drag-target{ outline:2px solid var(--accent); outline-offset:2px; }
-.drag-ghost{
-  position:fixed; pointer-events:none; z-index:9999;
-  transform: translate(-50%,-50%) scale(.98);
-  filter: drop-shadow(0 10px 22px rgba(0,0,0,.35));
-  width: clamp(180px, 40vw, 320px); /* responsive ghost size */
-  opacity:.95;
-}
 </style>
 </head>
 <body>
@@ -397,4 +389,1077 @@ html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
                 <label class="toggle"><input type="radio" name="themeMode" value="dark" checked> Dark</label>
                 <label class="toggle"><input type="radio" name="themeMode" value="light"> Light</label>
               </div>
-              <
+              <div class="row">
+                <label>Accent</label>
+                <input id="accentPicker" type="color" class="btn" value="#22d3ee" style="padding:6px 8px; width:60px; height:36px;">
+                <button id="accentReset" class="btn">Reset</button>
+              </div>
+              <div class="row" style="opacity:.8">Accent affects buttons, outlines, and focus rings across the app.</div>
+            </div>
+          </div>
+
+          <div class="item">
+            <div class="grow">
+              <div style="font-weight:800; margin-bottom:6px">Wallpaper</div>
+              <div class="row">
+                <button id="btnPickWallpaper" class="btn">Pick Wallpaper</button>
+                <button id="btnClearWallpaper" class="btn">Clear Wallpaper</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="item">
+            <div class="grow" style="opacity:.75">More global options (like theme templates) coming soon.</div>
+          </div>
+        </section>
+      </div>
+      <div class="footer">
+        <button id="adminSave" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIN Modal -->
+  <div id="pinModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="pinTitle">
+    <div class="modal" style="max-width:420px">
+      <header>
+        <div id="pinTitle" style="font-weight:800">Enter Admin PIN</div>
+        <button id="pinClose" class="btn">✖</button>
+      </header>
+      <div class="body" style="gap:12px">
+        <input id="pinInputModal" class="btn" inputmode="numeric" pattern="\\d*" placeholder="PIN (numbers only)" autofocus />
+      </div>
+      <div class="footer">
+        <button id="pinOk" class="btn-primary btn-lg">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Remove Cards Modal -->
+  <div id="addCardModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="addCardTitle">
+    <div class="modal" style="max-width:560px">
+      <header>
+        <div id="addCardTitle" style="font-weight:800">Add / Remove Cards</div>
+        <button id="addCardClose" class="btn">✖</button>
+      </header>
+      <div class="body" id="addCardBody"></div>
+      <div class="footer">
+        <button id="addCardDone" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- All Pages Modal -->
+  <div id="pagesModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="pagesTitle">
+    <div class="modal" style="max-width:560px">
+      <header>
+        <div id="pagesTitle" style="font-weight:800">All Pages</div>
+        <button id="pagesClose" class="btn">✖</button>
+      </header>
+      <div class="body" id="pagesBody"></div>
+      <div class="footer">
+        <button id="pagesDone" class="btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Modal -->
+  <div id="aboutModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="aboutTitle">
+    <div class="modal" style="max-width:600px">
+      <header>
+        <div id="aboutTitle" style="font-weight:800">About Fambam</div>
+        <button id="aboutClose" class="btn">✖</button>
+      </header>
+      <div class="body">
+        <p><b>Fambam</b> — single-device family hub (PWA). Data stays on this iPad.</p>
+        <ul>
+          <li>Wallpaper is stored locally and never uploaded.</li>
+          <li>Admin-gated settings via PIN.</li>
+          <li>Home supports grid placement by tapping a card then a slot.</li>
+        </ul>
+        <p style="opacity:.75">Works offline. Data stays on this device (local only).</p>
+      </div>
+      <div class="footer">
+        <button class="btn-primary" id="aboutOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+<!-- Family Store -->
+<script src="family.js?v=3.3.6"></script>
+<script>
+// Fallback Family shim if family.js failed
+if (!window.Family) {
+  console.warn('family.js not loaded — using fallback Family shim.');
+  (function(){
+    const K={pin:'hub:family:pin', parents:'hub:family:parents', kids:'hub:family:kids'};
+    const uid=()=>Math.random().toString(36).slice(2,10);
+    const load=(k,f)=>{ try{const v=JSON.parse(localStorage.getItem(k)); return v ?? f;}catch{ return f; } };
+    const save=(k,v)=>localStorage.setItem(k, JSON.stringify(v));
+    window.Family = {
+      setPin(pin){ save(K.pin, pin || null); },
+      verifyPin(pin){ const real = load(K.pin, null); return real ? String(real)===String(pin) : true; },
+      getParents(){ return load(K.parents, []); },
+      upsertParent(p){ const a=this.getParents(); const i=a.findIndex(x=>x.id===p.id);
+        if(i>=0) a[i]={...a[i],...p}; else a.push({...p,id:p.id||uid()}); save(K.parents,a); },
+      removeParent(id){ save(K.parents, this.getParents().filter(p=>p.id!==id)); },
+      getKids(){ return load(K.kids, []); },
+      getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false); },
+      upsertKid(k){ const a=this.getKids(); const i=a.findIndex(x=>x.id===k.id);
+        if(i>=0) a[i]={...a[i],...k}; else a.push({...k,id:k.id||uid(),enabled:true}); save(K.kids,a); },
+      removeKid(id){ save(K.kids, this.getKids().filter(k=>k.id!==id)); },
+      setKidEnabled(id,en){ const a=this.getKids(); const k=a.find(x=>x.id===id); if(k){ k.enabled=!!en; save(K.kids,a); } },
+      onChange(){ return ()=>{}; }
+    };
+  })();
+}
+</script>
+
+<!-- Seed PIN once to 4321 -->
+<script>
+(function seedPinOnce(){
+  try{
+    const FLAG = 'hub:pinSeeded';
+    if (!localStorage.getItem(FLAG)) {
+      Family.setPin('4321');
+      localStorage.setItem(FLAG, '1');
+      console.log('Admin PIN seeded to 4321');
+    }
+  }catch(e){ console.warn('PIN seed failed', e); }
+})();
+</script>
+
+<!-- Wallpaper utilities (shared helper + safe fallback) -->
+<script>
+function pickWallpaper(){
+  const input = document.getElementById('wallpaper-picker');
+  input.onchange = async (ev)=>{
+    const file = ev.target.files && ev.target.files[0]; if(!file) return;
+    const dataUrl = await compressImage(file, 2400, 0.85);
+    if (window.Wallpaper && typeof Wallpaper.set === 'function') {
+      Wallpaper.set(dataUrl);
+    } else {
+      const KEY = 'hub:wallpaper:dataurl';
+      localStorage.setItem(KEY, dataUrl);
+      document.documentElement.style.setProperty('--wallpaper', `url("${dataUrl}")`);
+    }
+    input.value='';
+  };
+  input.click();
+}
+function clearWallpaper(){
+  if (window.Wallpaper && typeof Wallpaper.clear === 'function') {
+    Wallpaper.clear();
+  } else {
+    const KEY = 'hub:wallpaper:dataurl';
+    localStorage.removeItem(KEY);
+    document.documentElement.style.setProperty('--wallpaper', `url('')`);
+  }
+}
+function compressImage(file, maxSide=2400, quality=.85){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1, maxSide/Math.max(img.width,img.height));
+      const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
+  });
+}
+</script>
+
+<!-- Menu + PIN gate + All Pages -->
+<script>
+(function menu(){
+  const btn = document.getElementById('btnMenu');
+  const dd  = document.getElementById('menuDropdown');
+  const openDD = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
+  const closeDD= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
+
+  btn?.addEventListener('click,', ()=>{}); // defensive
+  btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?closeDD():openDD(); });
+  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) closeDD(); });
+
+  dd?.addEventListener('click', (e)=>{
+    const el = e.target.closest('.menu-item'); if (!el) return;
+    const action = el.dataset.action;
+    closeDD();
+    if (action === 'pages') openPages();
+    else if (action === 'edithome') toggleEdit(true);
+    else if (action === 'admin') {
+      const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
+      if (hasPin) requestPinUI(openAdmin); else openAdmin();
+    } else if (action === 'about') showModal('aboutModal', true);
+  });
+
+  function openPages(){
+    const body = document.getElementById('pagesBody'); body.innerHTML='';
+    CARDS.forEach(c=>{
+      const row=document.createElement('div'); row.className='item';
+      row.innerHTML=`<div class="grow"><b>${c.label}</b><div style="opacity:.7">${c.hint||''}</div></div><a class="btn" href="${c.href}">Open</a>`;
+      body.appendChild(row);
+    });
+    showModal('pagesModal', true);
+  }
+  document.getElementById('pagesDone').onclick=()=>showModal('pagesModal', false);
+  document.getElementById('pagesClose').onclick=()=>showModal('pagesModal', false);
+})();
+</script>
+
+<!-- PIN modal helpers -->
+<script>
+function requestPinUI(onSuccess){
+  const m = document.getElementById('pinModal');
+  const input = document.getElementById('pinInputModal');
+  const ok = document.getElementById('pinOk');
+  const x = document.getElementById('pinClose');
+
+  function close(){ m.style.display='none'; m.setAttribute('aria-hidden','true'); input.value=''; ok.onclick = x.onclick = null; input.onkeydown=null; }
+  function open(){
+    m.style.display='flex'; m.setAttribute('aria-hidden','false');
+    setTimeout(()=>{
+      input.focus();
+      if (input.setSelectionRange) input.setSelectionRange(input.value.length, input.value.length);
+    }, 50);
+  }
+
+  function trySubmit(){
+    const pin = (input.value||'').trim();
+    if (!/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
+    if (Family.verifyPin(pin)) { close(); onSuccess(); }
+    else { alert('Incorrect PIN.'); input.focus(); input.select(); }
+  }
+
+  ok.onclick = trySubmit;
+  input.onkeydown = (e)=>{ if(e.key==='Enter') trySubmit(); };
+  x.onclick = close;
+
+  open();
+}
+window.addEventListener('load', ()=>{
+  if (location.hash === '#admin') {
+    const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
+    if (hasPin) requestPinUI(openAdmin); else openAdmin();
+  }
+});
+</script>
+
+<!-- Admin modal logic (incl. Global Settings) -->
+<script>
+const modal = document.getElementById('adminModal');
+document.getElementById('adminClose')?.addEventListener('click', closeAdmin);
+document.getElementById('adminSave')?.addEventListener('click', closeAdmin);
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    const tab = t.dataset.tab;
+    document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected','false'));
+    t.setAttribute('aria-selected','true');
+    document.querySelectorAll('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab?'':'none'));
+  });
+});
+function openAdmin(){ buildParents(); buildKids(); initGlobalSettings(); showModal('adminModal', true); }
+function closeAdmin(){ showModal('adminModal', false); }
+
+/* Parents UI */
+function buildParents(){
+  const list = document.getElementById('parentsList'); list.innerHTML='';
+  (Family.getParents?.() || []).forEach(p=>{
+    const row = document.createElement('div'); row.className='item'; row.dataset.id=p.id;
+    row.innerHTML = `
+      <div class="face">${p.photo?`<img src="${p.photo}" alt="${escapeHtml(p.name)}">`:`<span>${initials(p.name)}</span>`}</div>
+      <input class="grow btn" value="${escapeHtml(p.name||'Parent')}" />
+      <button class="btn" data-photo>Change Photo</button>
+      <button class="btn-warn" data-remove>Remove</button>`;
+    list.appendChild(row);
+  });
+  document.getElementById('addParent').onclick = ()=>{
+    const name = (document.getElementById('newParentName').value||'').trim(); if(!name) return;
+    Family.upsertParent({ name }); document.getElementById('newParentName').value=''; buildParents();
+  };
+  document.getElementById('savePin').onclick = ()=>{
+    const pin = (document.getElementById('pinInput').value||'').trim() || null;
+    if (pin && !/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
+    Family.setPin(pin); alert(pin ? 'PIN saved.' : 'PIN cleared.');
+  };
+  list.querySelectorAll('.item').forEach(row=>{
+    const id = row.dataset.id;
+    row.querySelector('input').oninput = (e)=> Family.upsertParent({ id, name:e.target.value });
+    row.querySelector('[data-photo]').onclick = ()=> pickPhoto('parent', id);
+    row.querySelector('[data-remove]').onclick = ()=>{ Family.removeParent(id); buildParents(); };
+  });
+}
+/* Kids UI */
+function buildKids(){
+  const list = document.getElementById('kidsList'); list.innerHTML='';
+  (Family.getKids?.() || []).forEach(k=>{
+    const row = document.createElement('div'); row.className='item'; row.dataset.id=k.id;
+    row.innerHTML = `
+      <div class="face">${k.photo?`<img src="${k.photo}" alt="${escapeHtml(k.name)}">`:`<span>${initials(k.name)}</span>`}</div>
+      <input class="grow btn" value="${escapeHtml(k.name||'Kid')}" />
+      <label class="toggle"><input type="checkbox" ${k.enabled!==false?'checked':''}/> Enabled</label>
+      <button class="btn" data-photo>Change Photo</button>
+      <button class="btn-warn" data-remove>Remove</button>`;
+    list.appendChild(row);
+  });
+  document.getElementById('addKid').onclick = ()=>{
+    const name = (document.getElementById('newKidName').value||'').trim(); if(!name) return;
+    Family.upsertKid({ name }); document.getElementById('newKidName').value=''; buildKids();
+  };
+  list.querySelectorAll('.item').forEach(row=>{
+    const id = row.dataset.id;
+    row.querySelector('input').oninput = (e)=> Family.upsertKid({ id, name:e.target.value });
+    row.querySelector('input[type="checkbox"]').onchange = (e)=> Family.setKidEnabled(id, e.target.checked);
+    row.querySelector('[data-photo]').onclick = ()=> pickPhoto('kid', id);
+    row.querySelector('[data-remove]').onclick = ()=>{ Family.removeKid(id); buildKids(); };
+  });
+}
+/* helpers */
+function initials(n){ const p=(n||'').trim(); return p? p[0].toUpperCase() : '?'; }
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
+function pickPhoto(kind, id){
+  const input = document.getElementById('file-picker');
+  input.removeAttribute('capture');
+  input.onchange = async (ev)=>{
+    const file = ev.target.files && ev.target.files[0]; if(!file) return;
+    const dataUrl = await compress(ev.target.files[0], 256, 0.8);
+    try{
+      if (kind==='kid') Family.upsertKid({ id, photo:dataUrl });
+      else Family.upsertParent({ id, photo:dataUrl });
+      if (kind==='kid') buildKids(); else buildParents();
+    }catch(_){ alert('Could not save photo.'); }
+    input.value='';
+  };
+  input.click();
+}
+function compress(file, maxSide=256, quality=0.8){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1, maxSide/Math.max(img.width,img.height));
+      const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
+  });
+}
+
+/* --------- Global Settings (Theme + Wallpaper) ---------- */
+function initGlobalSettings(){
+  try{
+    const raw = localStorage.getItem('ui:theme');
+    const saved = raw ? JSON.parse(raw) : { mode:'dark', accent:'#22d3ee' };
+    const mode = (saved.mode==='light') ? 'light' : 'dark';
+    const accent = saved.accent || '#22d3ee';
+
+    document.querySelectorAll('input[name="themeMode"]').forEach(r=>{
+      r.checked = (r.value===mode);
+      r.onchange = ()=> setTheme({ mode:r.value });
+    });
+    const pick = document.getElementById('accentPicker');
+    pick.value = accent;
+    pick.oninput = ()=> setTheme({ accent: pick.value });
+    document.getElementById('accentReset').onclick = ()=>{ pick.value = '#22d3ee'; setTheme({ accent: '#22d3ee' }); };
+
+    document.getElementById('btnPickWallpaper').onclick = pickWallpaper;
+    document.getElementById('btnClearWallpaper').onclick = clearWallpaper;
+  }catch(e){ console.warn('initGlobalSettings failed', e); }
+}
+function setTheme(patch){
+  try{
+    const raw = localStorage.getItem('ui:theme');
+    const cur = raw ? JSON.parse(raw) : { mode:'dark', accent:'#22d3ee' };
+    const next = { ...cur, ...patch };
+    if (next.mode!=='light') next.mode='dark';
+    if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(next.accent||'')) next.accent = '#22d3ee';
+
+    document.documentElement.setAttribute('data-theme', next.mode);
+    document.documentElement.style.setProperty('--accent', next.accent);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', next.mode==='light' ? '#f2efe7' : '#0f172a');
+
+    const logo = document.getElementById('logoImg');
+    if (logo) logo.src = (next.mode==='light') ? 'fambam2.png' : 'fambam.png';
+
+    localStorage.setItem('ui:theme', JSON.stringify(next));
+  }catch(e){ console.warn('setTheme failed', e); }
+}
+</script>
+
+<!-- Home grid logic (slots + editing + Photos + Breakfast + Dinner + Chores + Points + Family previews) -->
+<script>
+const SLOT_KEY = 'hub:home:slots:v2';
+const SLOTS_TOTAL = 16;
+
+const CARDS = [
+  {id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast', hint:''},
+  {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner', hint:'Weekly plan'},
+  {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',          hint:'Weekly rotation'},
+  {id:'points',    href:'./points.html',    emoji:'⭐', label:'Points',          hint:'Leaderboard'},
+  {id:'family',    href:'./family.html',    emoji:'👨‍👩‍👧‍👦', label:'Family',    hint:'Profiles'},
+  {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar', hint:'Events & activities'},
+  {id:'photos',    href:'./photos.html',    emoji:'🖼️', label:'Photos',          hint:'Slideshow'},
+  {id:'store',     href:'./store.html',     emoji:'🎁', label:'Store',           hint:'Rewards'}
+];
+const byId = Object.fromEntries(CARDS.map(c=>[c.id,c]));
+
+/* Load/save slots */
+function loadSlots(){
+  try{
+    const v=JSON.parse(localStorage.getItem(SLOT_KEY));
+    if(Array.isArray(v)) return v.slice(0,SLOTS_TOTAL).concat(Array(SLOTS_TOTAL).fill(null)).slice(0,SLOTS_TOTAL);
+  }catch{}
+  const seed = ['breakfast','dinner','chores','calendar','points','family','store']; // include Store by default
+  return seed.concat(Array(SLOTS_TOTAL-seed.length).fill(null));
+}
+function saveSlots(a){ localStorage.setItem(SLOT_KEY, JSON.stringify(a)); }
+
+let slots = loadSlots();
+let isEditing = false;
+let selectedCardId = null;
+let selectedFromSlot = -1;
+
+const $ = (s,e=document)=>e.querySelector(s);
+const $$= (s,e=document)=>[...e.querySelectorAll(s)];
+
+/* Photos util */
+function safelyGetPhotoList(){
+  try{ const arr = JSON.parse(localStorage.getItem('photos:list')) || []; return Array.isArray(arr)?arr:[]; }
+  catch{ return []; }
+}
+
+/* Local-date helpers */
+function todayISO(){
+  const d=new Date();
+  const y=d.getFullYear(), m=(d.getMonth()+1).toString().padStart(2,'0'), dd=d.getDate().toString().padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+/* NEW: month id used by the Points card to match points.html */
+function monthId(d=new Date()){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function niceToday(){ return new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
+
+/* Week helpers */
+function startOfWeekMonday(d=new Date()){
+  const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = (dt.getDay()+6)%7; dt.setDate(dt.getDate()-day); return dt;
+}
+function thisMondayISO(){
+  const m = startOfWeekMonday(new Date());
+  const y=m.getFullYear(), mm=(m.getMonth()+1).toString().padStart(2,'0'), dd=m.getDate().toString().padStart(2,'0');
+  return `${y}-${mm}-${dd}`;
+}
+function todayDowShort(){ return new Date().toLocaleDateString('en-US',{weekday:'short'}); }
+function emojiFromLabel(label){
+  const s=(label||'').trim();
+  return s ? Array.from(s)[0] : '';
+}
+function choreIconFromName(label){
+  const s=(label||'').trim();
+  const first = emojiFromLabel(s);
+  if (first && first !== s[0].toUpperCase()) return first;
+  const L = s.toLowerCase();
+  if (L.includes('table')) return '🍽️';
+  if (L.includes('vacuum') || L.includes('sweep') || L.includes('clean')) return '🧹';
+  if (L.includes('feed') && (L.includes('dog') || L.includes('dogs'))) return '🐶';
+  if (L.includes('trash') || L.includes('garbage') || L.includes('bins')) return '🗑️';
+  return first || s.charAt(0).toUpperCase();
+}
+
+/* === renderGrid (accepts optional preview order) === */
+function renderGrid(previewOrder=null){
+  const order = Array.isArray(previewOrder) ? previewOrder : slots;
+  const wrap = $('#slots'); wrap.innerHTML='';
+  for(let i=0;i<SLOTS_TOTAL;i++){
+    const div = document.createElement('div');
+    div.className = 'slot' + (isEditing?' editing':'');
+    div.dataset.pos = i;
+    const id = order[i];
+    if(id && byId[id]){
+      const t = renderTile(byId[id], i, order);
+      if(isEditing){
+        t.addEventListener('click', (ev)=>{
+          ev.preventDefault(); ev.stopPropagation();
+          if(selectedCardId===id){ selectedCardId=null; selectedFromSlot=-1; t.classList.remove('selecting'); return; }
+          $$('.tile').forEach(x=>x.classList.remove('selecting'));
+          selectedCardId = id; selectedFromSlot = i; t.classList.add('selecting');
+        });
+      }
+      div.appendChild(t);
+    } else {
+      if(isEditing){
+        const add = document.createElement('button');
+        add.className='add-btn'; add.textContent='+';
+        add.title='Add card';
+        add.onclick=(ev)=>{ ev.stopPropagation(); openAddRemove(i); };
+        div.appendChild(add);
+      }
+    }
+    div.addEventListener('click', ()=>{
+      if(!isEditing || selectedCardId==null) return;
+      const to = i, from = selectedFromSlot;
+      if(from===to) return;
+      const idB = slots[to];
+      slots[to] = selectedCardId;
+      slots[from] = idB ?? null;
+      selectedCardId=null; selectedFromSlot=-1;
+      saveSlots(slots); renderGrid();
+    });
+    wrap.appendChild(div);
+  }
+}
+
+function renderTile(c, slotIndex, orderRef){
+  const a = document.createElement('a');
+  a.href = c.href; a.className='tile'; a.draggable=false;
+
+  if(c.id === 'photos'){
+    const list = safelyGetPhotoList();
+    if(list.length) a.classList.add('photos-card');
+    if(list.length){
+      a.classList.add('photo-only');
+      a.innerHTML = `
+        <div class="photo-prev"><img alt=""></div>
+        <div class="photos-arrow">➔</div>
+        <button class="minus" type="button">−</button>`;
+      const img = a.querySelector('img');
+      let idx = 0;
+      img.src = list[0];
+      const cadence = Number(localStorage.getItem('photos:cadence_ms')) || 10000;
+      const timer = setInterval(()=>{ idx=(idx+1)%list.length; img.src=list[idx]; }, cadence);
+      a.addEventListener('click',()=>clearInterval(timer),{once:true});
+    } else {
+      a.innerHTML = `<div class="label">${c.label}</div><div class="hint">${c.hint||''}</div><button class="minus" type="button">−</button>`;
+    }
+
+  } else if (c.id === 'breakfast') {
+    a.innerHTML = `
+      <div class="label">Breakfast</div>
+      <div class="bf-box">
+        <div class="bf-date">Today · ${niceToday()}</div>
+        <div class="bf-empty">No selections yet — tap Breakfast.</div>
+        <div class="bf-grid" aria-label="Breakfast selections" style="display:none"></div>
+      </div>
+      <button class="minus" type="button">−</button>
+    `;
+    try{
+      const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
+      const key  = 'bf:day:'+todayISO();
+      const day  = JSON.parse(localStorage.getItem(key)||'{}');
+      const kids = (Family.getKids?.() || []);
+      const entries = Object.entries(day);
+      const emptyMsg = a.querySelector('.bf-empty');
+      const grid = a.querySelector('.bf-grid');
+      if (entries.length){
+        emptyMsg.style.display='none';
+        grid.style.display='grid';
+        const byName = (id)=> (kids.find(k=>k.id===id)?.name || '').toLowerCase();
+        entries.sort((a,b)=> byName(a[0]).localeCompare(byName(b[0])));
+        for(const [kidId, idx] of entries.slice(0,4)){
+          const kid = kids.find(k=>k.id===kidId);
+          const choice = menu?.[idx];
+          if(!choice) continue;
+          const cell = document.createElement('div');
+          cell.className='bf-item';
+          const face = kid?.photo
+            ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
+            : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
+          cell.innerHTML = `${face}<span class="bf-emoji">${choice.emoji||'❓'}</span>`;
+          grid.appendChild(cell);
+        }
+      }
+    }catch(err){ console.warn('Breakfast preview error', err); }
+
+  } else if (c.id === 'dinner') {
+    a.innerHTML = `
+      <div class="label">Dinner Planner</div>
+      <div class="dp-box">
+        <div class="dp-title">Tonight’s Dinner</div>
+        <div class="dp-empty">No selections yet — tap Dinner Planner.</div>
+        <div class="dp-rows" style="display:none">
+          <div class="dp-row"><div class="who">Kids</div><div class="dp-icons" data-row="kids"></div></div>
+          <div class="dp-row"><div class="who">Parents</div><div class="dp-icons" data-row="parents"></div></div>
+        </div>
+      </div>
+      <button class="minus" type="button">−</button>
+    `;
+    try{
+      const mISO = thisMondayISO();
+      const plan = JSON.parse(localStorage.getItem('dp:plan:'+mISO)||'null') || null;
+      const dow  = todayDowShort();
+      const data = plan?.days?.[dow] || null;
+      const emptyMsg = a.querySelector('.dp-empty');
+      const rowsWrap = a.querySelector('.dp-rows');
+      if (data){
+        const kidsIcons = [];
+        const parsIcons = [];
+        const kMain = emojiFromLabel(data.kids?.main);
+        const kSide = emojiFromLabel(data.kids?.side);
+        const pMain = emojiFromLabel(data.parents?.main);
+        const pSide = emojiFromLabel(data.parents?.side);
+        const dEmoji = emojiFromLabel(data.dessert);
+        if (kMain) kidsIcons.push(kMain);
+        if (kSide) kidsIcons.push(kSide);
+        if (pMain) parsIcons.push(pMain);
+        if (pSide) parsIcons.push(pSide);
+        if (dEmoji){ kidsIcons.push(dEmoji); parsIcons.push(dEmoji); }
+        const hasAny = kidsIcons.length || parsIcons.length;
+        if (hasAny){
+          emptyMsg.style.display='none';
+          rowsWrap.style.display='grid';
+          a.querySelector('.dp-icons[data-row="kids"]').innerHTML = kidsIcons.map(e=>`<span>${e}</span>`).join('');
+          a.querySelector('.dp-icons[data-row="parents"]').innerHTML = parsIcons.map(e=>`<span>${e}</span>`).join('');
+        }
+      }
+    }catch(err){ console.warn('Dinner preview error', err); }
+
+  } else if (c.id === 'chores') {
+    a.innerHTML = `
+      <div class="label">Chores</div>
+      <div class="ch-box">
+        <div class="ch-title">This Week</div>
+        <div class="ch-empty">No assignments yet — tap Chores.</div>
+        <div class="ch-grid" style="display:none" aria-label="Chore assignments"></div>
+      </div>
+      <button class="minus" type="button">−</button>
+    `;
+    try{
+      const mISO = thisMondayISO();
+      const assigns = JSON.parse(localStorage.getItem('ch:assign:'+mISO) || '{}') || {};
+      const choreList = JSON.parse(localStorage.getItem('ch:chores:list') || '[]') || [];
+      const kids = (Family.getKids?.() || []);
+      const choresById = Object.fromEntries(choreList.map(c=>[c.id, c.label]));
+      const byKid = {};
+      Object.entries(assigns).forEach(([choreId, kidId])=>{
+        const label = choresById[choreId] || 'Chore';
+        if(!byKid[kidId]) byKid[kidId] = [];
+        byKid[kidId].push(label);
+      });
+      const entries = Object.entries(byKid);
+      const empty = a.querySelector('.ch-empty');
+      const grid  = a.querySelector('.ch-grid');
+      if(entries.length){
+        empty.style.display='none';
+        grid.style.display='grid';
+        const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
+        entries.sort((a,b)=> nameOf(a[0]).localeCompare(nameOf(b[0])));
+        for(const [kidId, labels] of entries.slice(0,4)){
+          const kid = kids.find(k=>k.id===kidId);
+          const face = kid?.photo
+            ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
+            : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
+          const icons = labels.map(choreIconFromName).filter(Boolean).slice(0,3).join(' ');
+          const row = document.createElement('div');
+          row.className='ch-item';
+          row.innerHTML = `${face}<div class="ch-task">${icons}</div>`;
+          grid.appendChild(row);
+        }
+      }
+    }catch(err){ console.warn('Chores preview error', err); }
+
+  } else if (c.id === 'points') {
+    a.innerHTML = `
+      <div class="label">Points</div>
+      <div class="pt-box">
+        <div class="pt-title">This Month</div>
+        <div class="pt-empty">No points yet — tap Points.</div>
+        <div class="pt-grid" style="display:none"></div>
+      </div>
+      <button class="minus" type="button">−</button>
+    `;
+    try{
+      const kids = (Family.getKids?.() || []);
+      const grid = a.querySelector('.pt-grid');
+      const empty = a.querySelector('.pt-empty');
+
+      // Monthly-first, fallback to legacy all-time
+      const mid = monthId();
+      let balances = JSON.parse(localStorage.getItem(`pts:balances:${mid}`) || 'null') || {};
+      if (!Object.keys(balances).length) {
+        balances = JSON.parse(localStorage.getItem('pts:balances') || 'null') || {};
+      }
+
+      const pairs = Object.entries(balances).filter(([,v])=> typeof v==='number');
+      if(pairs.length){
+        empty.style.display='none';
+        grid.style.display='grid';
+        const nameOf = id => (kids.find(k=>k.id===id)?.name || '').toLowerCase();
+        pairs.sort((a,b)=> b[1]-a[1] || nameOf(a[0]).localeCompare(nameOf(b[0])));
+        for(const [kidId, pts] of pairs.slice(0,4)){
+          const kid = kids.find(k=>k.id===kidId);
+          const face = kid?.photo
+            ? `<span class="bf-face"><img src="${kid.photo}" alt=""></span>`
+            : `<span class="bf-face">${(kid?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
+          const row = document.createElement('div');
+          row.className='pt-item';
+          row.innerHTML = `${face}<div class="pt-score">${Number(pts)||0}</div>`;
+          grid.appendChild(row);
+        }
+      }
+    }catch(err){ console.warn('Points preview error', err); }
+
+  } else if (c.id === 'family') {
+    a.innerHTML = `
+      <div class="label">Family</div>
+      <div class="fam-box">
+        <div class="fam-title">Profiles</div>
+        <div class="fam-sub" id="fam-sub">Loading…</div>
+        <div class="fam-grid" aria-label="Family"></div>
+      </div>
+      <button class="minus" type="button">−</button>
+    `;
+    try{
+      const kids = (Family.getKids?.() || []);
+      const grid = a.querySelector('.fam-grid');
+      const sub  = a.querySelector('#fam-sub');
+      kids.slice().sort((a,b)=> (a.name||'').localeCompare(b.name||'')).slice(0,4).forEach(k=>{
+        const row = document.createElement('div'); row.className='fam-item';
+        const face = k?.photo
+          ? `<span class="bf-face"><img src="${k.photo}" alt=""></span>`
+          : `<span class="bf-face">${(k?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
+        row.innerHTML = `${face}`;
+        grid.appendChild(row);
+      });
+      function readProfiles(){
+        const out = {};
+        kids.forEach(k=>{
+          try{ const raw = localStorage.getItem(`profile:${k.id}`); if(raw) out[k.id]=JSON.parse(raw); }catch{}
+        });
+        return out;
+      }
+      const profiles = readProfiles();
+      const balances = JSON.parse(localStorage.getItem('pts:balances') || 'null') || {};
+      const top = Object.entries(balances).sort((a,b)=> (b[1]-a[1]))[0];
+      const tidbits = [];
+      kids.forEach(k=>{
+        const p = profiles[k.id];
+        const fav = p?.favFoodEmoji || p?.favoriteFood || p?.favFood || '';
+        const em = emojiFromLabel(String(fav));
+        if (em) tidbits.push(`${k.name}’s favorite: ${em}`);
+        if (p?.funFact) tidbits.push(`${k.name}: ${p.funFact}`);
+      });
+      if (top){
+        const kid = kids.find(x=>x.id===top[0]);
+        if (kid) tidbits.push(`Top scorer: ${kid.name} · ${Number(top[1])||0} pts`);
+      }
+      if (!tidbits.length) tidbits.push('Tap to view profiles');
+      let i=0; sub.textContent = tidbits[0];
+      setInterval(()=>{ i=(i+1)%tidbits.length; sub.textContent=tidbits[i]; }, 5000);
+    }catch(err){ console.warn('Family preview error', err); }
+
+  } else {
+    a.innerHTML = `
+      <div class="emoji">${c.emoji}</div>
+      <div class="label">${c.label}</div>
+      <div class="hint">${c.hint||''}</div>
+      <button class="minus" type="button">−</button>
+    `;
+  }
+
+  if(isEditing){ a.addEventListener('click', (e)=>e.preventDefault()); }
+
+  const minus = a.querySelector('.minus');
+  if(minus){
+    ['click','pointerdown','touchstart','mousedown'].forEach(evt=>{
+      minus.addEventListener(evt, (ev)=>{
+        ev.preventDefault(); ev.stopPropagation();
+      }, {passive:false});
+    });
+    minus.addEventListener('click', ()=>{
+      slots[slotIndex]=null; selectedCardId=null; selectedFromSlot=-1; saveSlots(slots); renderGrid();
+    });
+  }
+
+  // Long-press drag wiring (disabled in Edit Mode)
+  if (!isEditing) attachLongPressDrag(a, slotIndex);
+
+  return a;
+}
+
+/* ----- Edit controls / modal helpers ----- */
+function toggleEdit(on){
+  isEditing = !!on;
+  $('#editBar').classList.toggle('show', isEditing);
+  selectedCardId=null; selectedFromSlot=-1;
+  renderGrid();
+}
+document.getElementById('btnDoneEdit').onclick = ()=> toggleEdit(false);
+
+function openAddRemove(targetIndex){
+  const placed = new Set(slots.filter(Boolean));
+  const body = document.getElementById('addCardBody'); body.innerHTML='';
+  CARDS.forEach(c=>{
+    const isOnHome = placed.has(c.id);
+    const row=document.createElement('div'); row.className='item';
+    row.innerHTML=`
+      <div class="grow">${c.emoji} <b>${c.label}</b><div style="opacity:.8">${c.hint||''}</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" data-add>Add</button>
+        <button class="btn-warn" data-remove>Remove</button>
+      </div>
+    `;
+    const btnAdd = row.querySelector('[data-add]');
+    const btnRem = row.querySelector('[data-remove]');
+    if(isOnHome){ btnAdd.setAttribute('disabled',''); } else { btnRem.setAttribute('disabled',''); }
+    btnAdd.onclick=()=>{
+      const idx = (typeof targetIndex==='number') ? targetIndex : slots.findIndex(x=>!x);
+      if(idx<0){ alert('No empty slot available. Remove a card first.'); return; }
+      slots[idx]=c.id; saveSlots(slots); renderGrid(); openAddRemove(idx);
+    };
+    btnRem.onclick=()=>{
+      const ix = slots.findIndex(x=>x===c.id);
+      if(ix>=0){ slots[ix]=null; saveSlots(slots); renderGrid(); }
+      openAddRemove(targetIndex);
+    };
+    body.appendChild(row);
+  });
+  showModal('addCardModal', true);
+}
+document.getElementById('addCardDone').onclick=()=>showModal('addCardModal', false);
+document.getElementById('addCardClose').onclick=()=>showModal('addCardModal', false);
+document.getElementById('btnAddAnywhere').onclick=()=>{
+  const firstEmpty = slots.findIndex(x=>!x);
+  openAddRemove(firstEmpty<0?0:firstEmpty);
+};
+
+function showModal(id, show){
+  const m=document.getElementById(id);
+  if(!m) return;
+  if(show){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
+  else    { m.style.display='none'; m.setAttribute('aria-hidden','true'); }
+}
+document.getElementById('aboutOk')?.addEventListener('click',()=>showModal('aboutModal',false));
+document.getElementById('aboutClose')?.addEventListener('click',()=>showModal('aboutModal',false));
+</script>
+
+<script>
+/* ===== Long-press drag controller (robust) ===== */
+const DND = {
+  active:false, startX:0, startY:0, moved:false, timer:null,
+  pickIndex:-1, hoverIndex:-1, ghost:null, preview:null,
+  pressMs:400, cancelMovePx:8,
+  shield:null, autoscrollDir:0, autoscrollRAF:0
+};
+
+function setAutoscroll(dir){
+  if (dir === DND.autoscrollDir) return;
+  DND.autoscrollDir = dir;
+  if (DND.autoscrollRAF) { cancelAnimationFrame(DND.autoscrollRAF); DND.autoscrollRAF = 0; }
+  if (!dir) return;
+  const speed = 16; // px per frame
+  const step = ()=>{
+    if (!DND.active || !DND.autoscrollDir) { DND.autoscrollRAF = 0; return; }
+    window.scrollBy(0, DND.autoscrollDir * speed);
+    DND.autoscrollRAF = requestAnimationFrame(step);
+  };
+  DND.autoscrollRAF = requestAnimationFrame(step);
+}
+function updateEdgeScroll(clientY){
+  const edge = 80;
+  if (clientY < edge) setAutoscroll(-1);
+  else if (clientY > (window.innerHeight - edge)) setAutoscroll(1);
+  else setAutoscroll(0);
+}
+
+function attachLongPressDrag(tileEl, index){
+  tileEl.addEventListener('dragstart', e=>e.preventDefault());
+  tileEl.addEventListener('contextmenu', e=>e.preventDefault(), {passive:false});
+
+  let savedHref = null;
+  let tapNavigate = false;
+
+  const onDown = (e)=>{
+    if (isEditing) return;
+    if (e.button === 2) return;
+    const point = getPoint(e);
+
+    if (tileEl.hasAttribute('href')) { savedHref = tileEl.getAttribute('href'); tileEl.removeAttribute('href'); }
+    else savedHref = null;
+
+    DND.startX = point.x; DND.startY = point.y;
+    DND.moved = false; DND.pickIndex = index; DND.hoverIndex = index;
+    DND.preview = null; tapNavigate = true;
+
+    DND.timer = setTimeout(()=> beginDrag(tileEl, point), DND.pressMs);
+
+    window.addEventListener('pointermove', onMove, {passive:false});
+    window.addEventListener('pointerup', onUp, {passive:false, once:true});
+    window.addEventListener('pointercancel', onCancel, {passive:false, once:true});
+    document.addEventListener('visibilitychange', onCancelOnce, {once:true});
+  };
+
+  const onMove = (e)=>{
+    const p = getPoint(e);
+
+    if (!DND.active){
+      if (dist(DND.startX,DND.startY,p.x,p.y) > DND.cancelMovePx){
+        tapNavigate = false;
+        cancelPress(tileEl, savedHref);
+      }
+      return;
+    }
+    // dragging
+    e.preventDefault();
+    updateEdgeScroll(p.y);
+    positionGhost(p);
+
+    const idx = slotIndexFromPoint(p.x, p.y);
+    if (idx !== -1 && idx !== DND.hoverIndex){
+      DND.hoverIndex = idx;
+      const proj = projectOrder(slots, DND.pickIndex, DND.hoverIndex);
+      DND.preview = proj;
+      renderGrid(proj);
+      highlightSlot(idx);
+    }
+  };
+
+  const onUp = ()=>{
+    window.removeEventListener('pointermove', onMove);
+    if (!DND.active){
+      cancelPress(tileEl, savedHref);
+      if (tapNavigate && savedHref) location.href = savedHref;
+      return;
+    }
+    endDrag();
+    restoreHref(tileEl, savedHref);
+  };
+
+  const onCancel = ()=>{
+    window.removeEventListener('pointermove', onMove);
+    if (DND.active) cleanupDrag();
+    restoreHref(tileEl, savedHref);
+  };
+  const onCancelOnce = ()=> onCancel();
+
+  tileEl.addEventListener('pointerdown', onDown, {passive:false});
+}
+
+function beginDrag(tileEl, point){
+  DND.active = true;
+  try{ navigator.vibrate && navigator.vibrate(7); }catch(_){}
+
+  // lock page scroll + disable text selection
+  document.documentElement.classList.add('drag-lock');
+  document.body.classList.add('drag-lock', 'dragging');
+
+  // shield to swallow touches/clicks (prevents native scroll/selection)
+  const shield = document.createElement('div');
+  shield.className = 'drag-shield';
+  document.body.appendChild(shield);
+  DND.shield = shield;
+
+  // ghost sized exactly like the source card
+  const rect = tileEl.getBoundingClientRect();
+  const clone = tileEl.cloneNode(true);
+  clone.classList.add('drag-ghost');
+  Object.assign(clone.style, {
+    width: rect.width + 'px',
+    height: rect.height + 'px',
+    minWidth: rect.width + 'px',
+    minHeight: rect.height + 'px',
+    maxWidth: rect.width + 'px',
+    maxHeight: rect.height + 'px',
+    left: point.x + 'px',
+    top: point.y + 'px'
+  });
+  document.body.appendChild(clone);
+  DND.ghost = clone;
+
+  const proj = projectOrder(slots, DND.pickIndex, DND.hoverIndex);
+  DND.preview = proj;
+  renderGrid(proj);
+  highlightSlot(DND.hoverIndex);
+}
+
+function endDrag(){
+  if (DND.preview){ slots = DND.preview.slice(); saveSlots(slots); }
+  setAutoscroll(0);
+  cleanupDrag();
+  renderGrid();
+}
+
+function cleanupDrag(){
+  clearTimeout(DND.timer); DND.timer = null;
+
+  if (DND.autoscrollRAF) { cancelAnimationFrame(DND.autoscrollRAF); DND.autoscrollRAF = 0; }
+  DND.autoscrollDir = 0;
+
+  if (DND.ghost) DND.ghost.remove();
+  DND.ghost = null;
+
+  if (DND.shield) DND.shield.remove();
+  DND.shield = null;
+
+  document.body.classList.remove('dragging','drag-lock');
+  document.documentElement.classList.remove('drag-lock');
+
+  DND.active = false;
+  DND.preview = null;
+
+  // clear any highlights
+  $$('#slots .slot').forEach(el=>el.classList.remove('drag-target'));
+}
+
+function cancelPress(tileEl, hrefToRestore){
+  clearTimeout(DND.timer); DND.timer=null;
+  restoreHref(tileEl, hrefToRestore);
+}
+function restoreHref(el, href){
+  if (href !== null) el.setAttribute('href', href);
+}
+
+function positionGhost(p){
+  if (!DND.ghost) return;
+  DND.ghost.style.left = p.x + 'px';
+  DND.ghost.style.top  = p.y + 'px';
+}
+function getPoint(e){
+  const t = (e.touches && e.touches[0]) || e;
+  return { x: t.clientX, y: t.clientY };
+}
+function dist(x1,y1,x2,y2){ const dx=x2-x1, dy=y2-y1; return Math.hypot(dx,dy); }
+function slotIndexFromPoint(x,y){
+  const slotsEls = $$('#slots .slot');
+  let best=-1, bestArea=0;
+  for(let i=0;i<slotsEls.length;i++){
+    const r = slotsEls[i].getBoundingClientRect();
+    if (x>=r.left && x<=r.right && y>=r.top && y<=r.bottom) return i;
+    const area = overlapArea(r, x, y);
+    if (area>bestArea){ bestArea=area; best=i; }
+  }
+  return best;
+}
+function overlapArea(r, x, y){
+  const cx=(r.left+r.right)/2, cy=(r.top+r.bottom)/2;
+  const d=Math.max(1, Math.hypot(cx-x, cy-y));
+  return 1/d;
+}
+function highlightSlot(i){
+  $$('#slots .slot').forEach((el,idx)=> el.classList.toggle('drag-target', idx===i));
+}
+function projectOrder(arr, from, to){
+  if (from===to) return arr.slice();
+  const out = arr.slice();
+  const item = out[from];
+  out.splice(from,1);
+  out.splice(to,0,item);
+  return out.slice(0, SLOTS_TOTAL);
+}
+</script>
+
+<!-- Boot + SW -->
+<script>
+renderGrid();
+try { Family.onChange && Family.onChange(()=>{ renderGrid(); }); } catch(_){}
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
