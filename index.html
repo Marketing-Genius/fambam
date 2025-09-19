@@ -248,8 +248,8 @@ html[data-theme="light"] .bf-face{ background:#e3e0d8; color:#1b2432; }
 /* Family preview */
 .fam-title{font-size:.95rem;font-weight:800}
 .fam-sub{opacity:.9;font-size:.95rem;margin-top:4px;min-height:1.2em}
-.fam-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; margin-top:10px; }
-.fam-item{display:flex; align-items:center; gap:10px; min-height:40px}
+.fam-grid{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:12px;margin-top:10px;
+.fam-item{display:flex;align-items:center;justify-content:center;min-height:40px;
 .fam-name{ font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 /* Edit affordances */
@@ -825,7 +825,7 @@ const CARDS = [
   {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner', hint:'Weekly plan'},
   {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',          hint:'Weekly rotation'},
   {id:'points',    href:'./points.html',    emoji:'⭐', label:'Points',          hint:'Leaderboard'},
-  {id:'family',    href:'./family.html',    emoji:'👨‍👩‍👧‍👦', label:'Family',    hint:'Profiles'},
+  {id:'family',    href:'./family.html',    emoji:'👨‍👩‍👧‍👦', label:'Family',    hint:''},
   {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar', hint:'Events & activities'},
   {id:'photos',    href:'./photos.html',    emoji:'🖼️', label:'Photos',          hint:'Slideshow'},
   {id:'store',     href:'./store.html',     emoji:'🛒', label:'Store',           hint:'Rewards'}
@@ -1144,20 +1144,37 @@ function renderTile(c, slotIndex, orderRef){
     </div>
     <button class="minus" type="button">−</button>
   `;
+
   try{
-    const kids = (Family.getKids?.() || [])
-      .slice()
-      .sort((a,b)=> (a.name||'').localeCompare(b.name||''))
-      .slice(0,6);
+    const parents = (Family.getParents?.() || []).slice().sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+    const kids    = (Family.getActiveKids?.() || []).slice().sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+
+    // pick exactly 2 parents (if available) and 4 kids (if available)
+    const p1 = parents[0] || null;
+    const p2 = parents[1] || null;
+    const k1 = kids[0]    || null;
+    const k2 = kids[1]    || null;
+    const k3 = kids[2]    || null;
+    const k4 = kids[3]    || null;
+
+    // desired order: row1 = p1, k1, k2 ; row2 = p2, k3, k4
+    const display = [p1, k1, k2, p2, k3, k4].filter(Boolean);
 
     const grid = a.querySelector('.fam-grid');
-    kids.forEach(k=>{
-      const row = document.createElement('div'); row.className='fam-item';
-      const face = k?.photo
-        ? `<span class="bf-face"><img src="${k.photo}" alt=""></span>`
-        : `<span class="bf-face">${(k?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-      row.innerHTML = `${face}<div class="fam-name">${k.name||''}</div>`;
-      grid.appendChild(row);
+
+    function faceHTML(person){
+      const name = (person?.name || '?').trim();
+      const initial = name ? name[0].toUpperCase() : '?';
+      return person?.photo
+        ? `<span class="bf-face"><img src="${person.photo}" alt=""></span>`
+        : `<span class="bf-face"><span>${initial}</span></span>`;
+    }
+
+    display.forEach(person=>{
+      const cell = document.createElement('div');
+      cell.className = 'fam-item';
+      cell.innerHTML = faceHTML(person); // faces only, no names
+      grid.appendChild(cell);
     });
   }catch(err){ console.warn('Family preview error', err); }
 
