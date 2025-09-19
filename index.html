@@ -407,7 +407,21 @@ html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
               </div>
             </div>
           </div>
-
+          
+<div class="item">
+  <div class="grow">
+    <div style="font-weight:800; margin-bottom:6px">Data (Export / Import)</div>
+    <div class="row">
+      <button id="btnExportData" class="btn">Export Data</button>
+      <button id="btnImportData" class="btn">Import Data</button>
+      <input id="importFileInput" type="file" accept="application/json" class="sr-only">
+    </div>
+    <div class="row" style="opacity:.75">
+      Creates a .json backup you can save to Files/AirDrop. Import replaces current data on this device.
+    </div>
+  </div>
+</div>
+          
           <div class="item">
             <div class="grow" style="opacity:.75">More global options (like theme templates) coming soon.</div>
           </div>
@@ -1451,6 +1465,118 @@ function projectOrder(arr, from, to){
   out.splice(to,0,item);
   return out.slice(0, SLOTS_TOTAL);
 }
+</script>
+
+<script>
+/* ===== Export / Import ===== */
+(function(){
+  const ALLOW_PREFIXES = [
+    'hub:',       // family admin data, slots, pin, parents/kids
+    'bf:',        // breakfast
+    'dp:',        // dinner planner
+    'ch:',        // chores
+    'pts:',       // points (all-time + monthly + ledger + pending)
+    'photos:',    // photos page settings + list
+    'profile:',   // profiles (older)
+    'prof:',      // profiles (newer mini-store)
+    'ui:'         // theme etc.
+  ];
+
+  const $ = (s,e=document)=>e.querySelector(s);
+
+  function shouldExportKey(k){
+    return ALLOW_PREFIXES.some(p => k.startsWith(p));
+  }
+
+  function exportHubData(){
+    try{
+      const dump = {
+        __meta: {
+          app: 'Fambam',
+          version: '1',
+          exportedAt: new Date().toISOString()
+        },
+        data: {}
+      };
+      for (let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if (shouldExportKey(k)) dump.data[k] = localStorage.getItem(k);
+      }
+      const name = `fambam-backup-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+      const blob = new Blob([JSON.stringify(dump)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }catch(err){
+      alert('Export failed: ' + (err?.message || err));
+    }
+  }
+
+  function importHubDataFile(file){
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const parsed = JSON.parse(reader.result || '{}');
+        const data = parsed && parsed.data;
+        if (!data || typeof data !== 'object') { alert('Invalid backup file.'); return; }
+
+        if (!confirm('Importing will replace current data on this device. Continue?')) return;
+
+        // 1) Clear existing allowed keys (so import is a clean copy)
+        const toDelete = [];
+        for (let i=0;i<localStorage.length;i++){
+          const k = localStorage.key(i);
+          if (shouldExportKey(k)) toDelete.push(k);
+        }
+        toDelete.forEach(k=> localStorage.removeItem(k));
+
+        // 2) Write imported keys
+        Object.entries(data).forEach(([k,v])=>{
+          if (shouldExportKey(k)) localStorage.setItem(k, String(v));
+        });
+
+        alert('Import complete. The app will reload to apply the data.');
+        location.reload();
+      }catch(err){
+        alert('Import failed: ' + (err?.message || err));
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // Wire up buttons (works whether the admin modal is open now or later)
+  function wireDataButtons(){
+    const btnExp = $('#btnExportData');
+    const btnImp = $('#btnImportData');
+    const fileIn = $('#importFileInput');
+    if (btnExp && !btnExp._wired){
+      btnExp._wired = true;
+      btnExp.addEventListener('click', exportHubData);
+    }
+    if (btnImp && fileIn && !btnImp._wired){
+      btnImp._wired = true;
+      btnImp.addEventListener('click', ()=> fileIn.click());
+      fileIn.addEventListener('change', (e)=>{
+        const f = e.target.files && e.target.files[0];
+        if (f) importHubDataFile(f);
+        e.target.value = '';
+      });
+    }
+  }
+
+  // Attempt to wire on load and whenever the admin modal is opened
+  document.addEventListener('DOMContentLoaded', wireDataButtons);
+  document.addEventListener('click', (e)=>{
+    // When the Admin modal opens, our elements get added to the DOM; try wiring again.
+    if (e.target && (e.target.id==='adminSave' || e.target.id==='adminClose' || e.target.id==='btnMenu')) {
+      setTimeout(wireDataButtons, 0);
+    }
+  });
+})();
 </script>
 
 <!-- Boot + SW -->
