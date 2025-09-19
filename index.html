@@ -280,6 +280,14 @@ html[data-theme="light"] .bf-face{ background:#e3e0d8; color:#1b2432; }
 }
 .tile.photos-card:hover .photos-arrow{ opacity:.6; transform:translateY(-1px); }
 
+/* Family card: name beside the face */
+.fam-name{ font-weight:700 }
+
+/* Store preview */
+.st-box{ margin-top:6px; width:100%; background:var(--previewBg); border:1px solid var(--previewBorder);
+  border-radius:16px; padding:12px; max-height: calc(var(--slotH) - 72px); overflow:hidden; }
+.st-row{ display:flex; align-items:center; gap:12px; min-height:42px; font-size:1.05rem; }
+  
 /* Modal + form + edit bar */
 .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
@@ -818,7 +826,7 @@ const CARDS = [
   {id:'family',    href:'./family.html',    emoji:'👨‍👩‍👧‍👦', label:'Family',    hint:'Profiles'},
   {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar', hint:'Events & activities'},
   {id:'photos',    href:'./photos.html',    emoji:'🖼️', label:'Photos',          hint:'Slideshow'},
-  {id:'store',     href:'./store.html',     emoji:'🎁', label:'Store',           hint:'Rewards'}
+  {id:'store',     href:'./store.html',     emoji:'🛒', label:'Store',           hint:'Rewards'}
 ];
 const byId = Object.fromEntries(CARDS.map(c=>[c.id,c]));
 
@@ -847,6 +855,14 @@ function safelyGetPhotoList(){
   catch{ return []; }
 }
 
+/* Store util */
+function readStoreItems(){
+  try{
+    const arr = JSON.parse(localStorage.getItem('store:items') || '[]');
+    return Array.isArray(arr) ? arr : [];
+  }catch{ return []; }
+}
+  
 /* Local-date helpers */
 function todayISO(){
   const d=new Date();
@@ -1118,54 +1134,69 @@ function renderTile(c, slotIndex, orderRef){
       }
     }catch(err){ console.warn('Points preview error', err); }
 
-  } else if (c.id === 'family') {
-    a.innerHTML = `
-      <div class="label">Family</div>
-      <div class="fam-box">
-        <div class="fam-title">Profiles</div>
-        <div class="fam-sub" id="fam-sub">Loading…</div>
-        <div class="fam-grid" aria-label="Family"></div>
-      </div>
-      <button class="minus" type="button">−</button>
-    `;
-    try{
-      const kids = (Family.getKids?.() || []);
-      const grid = a.querySelector('.fam-grid');
-      const sub  = a.querySelector('#fam-sub');
-      kids.slice().sort((a,b)=> (a.name||'').localeCompare(b.name||'')).slice(0,4).forEach(k=>{
-        const row = document.createElement('div'); row.className='fam-item';
-        const face = k?.photo
-          ? `<span class="bf-face"><img src="${k.photo}" alt=""></span>`
-          : `<span class="bf-face">${(k?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-        row.innerHTML = `${face}`;
-        grid.appendChild(row);
+} else if (c.id === 'family') {
+  a.innerHTML = `
+    <div class="label">Family</div>
+    <div class="fam-box">
+      <div class="fam-title">Profiles</div>
+      <div class="fam-grid" aria-label="Family"></div>
+    </div>
+    <button class="minus" type="button">−</button>
+  `;
+  try{
+    const kids = (Family.getKids?.() || []);
+    const parents = (Family.getParents?.() || []);
+    const everyone = [...parents, ...kids];
+
+    const grid = a.querySelector('.fam-grid');
+    grid.innerHTML = '';
+
+    // Show up to 6 people, sorted by name
+    const list = everyone
+      .slice()
+      .sort((a,b)=> (a.name||'').localeCompare(b.name||''))
+      .slice(0,6);
+
+    list.forEach(p=>{
+      const row = document.createElement('div'); row.className='fam-item';
+      const face = p?.photo
+        ? `<span class="bf-face"><img src="${p.photo}" alt=""></span>`
+        : `<span class="bf-face">${(p?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
+      row.innerHTML = `${face}<div class="fam-name">${p.name||''}</div>`;
+      grid.appendChild(row);
+    });
+  }catch(err){ console.warn('Family preview error', err); }
+
+    } else if (c.id === 'store') {
+  a.innerHTML = `
+    <div class="label">Store</div>
+    <div class="st-box">
+      <div style="font-weight:800; margin-bottom:8px">Top items this week!</div>
+      <div class="st-list"></div>
+    </div>
+    <button class="minus" type="button">−</button>
+  `;
+  try{
+    const items = readStoreItems()
+      .filter(it => typeof it.price === 'number')
+      .sort((a,b)=> (b.price||0) - (a.price||0))
+      .slice(0,2);
+
+    const wrap = a.querySelector('.st-list');
+    if (!items.length) {
+      wrap.innerHTML = `<div class="small" style="opacity:.8">Add items in Store to see a preview.</div>`;
+    } else {
+      items.forEach(it=>{
+        const row = document.createElement('div');
+        row.className = 'st-row';
+        const emoji = (it.emoji && String(it.emoji).trim()) || '🛍️';
+        row.innerHTML = `<div style="font-size:1.4rem;line-height:1">${emoji}</div>
+                         <div style="font-weight:800">${it.label || 'Item'}</div>
+                         <div style="margin-left:auto; font-weight:800">${it.price.toLocaleString()} Pts</div>`;
+        wrap.appendChild(row);
       });
-      function readProfiles(){
-        const out = {};
-        kids.forEach(k=>{
-          try{ const raw = localStorage.getItem(`profile:${k.id}`); if(raw) out[k.id]=JSON.parse(raw); }catch{}
-        });
-        return out;
-      }
-      const profiles = readProfiles();
-      const balances = JSON.parse(localStorage.getItem('pts:balances') || 'null') || {};
-      const top = Object.entries(balances).sort((a,b)=> (b[1]-a[1]))[0];
-      const tidbits = [];
-      kids.forEach(k=>{
-        const p = profiles[k.id];
-        const fav = p?.favFoodEmoji || p?.favoriteFood || p?.favFood || '';
-        const em = emojiFromLabel(String(fav));
-        if (em) tidbits.push(`${k.name}’s favorite: ${em}`);
-        if (p?.funFact) tidbits.push(`${k.name}: ${p.funFact}`);
-      });
-      if (top){
-        const kid = kids.find(x=>x.id===top[0]);
-        if (kid) tidbits.push(`Top scorer: ${kid.name} · ${Number(top[1])||0} pts`);
-      }
-      if (!tidbits.length) tidbits.push('Tap to view profiles');
-      let i=0; sub.textContent = tidbits[0];
-      setInterval(()=>{ i=(i+1)%tidbits.length; sub.textContent=tidbits[i]; }, 5000);
-    }catch(err){ console.warn('Family preview error', err); }
+    }
+  }catch(err){ console.warn('Store preview error', err); }
 
   } else {
     a.innerHTML = `
