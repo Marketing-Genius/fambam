@@ -1534,27 +1534,36 @@ function projectOrder(arr, from, to){
     'ui:'         // theme etc.
   ];
 
+  const EXCLUDE_MEDIA_KEYS = new Set([
+    'hub:wallpaper:dataurl',
+    'photos:list'
+  ]);
+
   const $ = (s,e=document)=>e.querySelector(s);
 
   function shouldExportKey(k){
     return ALLOW_PREFIXES.some(p => k.startsWith(p));
   }
 
-  function exportHubData(){
+  function exportHubDataCore({excludeMedia=false}={}){
     try{
       const dump = {
         __meta: {
           app: 'Fambam',
           version: '1',
-          exportedAt: new Date().toISOString()
+          exportedAt: new Date().toISOString(),
+          noMedia: !!excludeMedia
         },
         data: {}
       };
       for (let i=0;i<localStorage.length;i++){
         const k = localStorage.key(i);
-        if (shouldExportKey(k)) dump.data[k] = localStorage.getItem(k);
+        if (!shouldExportKey(k)) continue;
+        if (excludeMedia && EXCLUDE_MEDIA_KEYS.has(k)) continue;
+        dump.data[k] = localStorage.getItem(k);
       }
-      const name = `fambam-backup-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+      const suffix = excludeMedia ? '-nomedia' : '';
+      const name = `fambam-backup${suffix}-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
       const blob = new Blob([JSON.stringify(dump)], {type:'application/json'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -1567,47 +1576,151 @@ function projectOrder(arr, from, to){
     }
   }
 
-  function importHubDataFile(file){
+  function exportHubData(){ exportHubDataCore({excludeMedia:false}); }
+  function exportHubDataNoMedia(){ exportHubDataCore({excludeMedia:true}); }
+
+  // (unchanged) — your robust import that writes keys back
+  async function importHubDataFile(file){
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try{
-        const parsed = JSON.parse(reader.result || '{}');
-        const data = parsed && parsed.data;
-        if (!data || typeof data !== 'object') { alert('Invalid backup file.'); return; }
 
-        if (!confirm('Importing will replace current data on this device. Continue?')) return;
+    const readText = f => new Promise((res, rej)=>{
+      const r = new FileReader();
+      r.onload = ()=>res(String(r.result||''));
+      r.onerror = rej;
+      r.readAsText(f);
+    });
 
-        // 1) Clear existing allowed keys (so import is a clean copy)
-        const toDelete = [];
-        for (let i=0;i<localStorage.length;i++){
-          const k = localStorage.key(i);
-          if (shouldExportKey(k)) toDelete.push(k);
-        }
-        toDelete.forEach(k=> localStorage.removeItem(k));
+    function shouldExportKey(k){
+      return ['hub:','bf:','dp:','ch:','pts:','photos:','profile:','prof:','ui:'].some(p=>k.startsWith(p));
+    }
 
-        // 2) Write imported keys
-        Object.entries(data).forEach(([k,v])=>{
-          if (shouldExportKey(k)) localStorage.setItem(k, String(v));
-        });
+    // Recompress a dataURL (used for wallpaper)
+    function recompressDataUrl(dataUrl, maxSide=1600, quality=0.7){
+      return new Promise(resolve=>{
+        try{
+          const img = new Image();
+          img.onload = ()=>{
+            const scale = Math.min(1, maxSide/Math.max(img.width, img.height));
+            const w = Math.max(1, Math.round(img.width*scale));
+            const h = Math.max(1, Math.round(img.height*scale));
+            const c = document.createElement('canvas'); c.width = w; c.height = h;
+            c.getContext('2d').drawImage(img,0,0,w,h);
+            resolve(c.toDataURL('image/jpeg', quality));
+          };
+          img.onerror = ()=>resolve(null);
+          img.src = dataUrl;
+        }catch{ resolve(null); }
+      });
+    }
 
-        alert('Import complete. The app will reload to apply the data.');
-        location.reload();
-      }catch(err){
-        alert('Import failed: ' + (err?.message || err));
+    try{
+      const text = await readText(file);
+      const parsed = JSON.parse(text||'{}');
+      const data = parsed && parsed.data;
+      if (!data || typeof data !== 'object') { alert('Invalid backup file.'); return; }
+
+      if (!confirm('Importing will replace current data on this device. Continue?')) return;
+
+      // 1) Clear existing allowed keys
+      const toDelete = [];
+      for (let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if (shouldExportKey(k)) toDelete.push(k);
       }
-    };
-    reader.readAsText(file);
+      toDelete.forEach(k=> localStorage.removeItem(k));
+
+      // 2) Sort keys: smallest first, biggest last
+      const entries = Object.entries(data)
+        .filter(([k]) => shouldExportKey(k))
+        .sort((a,b)=> String(a[1]).length - String(b[1]).length);
+
+      const BIG_WALL = 'hub:wallpaper:dataurl';
+      const PHOTOS   = 'photos:list';
+
+      const skipped = [];
+      const notes = [];
+
+      // Write all small/normal keys first, defer the big two
+      const deferred = [];
+      for (const [k,v] of entries){
+        if (k===BIG_WALL || k===PHOTOS) { deferred.push([k,v]); continue; }
+        try{
+          localStorage.setItem(k, String(v));
+        }catch(err){
+          skipped.push(k);
+        }
+      }
+
+      // Wallpaper (recompress if needed)
+      const wallEntry = deferred.find(([k])=>k===BIG_WALL);
+      if (wallEntry){
+        const [k,v] = wallEntry;
+        let wall = String(v||'');
+        let ok = false;
+        try{
+          localStorage.setItem(k, wall);
+          ok = true;
+        }catch{
+          const recompressed = await recompressDataUrl(wall, 1600, 0.7);
+          if (recompressed){
+            try{
+              localStorage.setItem(k, recompressed);
+              ok = true; notes.push('Wallpaper recompressed to fit.');
+            }catch{}
+          }
+        }
+        if (!ok) skipped.push(k);
+      }
+
+      // Photos (trim to fit)
+      const photosEntry = deferred.find(([k])=>k===PHOTOS);
+      if (photosEntry){
+        const [k,v] = photosEntry;
+        let arr; try{ arr = JSON.parse(String(v||'[]')); if(!Array.isArray(arr)) arr=[]; }catch{ arr=[]; }
+
+        if (arr.length){
+          let lo = 0, hi = arr.length, best = 0;
+          while (lo <= hi){
+            const mid = Math.floor((lo+hi)/2);
+            try{
+              localStorage.setItem(k, JSON.stringify(arr.slice(0,mid)));
+              best = mid; lo = mid + 1;
+            }catch{
+              hi = mid - 1;
+            }
+          }
+          if (best < arr.length) notes.push(`Photos trimmed: kept ${best}/${arr.length}.`);
+          if (best === 0){ try{ localStorage.removeItem(k); }catch{} skipped.push(k); }
+        } else {
+          try{ localStorage.setItem(k, '[]'); }catch{ skipped.push(k); }
+        }
+      }
+
+      let msg = 'Import complete.';
+      if (notes.length)   msg += '\n' + notes.join('\n');
+      if (skipped.length) msg += '\nSkipped keys: ' + skipped.join(', ');
+      alert(msg + '\nThe app will reload to apply the data.');
+      location.reload();
+
+    }catch(err){
+      alert('Import failed: ' + (err?.message || err));
+    }
   }
 
-  // Wire up buttons (works whether the admin modal is open now or later)
+  // Wire buttons (now includes "No Media")
   function wireDataButtons(){
-    const btnExp = $('#btnExportData');
-    const btnImp = $('#btnImportData');
-    const fileIn = $('#importFileInput');
+    const btnExp  = $('#btnExportData');
+    const btnExpN = $('#btnExportNoMedia');
+    const btnImp  = $('#btnImportData');
+    const fileIn  = $('#importFileInput');
+
     if (btnExp && !btnExp._wired){
       btnExp._wired = true;
       btnExp.addEventListener('click', exportHubData);
+    }
+    if (btnExpN && !btnExpN._wired){
+      btnExpN._wired = true;
+      btnExpN.addEventListener('click', exportHubDataNoMedia);
     }
     if (btnImp && fileIn && !btnImp._wired){
       btnImp._wired = true;
@@ -1620,10 +1733,9 @@ function projectOrder(arr, from, to){
     }
   }
 
-  // Attempt to wire on load and whenever the admin modal is opened
   document.addEventListener('DOMContentLoaded', wireDataButtons);
+  // also try re-wiring when the modal is opened via the menu
   document.addEventListener('click', (e)=>{
-    // When the Admin modal opens, our elements get added to the DOM; try wiring again.
     if (e.target && (e.target.id==='adminSave' || e.target.id==='adminClose' || e.target.id==='btnMenu')) {
       setTimeout(wireDataButtons, 0);
     }
