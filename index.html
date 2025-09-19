@@ -248,9 +248,20 @@ html[data-theme="light"] .bf-face{ background:#e3e0d8; color:#1b2432; }
 /* Family preview */
 .fam-title{font-size:.95rem;font-weight:800}
 .fam-sub{opacity:.9;font-size:.95rem;margin-top:4px;min-height:1.2em}
-.fam-grid{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:12px;margin-top:10px;
-.fam-item{display:flex;align-items:center;justify-content:center;min-height:40px;
-.fam-name{ font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* 2 rows × 3 columns grid, centered avatars, no names */
+.fam-grid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:12px;
+  margin-top:10px;
+}
+.fam-item{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:40px;
+}
 
 /* Edit affordances */
 .tile .minus{
