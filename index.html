@@ -1164,26 +1164,24 @@ function renderTile(c, slotIndex, orderRef){
 } else if (c.id === 'store') {
   a.innerHTML = `
     <div class="label">Store</div>
-    <div class="pt-box">
-      <div class="pt-title">Top items this week!</div>
-      <div class="pt-empty">No items yet — tap Store.</div>
-      <div class="pt-grid" style="display:none"></div>
+    <div class="st-box">
+      <div class="st-title">Top items this week!</div>
+      <div class="st-empty">No items yet — tap Store.</div>
+      <div class="st-grid" style="display:none"></div>
     </div>
     <button class="minus" type="button">−</button>
   `;
   try{
-    // EXACT same key your Store page uses:
     const items = JSON.parse(localStorage.getItem('store:items') || '[]') || [];
     if (Array.isArray(items) && items.length){
-      // pick the two most expensive
       const top2 = items.slice().sort((a,b)=> (b.cost||0) - (a.cost||0)).slice(0,2);
-      const grid = a.querySelector('.pt-grid');
-      const empty = a.querySelector('.pt-empty');
+      const grid  = a.querySelector('.st-grid');
+      const empty = a.querySelector('.st-empty');
       empty.style.display='none';
       grid.style.display='grid';
       top2.forEach(it=>{
         const row = document.createElement('div');
-        row.className = 'pt-item';
+        row.className = 'st-row';
         row.innerHTML = `
           <div style="font-size:1.4rem;line-height:1">${it.emoji || '🎁'}</div>
           <div style="font-weight:800">${it.name || 'Item'} — ${Number(it.cost)||0} Pts</div>
