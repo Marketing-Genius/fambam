@@ -250,6 +250,7 @@ html[data-theme="light"] .bf-face{ background:#e3e0d8; color:#1b2432; }
 .fam-sub{opacity:.9;font-size:.95rem;margin-top:4px;min-height:1.2em}
 .fam-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; margin-top:10px; }
 .fam-item{display:flex; align-items:center; gap:10px; min-height:40px}
+.fam-name{ font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 /* Edit affordances */
 .tile .minus{
@@ -1138,62 +1139,55 @@ function renderTile(c, slotIndex, orderRef){
   a.innerHTML = `
     <div class="label">Family</div>
     <div class="fam-box">
-      <div class="fam-title">Profiles</div>
       <div class="fam-grid" aria-label="Family"></div>
     </div>
     <button class="minus" type="button">−</button>
   `;
   try{
-    const kids = (Family.getKids?.() || []);
-    const parents = (Family.getParents?.() || []);
-    const everyone = [...parents, ...kids];
-
-    const grid = a.querySelector('.fam-grid');
-    grid.innerHTML = '';
-
-    // Show up to 6 people, sorted by name
-    const list = everyone
+    const kids = (Family.getKids?.() || [])
       .slice()
       .sort((a,b)=> (a.name||'').localeCompare(b.name||''))
       .slice(0,6);
 
-    list.forEach(p=>{
+    const grid = a.querySelector('.fam-grid');
+    kids.forEach(k=>{
       const row = document.createElement('div'); row.className='fam-item';
-      const face = p?.photo
-        ? `<span class="bf-face"><img src="${p.photo}" alt=""></span>`
-        : `<span class="bf-face">${(p?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
-      row.innerHTML = `${face}<div class="fam-name">${p.name||''}</div>`;
+      const face = k?.photo
+        ? `<span class="bf-face"><img src="${k.photo}" alt=""></span>`
+        : `<span class="bf-face">${(k?.name||'?').trim().charAt(0).toUpperCase()}</span>`;
+      row.innerHTML = `${face}<div class="fam-name">${k.name||''}</div>`;
       grid.appendChild(row);
     });
   }catch(err){ console.warn('Family preview error', err); }
 
-    } else if (c.id === 'store') {
+} else if (c.id === 'store') {
   a.innerHTML = `
     <div class="label">Store</div>
-    <div class="st-box">
-      <div style="font-weight:800; margin-bottom:8px">Top items this week!</div>
-      <div class="st-list"></div>
+    <div class="pt-box">
+      <div class="pt-title">Top items this week!</div>
+      <div class="pt-empty">No items yet — tap Store.</div>
+      <div class="pt-grid" style="display:none"></div>
     </div>
     <button class="minus" type="button">−</button>
   `;
   try{
-    const items = readStoreItems()
-      .filter(it => typeof it.price === 'number')
-      .sort((a,b)=> (b.price||0) - (a.price||0))
-      .slice(0,2);
-
-    const wrap = a.querySelector('.st-list');
-    if (!items.length) {
-      wrap.innerHTML = `<div class="small" style="opacity:.8">Add items in Store to see a preview.</div>`;
-    } else {
-      items.forEach(it=>{
+    // EXACT same key your Store page uses:
+    const items = JSON.parse(localStorage.getItem('store:items') || '[]') || [];
+    if (Array.isArray(items) && items.length){
+      // pick the two most expensive
+      const top2 = items.slice().sort((a,b)=> (b.cost||0) - (a.cost||0)).slice(0,2);
+      const grid = a.querySelector('.pt-grid');
+      const empty = a.querySelector('.pt-empty');
+      empty.style.display='none';
+      grid.style.display='grid';
+      top2.forEach(it=>{
         const row = document.createElement('div');
-        row.className = 'st-row';
-        const emoji = (it.emoji && String(it.emoji).trim()) || '🛍️';
-        row.innerHTML = `<div style="font-size:1.4rem;line-height:1">${emoji}</div>
-                         <div style="font-weight:800">${it.label || 'Item'}</div>
-                         <div style="margin-left:auto; font-weight:800">${it.price.toLocaleString()} Pts</div>`;
-        wrap.appendChild(row);
+        row.className = 'pt-item';
+        row.innerHTML = `
+          <div style="font-size:1.4rem;line-height:1">${it.emoji || '🎁'}</div>
+          <div style="font-weight:800">${it.name || 'Item'} — ${Number(it.cost)||0} Pts</div>
+        `;
+        grid.appendChild(row);
       });
     }
   }catch(err){ console.warn('Store preview error', err); }
