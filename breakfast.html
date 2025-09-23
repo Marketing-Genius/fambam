@@ -224,6 +224,37 @@ input[type="text"]{background:var(--card);border:1px solid var(--panelBorder);bo
 /* Footer hint */
 .hint{opacity:.8;font-size:.9rem;text-align:center}
 .version{opacity:.6;font-size:.8rem;margin-top:6px}
+
+/* --- Drag infra (match index page behavior) --- */
+.dragging, .dragging * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.dragging { touch-action: none; cursor: grabbing; }
+html.drag-lock, body.drag-lock { overflow: hidden !important; overscroll-behavior: contain; }
+
+.drag-shield {
+  position: fixed; inset: 0; z-index: 9998;
+  background: transparent; pointer-events: auto;
+  touch-action: none; cursor: grabbing;
+}
+
+.drag-ghost{
+  position: fixed; left: 0; top: 0;
+  transform: translate(-50%,-50%) scale(.98);
+  z-index: 9999; pointer-events: none;
+  filter: drop-shadow(0 10px 22px rgba(0,0,0,.35));
+  opacity: .96; overflow: hidden; box-sizing: border-box;
+}
+
+/* Make draggables and targets opt-out of native scrolling while interacting */
+.kid, .card { touch-action: none; }
+
+/* Drop target highlight */
+.card.drop-target { outline: 2px solid var(--accent); outline-offset: 2px; } 
+   
 </style>
 </head>
 <body>
@@ -493,7 +524,7 @@ function dropOnCardFromPoint(x,y, kidId){
 
   // paint all cards
   menu.forEach((opt,idx)=>{
-    const el=document.createElement('div'); el.className='card'; el.dataset.choice=idx;
+    const el=document.createElement('div'); el.className='card'; el.dataset.idx = String(idx);
     el.innerHTML=`
       <div class="head">
         <div class="food">${opt.emoji} ${opt.label}</div>
@@ -502,6 +533,11 @@ function dropOnCardFromPoint(x,y, kidId){
       <div class="picks" id="picks-${idx}"></div>
     `;
     grid.appendChild(el);
+     el.dataset.kidId = String(k.id);
+attachKidDrag(el, k.id);
+     // after you build all cards:
+const dropZones = [...document.querySelectorAll('.card')];
+BF_DND.setDropZones(dropZones);
   });
 
   // fill pills
@@ -550,6 +586,187 @@ function dropOnCardFromPoint(x,y, kidId){
     });
     return lines.join('\n');
   }
+
+/* ===== Breakfast Drag & Drop: Kid -> Food Card ===== */
+const BF_DND = {
+  active:false, timer:null, pressMs:400, cancelMovePx:8,
+  startX:0, startY:0, ghost:null, shield:null,
+  kidId:null, hoverIdx:-1, dropZones:[],
+  autoscrollDir:0, autoscrollRAF:0
+};
+
+BF_DND.setDropZones = function(zones){ this.dropZones = Array.from(zones||[]); };
+
+function attachKidDrag(kidEl, kidId){
+  kidEl.addEventListener('dragstart', e=>e.preventDefault());
+  kidEl.addEventListener('contextmenu', e=>e.preventDefault(), {passive:false});
+
+  const onDown = (e)=>{
+    if (e.button === 2) return;
+    const p = getPoint(e);
+    BF_DND.startX = p.x; BF_DND.startY = p.y;
+    BF_DND.kidId = kidId; BF_DND.hoverIdx = -1;
+
+    BF_DND.timer = setTimeout(()=> beginKidDrag(kidEl, kidId, p), BF_DND.pressMs);
+
+    window.addEventListener('pointermove', onMove, {passive:false});
+    window.addEventListener('pointerup', onUp, {passive:false, once:true});
+    window.addEventListener('pointercancel', onCancel, {passive:false, once:true});
+    document.addEventListener('visibilitychange', onCancel, {once:true});
+  };
+
+  const onMove = (e)=>{
+    const p = getPoint(e);
+    if (!BF_DND.active){
+      // cancel long-press if user moves too much
+      if (dist(BF_DND.startX,BF_DND.startY,p.x,p.y) > BF_DND.cancelMovePx){
+        clearTimeout(BF_DND.timer); BF_DND.timer=null;
+      }
+      return;
+    }
+    // dragging
+    e.preventDefault();
+    positionGhost(p);
+    updateEdgeScroll(p.y);
+    const idx = dropIndexFromPoint(p.x, p.y);
+    if (idx !== BF_DND.hoverIdx){
+      BF_DND.hoverIdx = idx;
+      highlightDrop(idx);
+    }
+  };
+
+  const onUp = ()=>{
+    if (!BF_DND.active){
+      clearTimeout(BF_DND.timer); BF_DND.timer=null;
+      cleanupKidDrag(); return;
+    }
+    // commit selection if on a drop zone
+    if (BF_DND.hoverIdx !== -1){
+      const iso = todayISO();
+      const m = load(LS.day(iso),{});
+      m[BF_DND.kidId] = BF_DND.hoverIdx;
+      save(LS.day(iso), m);
+      renderChoices(); // refresh pills
+    }
+    endKidDrag();
+  };
+
+  const onCancel = ()=>{
+    clearTimeout(BF_DND.timer); BF_DND.timer=null;
+    if (BF_DND.active) endKidDrag();
+  };
+
+  kidEl.addEventListener('pointerdown', onDown, {passive:false});
+}
+
+/* ---------- internals ---------- */
+
+function beginKidDrag(kidEl, kidId, point){
+  BF_DND.active = true;
+  try{ navigator.vibrate && navigator.vibrate(7); }catch(_){}
+
+  // lock page scroll + disable selection
+  document.documentElement.classList.add('drag-lock');
+  document.body.classList.add('drag-lock','dragging');
+
+  // shield to swallow touches/clicks (prevents native scroll/selection)
+  const shield = document.createElement('div');
+  shield.className = 'drag-shield';
+  document.body.appendChild(shield);
+  BF_DND.shield = shield;
+
+  // ghost: use the avatar (prefer photo img if present)
+  const avatar = kidEl.querySelector('.avatar, img.avatar') || kidEl.querySelector('.avatar') || kidEl;
+  const rect = avatar.getBoundingClientRect();
+
+  const clone = avatar.cloneNode(true);
+  clone.classList.add('drag-ghost');
+  Object.assign(clone.style,{
+    width: rect.width+'px', height: rect.height+'px',
+    minWidth: rect.width+'px', minHeight: rect.height+'px',
+    maxWidth: rect.width+'px', maxHeight: rect.height+'px',
+    left: point.x+'px', top: point.y+'px', borderRadius:'50%'
+  });
+  document.body.appendChild(clone);
+  BF_DND.ghost = clone;
+
+  // initial highlight (none)
+  highlightDrop(-1);
+}
+
+function endKidDrag(){
+  setAutoscroll(0);
+  cleanupKidDrag();
+  highlightDrop(-1);
+}
+
+function cleanupKidDrag(){
+  if (BF_DND.ghost) BF_DND.ghost.remove();
+  BF_DND.ghost = null;
+  if (BF_DND.shield) BF_DND.shield.remove();
+  BF_DND.shield = null;
+
+  document.body.classList.remove('dragging','drag-lock');
+  document.documentElement.classList.remove('drag-lock');
+
+  BF_DND.active=false; BF_DND.kidId=null; BF_DND.hoverIdx=-1;
+}
+
+/* --- utils mirroring index behavior --- */
+function positionGhost(p){
+  if (!BF_DND.ghost) return;
+  BF_DND.ghost.style.left = p.x + 'px';
+  BF_DND.ghost.style.top  = p.y + 'px';
+}
+
+function getPoint(e){
+  const t = (e.touches && e.touches[0]) || e;
+  return { x: t.clientX, y: t.clientY };
+}
+function dist(x1,y1,x2,y2){ const dx=x2-x1, dy=y2-y1; return Math.hypot(dx,dy); }
+
+function dropIndexFromPoint(x,y){
+  // prefer direct hit; fall back to nearest center
+  let best=-1, bestScore=0;
+  for (const el of BF_DND.dropZones){
+    const r = el.getBoundingClientRect();
+    const idx = Number(el.dataset.idx||-1);
+    const inside = (x>=r.left && x<=r.right && y>=r.top && y<=r.bottom);
+    if (inside) return idx;
+    // proximity fallback
+    const cx=(r.left+r.right)/2, cy=(r.top+r.bottom)/2;
+    const score = 1/Math.max(1, Math.hypot(cx-x, cy-y));
+    if (score>bestScore){ bestScore=score; best=idx; }
+  }
+  return best;
+}
+
+function highlightDrop(idx){
+  BF_DND.dropZones.forEach(el=>{
+    el.classList.toggle('drop-target', Number(el.dataset.idx)===Number(idx));
+  });
+}
+
+/* --- edge autoscroll (rarely needed on this page, but safe) --- */
+function setAutoscroll(dir){
+  if (dir === BF_DND.autoscrollDir) return;
+  BF_DND.autoscrollDir = dir;
+  if (BF_DND.autoscrollRAF) { cancelAnimationFrame(BF_DND.autoscrollRAF); BF_DND.autoscrollRAF = 0; }
+  if (!dir) return;
+  const speed = 16; // px per frame
+  const step = ()=>{
+    if (!BF_DND.active || !BF_DND.autoscrollDir) { BF_DND.autoscrollRAF = 0; return; }
+    window.scrollBy(0, BF_DND.autoscrollDir * speed);
+    BF_DND.autoscrollRAF = requestAnimationFrame(step);
+  };
+  BF_DND.autoscrollRAF = requestAnimationFrame(step);
+}
+function updateEdgeScroll(clientY){
+  const edge = 80;
+  if (clientY < edge) setAutoscroll(-1);
+  else if (clientY > (window.innerHeight - edge)) setAutoscroll(1);
+  else setAutoscroll(0);
+}     
 
   /* --- Manage modal wires --- */
   const manageModal=$('#menuModal');
