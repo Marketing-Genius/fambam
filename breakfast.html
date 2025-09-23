@@ -410,122 +410,19 @@ function renderKids(){
   });
 }
 
-/* ---------- DRAG CONTROLLER (simple, smooth, no scroll issues) ---------- */
-const D = {
-  active:false, kidId:null, ghost:null, startX:0, startY:0, moved:false,
-  pressMs:120, cancelMovePx:6, timer:0, shield:null
-};
-
-function attachKidDrag(chip, kidId){
-  chip.addEventListener('pointerdown', onDown, {passive:false});
-  chip.addEventListener('dragstart', e=>e.preventDefault());
-
-  function onDown(e){
-    if (e.button===2) return;
-    e.preventDefault();
-    const p = getPoint(e);
-    D.startX=p.x; D.startY=p.y; D.moved=false; D.kidId=kidId;
-    D.timer = setTimeout(()=> beginDrag(chip, p), D.pressMs);
-
-    window.addEventListener('pointermove', onMove, {passive:false});
-    window.addEventListener('pointerup', onUp, {passive:false, once:true});
-    window.addEventListener('pointercancel', onCancel, {passive:false, once:true});
-  }
-  function onMove(e){
-    const p=getPoint(e);
-    if (!D.active){
-      if (dist(D.startX,D.startY,p.x,p.y)>D.cancelMovePx){
-        clearTimeout(D.timer);
-      }
-      return;
-    }
-    e.preventDefault();
-    positionGhost(p);
-    hoverCardFromPoint(p.x,p.y);
-  }
-  function onUp(e){
-    if (!D.active){ clearTimeout(D.timer); return; }
-    const p=getPoint(e);
-    dropOnCardFromPoint(p.x,p.y, D.kidId);
-    cleanupDrag();
-  }
-  function onCancel(){ cleanupDrag(); }
-}
-
-function beginDrag(chip, point){
-  D.active=true;
-  try{ navigator.vibrate && navigator.vibrate(6); }catch(_){}
-  // shield to stop page scroll/selection
-  D.shield = document.createElement('div');
-  D.shield.style.cssText='position:fixed;inset:0;z-index:9998;background:transparent;touch-action:none;cursor:grabbing';
-  document.body.appendChild(D.shield);
-  document.body.classList.add('dragging');
-
-  // ghost
-  const r=chip.getBoundingClientRect();
-  const g=chip.cloneNode(true);
-  g.style.cssText = `
-    position:fixed;left:${point.x}px;top:${point.y}px;transform:translate(-50%,-50%) scale(.98);
-    z-index:9999;pointer-events:none;filter:drop-shadow(0 10px 22px rgba(0,0,0,.35));opacity:.96;
-    width:${r.width}px;height:${r.height}px;`;
-  g.classList.add('drag-ghost');
-  document.body.appendChild(g);
-  D.ghost=g;
-
-  // visual hover prime
-  hoverCardFromPoint(point.x, point.y);
-}
-function cleanupDrag(){
-  D.active=false; D.kidId=null;
-  if (D.ghost) D.ghost.remove(); D.ghost=null;
-  if (D.shield) D.shield.remove(); D.shield=null;
-  document.body.classList.remove('dragging');
-  $$('.card').forEach(c=>c.classList.remove('drop-ok','drop-bad'));
-}
-function positionGhost(p){
-  if (!D.ghost) return;
-  D.ghost.style.left=p.x+'px';
-  D.ghost.style.top =p.y+'px';
-}
-function getPoint(e){ const t=(e.touches && e.touches[0]) || e; return {x:t.clientX,y:t.clientY}; }
-function dist(x1,y1,x2,y2){ const dx=x2-x1, dy=y2-y1; return Math.hypot(dx,dy); }
-
-function cardAt(x,y){
-  let best=null, bestArea=0;
-  $$('.card').forEach(c=>{
-    const r=c.getBoundingClientRect();
-    const inside = (x>=r.left && x<=r.right && y>=r.top && y<=r.bottom);
-    const area = inside ? 1e9 : 1/Math.max(1, Math.hypot((r.left+r.right)/2-x, (r.top+r.bottom)/2-y));
-    if (area>bestArea){ bestArea=area; best=c; }
-  });
-  return best;
-}
-function hoverCardFromPoint(x,y){
-  const target = cardAt(x,y);
-  $$('.card').forEach(c=>c.classList.remove('drop-ok','drop-bad'));
-  if (target) target.classList.add('drop-ok');
-}
-function dropOnCardFromPoint(x,y, kidId){
-  const target = cardAt(x,y);
-  if (!target) return;
-  const idx = Number(target.dataset.choice);
-  const iso = todayISO();
-  const m = load(LS.day(iso),{});
-  m[kidId]=idx; save(LS.day(iso),m);
-  renderChoices();
-}
-
   function renderChoices(){
-  const grid=$('#choicesGrid'); grid.innerHTML='';
-  const menu=load(LS.menu,[]);
-  const iso = todayISO();
-  const map=load(LS.day(iso),{});
-  const kids=(Family.getKids&&Family.getKids())||[];
+  const grid = $('#choicesGrid'); grid.innerHTML = '';
+  const menu = load(LS.menu, []);
+  const iso  = todayISO();
+  const map  = load(LS.day(iso), {});
+  const kids = (Family.getKids && Family.getKids()) || [];
 
   // paint all cards
-  menu.forEach((opt,idx)=>{
-    const el=document.createElement('div'); el.className='card'; el.dataset.idx = String(idx);
-    el.innerHTML=`
+  menu.forEach((opt, idx)=>{
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.dataset.idx = String(idx);               // used by BF_DND.dropZones
+    el.innerHTML = `
       <div class="head">
         <div class="food">${opt.emoji} ${opt.label}</div>
         <button class="btn" data-choose="${idx}">Choose</button>
@@ -533,21 +430,17 @@ function dropOnCardFromPoint(x,y, kidId){
       <div class="picks" id="picks-${idx}"></div>
     `;
     grid.appendChild(el);
-     el.dataset.kidId = String(k.id);
-attachKidDrag(el, k.id);
-     // after you build all cards:
-const dropZones = [...document.querySelectorAll('.card')];
-BF_DND.setDropZones(dropZones);
   });
 
-  // fill pills
-  menu.forEach((_,idx)=>{
-    const row=$(`#picks-${idx}`);
-    Object.entries(map).forEach(([kidId,choiceIdx])=>{
-      if(Number(choiceIdx)===idx){
-        const kid=kids.find(k=>String(k.id)===String(kidId));
-        if(!kid) return;
-        const pill=document.createElement('div'); pill.className='pill';
+ // fill “who picked this” pills
+  menu.forEach((_, idx)=>{
+    const row = $(`#picks-${idx}`);
+    Object.entries(map).forEach(([kidId, choiceIdx])=>{
+      if (Number(choiceIdx) === idx){
+        const kid = kids.find(k => String(k.id) === String(kidId));
+        if (!kid) return;
+        const pill = document.createElement('div');
+        pill.className = 'pill';
         pill.innerHTML = kid.photo
           ? `<img src="${kid.photo}" alt=""> <span>${kid.name}</span>`
           : `<div class="avatar" style="width:22px;height:22px;font-size:.8rem">${(kid.name||'?').slice(0,1).toUpperCase()}</div><span>${kid.name}</span>`;
@@ -556,21 +449,21 @@ BF_DND.setDropZones(dropZones);
     });
   });
 
-  // tap to choose
+  // tap-to-choose fallback
   $$('[data-choose]').forEach(btn=>{
-    btn.onclick=()=>{
-      if(!activeKidId){ alert('Tap a child first.'); return; }
-      const idx=Number(btn.dataset.choose);
-      const m=load(LS.day(iso),{});
-      m[activeKidId]=idx; save(LS.day(iso),m); renderChoices();
+    btn.onclick = ()=>{
+      if (!activeKidId){ alert('Tap a child first.'); return; }
+      const idx = Number(btn.dataset.choose);
+      const m = load(LS.day(iso), {});
+      m[activeKidId] = idx;
+      save(LS.day(iso), m);
+      renderChoices();
     };
   });
 
-  // make cards droppable
-  $$('.card').forEach(card=>{
-    card.addEventListener('pointerenter', ()=> card.classList.add('drop-ok'));
-    card.addEventListener('pointerleave', ()=> card.classList.remove('drop-ok'));
-  });
+     
+  // let the BF_DND controller know the current drop zones
+  BF_DND.setDropZones($$('.card'));
 }
 
   function buildSummary(){
