@@ -168,12 +168,38 @@ header{display:flex;gap:12px;align-items:center;justify-content:space-between;fl
 .menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
 .menu-item:hover{background:var(--chipBg)}
 
-/* Kids row */
-.kids{display:flex;gap:10px;flex-wrap:wrap}
-.kid{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--panelBorder);border-radius:14px;padding:8px 12px}
+/* Kids row — bigger chips */
+.kids{display:flex;gap:12px;flex-wrap:wrap}
+.kid{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--panelBorder);
+  border-radius:16px;padding:10px 14px; cursor:grab;
+  user-select:none; -webkit-user-select:none;
+}
+.kid:active{ cursor:grabbing; }
 .kid[data-active="true"]{outline:2px solid var(--accent)}
-.avatar{width:36px;height:36px;border-radius:50%;background:var(--chipBg);border:1px solid var(--chipBorder);object-fit:cover;display:grid;place-items:center;font-weight:800;color:var(--text)}
+.avatar{
+  width:56px;height:56px;border-radius:50%;background:var(--chipBg);
+  border:2px solid var(--chipBorder);object-fit:cover;display:grid;place-items:center;
+  font-weight:800;color:var(--text); font-size:1.2rem;
+}
 
+/* Food cards accept drops */
+.card{ position:relative; background:var(--panel); border:1px solid var(--panelBorder);
+  border-radius:16px;padding:14px;display:grid;gap:12px }
+.card.drop-ok{ outline:2px solid var(--accent); outline-offset:2px; }
+.card.drop-bad{ outline:2px solid #7f1d1d; outline-offset:2px; }
+
+/* “Who picked this” pills */
+.pill{display:flex;align-items:center;gap:8px;background:var(--card);
+  border:1px solid var(--panelBorder);border-radius:999px;padding:6px 10px}
+.pill img{width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid var(--chipBorder)}
+
+/* Grid can hold up to 8 cards comfortably */
+.grid{display:grid;gap:14px}
+@media(min-width:780px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1020px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+   
 /* Choices grid */
 .grid{display:grid;gap:14px}
 @media(min-width:780px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -210,7 +236,7 @@ input[type="text"]{background:var(--card);border:1px solid var(--panelBorder);bo
         </a>
         <div class="title">
           <div class="big">Breakfast Chooser</div>
-          <div class="small">Tap a child, then tap a food card to choose.</div>
+          <div class="small">Drag your kid onto a food (or tap a kid, then a food).</div>
         </div>
       </div>
 
@@ -251,7 +277,7 @@ input[type="text"]{background:var(--card);border:1px solid var(--panelBorder);bo
         <button id="menuClose" class="btn">✖</button>
       </header>
       <div class="body">
-        <div class="small" style="opacity:.8">Edit the 4 choices (emoji + name)</div>
+        <div class="small" style="opacity:.8">Edit up to 8 choices (emoji + name)</div>
         <div id="menuList" class="list"></div>
       </div>
       <div class="footer">
@@ -307,15 +333,17 @@ input[type="text"]{background:var(--card);border:1px solid var(--panelBorder);bo
   }
 
   function seedMenu(){
-    let m=load(LS.menu,null);
-    if(!m || m.length!==4){
-      m=[ {emoji:'🧇',label:'Waffles (Eggo)'},
-          {emoji:'🥧',label:'Pop-Tart'},
-          {emoji:'🥣',label:'Cereal'},
-          {emoji:'🥯',label:'Bagel & Cream Cheese'} ];
-      save(LS.menu,m);
-    }
+  let m = load(LS.menu, null);
+  if (!Array.isArray(m) || m.length === 0){
+    m = [
+      {emoji:'🧇',label:'Waffles (Eggo)'},
+      {emoji:'🥧',label:'Pop-Tart'},
+      {emoji:'🥣',label:'Cereal'},
+      {emoji:'🥯',label:'Bagel & Cream Cheese'}
+    ];
+    save(LS.menu, m);
   }
+}
 
   async function shareText(content){
     try{ if(navigator.share){ await navigator.share({text:content}); return; } }catch{}
@@ -329,67 +357,185 @@ input[type="text"]{background:var(--card);border:1px solid var(--panelBorder);bo
 
   let activeKidId=null;
 
-  function renderKids(){
-    const wrap=$('#kidsRow'); wrap.innerHTML='';
-    const kids=(Family.getKids&&Family.getKids())||[];
-    if(!kids.length){ wrap.innerHTML='<span class="small" style="color:#cbd5e1">No kids yet. Add them in Home → Admin Settings.</span>'; return; }
-    kids.forEach(k=>{
-      const el=document.createElement('button'); el.className='kid'; el.dataset.active=activeKidId===k.id;
-      const imgHtml = k.photo
-        ? `<img class="avatar" src="${k.photo}" alt="${k.name}">`
-        : `<div class="avatar">${(k.name||'?').slice(0,1).toUpperCase()}</div>`;
-      el.innerHTML=`${imgHtml}<span>${k.name}</span>`;
-      el.onclick=()=>{ activeKidId=(activeKidId===k.id? null : k.id); renderKids(); };
-      wrap.appendChild(el);
-    });
+function renderKids(){
+  const wrap=$('#kidsRow'); wrap.innerHTML='';
+  const kids=(Family.getKids&&Family.getKids())||[];
+  if(!kids.length){ wrap.innerHTML='<span class="small" style="color:#cbd5e1">No kids yet. Add them in Home → Admin Settings.</span>'; return; }
+
+  kids.forEach(k=>{
+    const el=document.createElement('button');
+    el.className='kid'; el.dataset.id=k.id; el.dataset.active=activeKidId===k.id;
+    const imgHtml = k.photo
+      ? `<img class="avatar" src="${k.photo}" alt="${k.name}">`
+      : `<div class="avatar">${(k.name||'?').slice(0,1).toUpperCase()}</div>`;
+    el.innerHTML=`${imgHtml}<span>${k.name}</span>`;
+    // tap toggles “active” (still supported)
+    el.onclick=()=>{ activeKidId=(activeKidId===k.id? null : k.id); renderKids(); };
+
+    // drag wires
+    attachKidDrag(el, k.id);
+
+    wrap.appendChild(el);
+  });
+}
+
+/* ---------- DRAG CONTROLLER (simple, smooth, no scroll issues) ---------- */
+const D = {
+  active:false, kidId:null, ghost:null, startX:0, startY:0, moved:false,
+  pressMs:120, cancelMovePx:6, timer:0, shield:null
+};
+
+function attachKidDrag(chip, kidId){
+  chip.addEventListener('pointerdown', onDown, {passive:false});
+  chip.addEventListener('dragstart', e=>e.preventDefault());
+
+  function onDown(e){
+    if (e.button===2) return;
+    e.preventDefault();
+    const p = getPoint(e);
+    D.startX=p.x; D.startY=p.y; D.moved=false; D.kidId=kidId;
+    D.timer = setTimeout(()=> beginDrag(chip, p), D.pressMs);
+
+    window.addEventListener('pointermove', onMove, {passive:false});
+    window.addEventListener('pointerup', onUp, {passive:false, once:true});
+    window.addEventListener('pointercancel', onCancel, {passive:false, once:true});
   }
+  function onMove(e){
+    const p=getPoint(e);
+    if (!D.active){
+      if (dist(D.startX,D.startY,p.x,p.y)>D.cancelMovePx){
+        clearTimeout(D.timer);
+      }
+      return;
+    }
+    e.preventDefault();
+    positionGhost(p);
+    hoverCardFromPoint(p.x,p.y);
+  }
+  function onUp(e){
+    if (!D.active){ clearTimeout(D.timer); return; }
+    const p=getPoint(e);
+    dropOnCardFromPoint(p.x,p.y, D.kidId);
+    cleanupDrag();
+  }
+  function onCancel(){ cleanupDrag(); }
+}
+
+function beginDrag(chip, point){
+  D.active=true;
+  try{ navigator.vibrate && navigator.vibrate(6); }catch(_){}
+  // shield to stop page scroll/selection
+  D.shield = document.createElement('div');
+  D.shield.style.cssText='position:fixed;inset:0;z-index:9998;background:transparent;touch-action:none;cursor:grabbing';
+  document.body.appendChild(D.shield);
+  document.body.classList.add('dragging');
+
+  // ghost
+  const r=chip.getBoundingClientRect();
+  const g=chip.cloneNode(true);
+  g.style.cssText = `
+    position:fixed;left:${point.x}px;top:${point.y}px;transform:translate(-50%,-50%) scale(.98);
+    z-index:9999;pointer-events:none;filter:drop-shadow(0 10px 22px rgba(0,0,0,.35));opacity:.96;
+    width:${r.width}px;height:${r.height}px;`;
+  g.classList.add('drag-ghost');
+  document.body.appendChild(g);
+  D.ghost=g;
+
+  // visual hover prime
+  hoverCardFromPoint(point.x, point.y);
+}
+function cleanupDrag(){
+  D.active=false; D.kidId=null;
+  if (D.ghost) D.ghost.remove(); D.ghost=null;
+  if (D.shield) D.shield.remove(); D.shield=null;
+  document.body.classList.remove('dragging');
+  $$('.card').forEach(c=>c.classList.remove('drop-ok','drop-bad'));
+}
+function positionGhost(p){
+  if (!D.ghost) return;
+  D.ghost.style.left=p.x+'px';
+  D.ghost.style.top =p.y+'px';
+}
+function getPoint(e){ const t=(e.touches && e.touches[0]) || e; return {x:t.clientX,y:t.clientY}; }
+function dist(x1,y1,x2,y2){ const dx=x2-x1, dy=y2-y1; return Math.hypot(dx,dy); }
+
+function cardAt(x,y){
+  let best=null, bestArea=0;
+  $$('.card').forEach(c=>{
+    const r=c.getBoundingClientRect();
+    const inside = (x>=r.left && x<=r.right && y>=r.top && y<=r.bottom);
+    const area = inside ? 1e9 : 1/Math.max(1, Math.hypot((r.left+r.right)/2-x, (r.top+r.bottom)/2-y));
+    if (area>bestArea){ bestArea=area; best=c; }
+  });
+  return best;
+}
+function hoverCardFromPoint(x,y){
+  const target = cardAt(x,y);
+  $$('.card').forEach(c=>c.classList.remove('drop-ok','drop-bad'));
+  if (target) target.classList.add('drop-ok');
+}
+function dropOnCardFromPoint(x,y, kidId){
+  const target = cardAt(x,y);
+  if (!target) return;
+  const idx = Number(target.dataset.choice);
+  const iso = todayISO();
+  const m = load(LS.day(iso),{});
+  m[kidId]=idx; save(LS.day(iso),m);
+  renderChoices();
+}
 
   function renderChoices(){
-    const grid=$('#choicesGrid'); grid.innerHTML='';
-    const menu=load(LS.menu,[]);
-    const iso = todayISO();
-    const map=load(LS.day(iso),{});
-    const kids=(Family.getKids&&Family.getKids())||[];
+  const grid=$('#choicesGrid'); grid.innerHTML='';
+  const menu=load(LS.menu,[]);
+  const iso = todayISO();
+  const map=load(LS.day(iso),{});
+  const kids=(Family.getKids&&Family.getKids())||[];
 
-    menu.forEach((opt,idx)=>{
-      const el=document.createElement('div'); el.className='card';
-      el.innerHTML=`
-        <div class="head">
-          <div class="food">${opt.emoji} ${opt.label}</div>
-          <button class="btn" data-choose="${idx}">Choose</button>
-        </div>
-        <div class="picks" id="picks-${idx}"></div>
-      `;
-      grid.appendChild(el);
-    });
+  // paint all cards
+  menu.forEach((opt,idx)=>{
+    const el=document.createElement('div'); el.className='card'; el.dataset.choice=idx;
+    el.innerHTML=`
+      <div class="head">
+        <div class="food">${opt.emoji} ${opt.label}</div>
+        <button class="btn" data-choose="${idx}">Choose</button>
+      </div>
+      <div class="picks" id="picks-${idx}"></div>
+    `;
+    grid.appendChild(el);
+  });
 
-    menu.forEach((_,idx)=>{
-      const row=$(`#picks-${idx}`);
-      Object.entries(map).forEach(([kidId,choiceIdx])=>{
-        if(Number(choiceIdx)===idx){
-          const kid=kids.find(k=>String(k.id)===String(kidId));
-          if(!kid) return;
-          const pill=document.createElement('div'); pill.className='pill';
-          pill.innerHTML = kid.photo
-            ? `<img src="${kid.photo}" alt=""> <span>${kid.name}</span>`
-            : `<div class="avatar" style="width:20px;height:20px;font-size:.75rem">${(kid.name||'?').slice(0,1).toUpperCase()}</div><span>${kid.name}</span>`;
-          row.appendChild(pill);
-        }
-      });
+  // fill pills
+  menu.forEach((_,idx)=>{
+    const row=$(`#picks-${idx}`);
+    Object.entries(map).forEach(([kidId,choiceIdx])=>{
+      if(Number(choiceIdx)===idx){
+        const kid=kids.find(k=>String(k.id)===String(kidId));
+        if(!kid) return;
+        const pill=document.createElement('div'); pill.className='pill';
+        pill.innerHTML = kid.photo
+          ? `<img src="${kid.photo}" alt=""> <span>${kid.name}</span>`
+          : `<div class="avatar" style="width:22px;height:22px;font-size:.8rem">${(kid.name||'?').slice(0,1).toUpperCase()}</div><span>${kid.name}</span>`;
+        row.appendChild(pill);
+      }
     });
+  });
 
-    $$('[data-choose]').forEach(btn=>{
-      btn.onclick=()=>{
-        if(!activeKidId){ alert('Tap a child first.'); return; }
-        const idx=Number(btn.dataset.choose);
-        const iso = todayISO();
-        const m=load(LS.day(iso),{});
-        m[activeKidId]=idx;
-        save(LS.day(iso),m);
-        renderChoices();
-      };
-    });
-  }
+  // tap to choose
+  $$('[data-choose]').forEach(btn=>{
+    btn.onclick=()=>{
+      if(!activeKidId){ alert('Tap a child first.'); return; }
+      const idx=Number(btn.dataset.choose);
+      const m=load(LS.day(iso),{});
+      m[activeKidId]=idx; save(LS.day(iso),m); renderChoices();
+    };
+  });
+
+  // make cards droppable
+  $$('.card').forEach(card=>{
+    card.addEventListener('pointerenter', ()=> card.classList.add('drop-ok'));
+    card.addEventListener('pointerleave', ()=> card.classList.remove('drop-ok'));
+  });
+}
 
   function buildSummary(){
     const iso = todayISO();
@@ -413,21 +559,46 @@ input[type="text"]{background:var(--card);border:1px solid var(--panelBorder);bo
   $('#menuDone').onclick=closeManage;
 
   function buildMenuList(){
-    const list=$('#menuList'); list.innerHTML='';
-    const menu=load(LS.menu,[]);
-    menu.forEach((m,idx)=>{
-      const row=document.createElement('div'); row.className='item';
-      row.innerHTML=`
-        <input data-emo type="text" value="${m.emoji||''}" placeholder="🍳" style="width:100px;text-align:center"/>
-        <input data-label type="text" value="${m.label||''}" placeholder="Item name (e.g., Waffles)"/>
-        <button class="btn" data-save>Save</button>`;
-      list.appendChild(row);
-      row.querySelector('[data-save]').onclick=()=>{
-        menu[idx]={ emoji: row.querySelector('[data-emo]').value||'🍳', label: row.querySelector('[data-label]').value||'Item' };
-        save(LS.menu,menu); renderChoices();
-      };
-    });
-  }
+  const list=$('#menuList'); list.innerHTML='';
+  const menu=load(LS.menu,[]);
+  const MAX=8;
+
+  // rows
+  menu.forEach((m,idx)=>{
+    const row=document.createElement('div'); row.className='item';
+    row.innerHTML=`
+      <input data-emo type="text" value="${m.emoji||''}" placeholder="🍳" style="width:100px;text-align:center"/>
+      <input data-label type="text" value="${m.label||''}" placeholder="Item name (e.g., Waffles)"/>
+      <div style="display:flex;gap:8px">
+        <button class="btn" data-save>Save</button>
+        <button class="btn" data-del>Remove</button>
+      </div>`;
+    const saveBtn=row.querySelector('[data-save]');
+    const delBtn =row.querySelector('[data-del]');
+    saveBtn.onclick=()=>{
+      menu[idx]={ emoji: row.querySelector('[data-emo]').value||'🍳',
+                  label: row.querySelector('[data-label]').value||'Item' };
+      save(LS.menu,menu); renderChoices();
+    };
+    delBtn.onclick=()=>{
+      menu.splice(idx,1); save(LS.menu,menu); buildMenuList(); renderChoices();
+    };
+    list.appendChild(row);
+  });
+
+  // add button
+  const addWrap=document.createElement('div'); addWrap.className='item';
+  addWrap.innerHTML=`
+    <div style="opacity:.8">Add another choice</div>
+    <div></div>
+    <button class="btn" id="addChoice" ${menu.length>=MAX?'disabled':''}>Add</button>`;
+  addWrap.querySelector('#addChoice').onclick=()=>{
+    if(menu.length>=MAX) return;
+    menu.push({emoji:'🍳',label:'New choice'});
+    save(LS.menu,menu); buildMenuList(); renderChoices();
+  };
+  list.appendChild(addWrap);
+}
 
   /* --- Hamburger logic (match index) --- */
   (function menu(){
