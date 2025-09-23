@@ -568,17 +568,16 @@ function beginKidDrag(kidEl, kidId, point){
   document.body.appendChild(shield);
   BF_DND.shield = shield;
 
-  // ghost: use the avatar (prefer photo img if present)
-  const avatar = kidEl.querySelector('.avatar, img.avatar') || kidEl.querySelector('.avatar') || kidEl;
-  const rect = avatar.getBoundingClientRect();
-
-  const clone = avatar.cloneNode(true);
+  // ghost: clone the entire kid chip (photo + name)
+  const rect  = kidEl.getBoundingClientRect();
+  const clone = kidEl.cloneNode(true);
   clone.classList.add('drag-ghost');
-  Object.assign(clone.style,{
-    width: rect.width+'px', height: rect.height+'px',
-    minWidth: rect.width+'px', minHeight: rect.height+'px',
-    maxWidth: rect.width+'px', maxHeight: rect.height+'px',
-    left: point.x+'px', top: point.y+'px', borderRadius:'50%'
+  Object.assign(clone.style, {
+    width: rect.width + 'px',  height: rect.height + 'px',
+    minWidth: rect.width + 'px', minHeight: rect.height + 'px',
+    maxWidth: rect.width + 'px', maxHeight: rect.height + 'px',
+    left: point.x + 'px', top: point.y + 'px',
+    borderRadius: '16px' // match .kid chip radius
   });
   document.body.appendChild(clone);
   BF_DND.ghost = clone;
