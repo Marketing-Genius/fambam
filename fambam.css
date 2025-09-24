@@ -1,0 +1,63 @@
+/* ----- Tokens (same on all pages) ----- */
+:root{
+  --panel:#111827; --card:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --accent:#22d3ee;
+  --bg-dim:#404c69; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
+  --chipBg:#0b1224; --chipBorder:#334155; --panelBorder:#0b1224;
+}
+
+html[data-theme="light"]{
+  --panel:#f2efe7; --card:#ffffff; --text:#0f1623; --muted:#556070;
+  --bg-dim:#f0ece4; --shadow:0 10px 28px rgba(0,0,0,.08);
+  --chipBg:#fffdf7; --chipBorder:#e3ded4; --panelBorder:#e6e2da;
+}
+
+/* ----- Base layout helpers ----- */
+html,body{height:100%}
+body{
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  color:var(--text); background:var(--bg-dim);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation; overflow-x:hidden;
+}
+.panel{background:var(--panel); border:1px solid var(--panelBorder); box-shadow:var(--shadow); border-radius:18px; padding:14px}
+.app{max-width:1100px; margin:0 auto; padding:20px; display:grid; gap:18px}
+
+/* Wallpaper layer (so every page gets the same treatment) */
+body::before{content:""; position:fixed; inset:0; z-index:-2; background-image:var(--wallpaper, none);
+  background-size:cover; background-repeat:no-repeat; background-position:center var(--wallpaper-shift,40%); transform:translateZ(0);}
+body::after{content:""; position:fixed; inset:0; z-index:-1; background:rgba(64,76,105,.9); pointer-events:none;}
+html[data-theme="light"] body::after{ background:rgba(240,236,228,.88) }
+
+/* ----- Buttons (used everywhere) ----- */
+.btn{background:var(--chipBg); border:1px solid var(--chipBorder); border-radius:12px; padding:10px 12px; color:var(--text); font:inherit; cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,var(--accent),color-mix(in oklab, var(--accent) 70%, #0891b2 30%)); border:none; color:#001018; font-weight:800}
+
+/* ----- Header component (two variants) ----- */
+.header{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
+.header .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit}
+.header .brand img{height:38px; display:block}
+.header .title .big{font-weight:800; font-size:1.4rem}
+.header .title .small{font-weight:600; font-size:.9rem; color:var(--muted)}
+
+.header.panel{ /* “bar” style used on pages with title/subtitle */
+  background:var(--panel); border:1px solid var(--panelBorder); box-shadow:var(--shadow);
+  border-radius:18px; padding:14px;
+}
+
+/* Floating header: just a row, no panel chrome */
+.header.floating{ padding:0; background:transparent; border:none; box-shadow:none }
+
+/* Menu button + dropdown (shared) */
+.menu-wrap{ position:relative; z-index: 1001; }
+.hamburger{ composes: btn; }     /* ok if your bundler doesn’t support composes—just reuse .btn classes */
+.hamburger{ background:var(--chipBg); border:1px solid var(--chipBorder); border-radius:12px; padding:10px 12px }
+.menu-dd{
+  position:absolute; right:0; top:110%; min-width:220px; z-index:1002;
+  background:var(--card); border:1px solid var(--panelBorder); border-radius:12px; box-shadow:var(--shadow); padding:6px; display:none
+}
+.menu-dd.open{ display:block }
+.menu-dd .mi{ width:100%; text-align:left; padding:10px 12px; border:none; background:transparent; color:var(--text); border-radius:10px; cursor:pointer }
+.menu-dd .mi:hover{ background:var(--chipBg) }
+
+/* Utility */
+.small{font-size:.9rem; color:var(--muted)}
+.z-top{ position:relative; z-index:1000 } /* keep header above content when needed */
