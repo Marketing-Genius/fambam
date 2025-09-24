@@ -8,10 +8,13 @@
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fambam">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
+<link rel="stylesheet" href="fambam.css">
+<script src="menu.js" defer></script>  
 
 <script>
 /* THEME BOOT + logo swap (copy this into other pages) */
@@ -91,33 +94,13 @@ body::after{
   background: rgba(64,76,105,.9);
   pointer-events:none;
 }
-
+  
 /* App */
 .app{
   min-height: 100svh;
   display:flex; flex-direction:column; gap:18px;
   padding:20px; max-width:1100px; margin:0 auto;
 }
-/* Header */
-header{
-  position:relative; z-index: 9000; isolation:isolate;
-  display:flex;justify-content:space-between;align-items:center;
-  background:var(--glassHeader); border:1px solid var(--panelBorder);
-  border-radius:var(--radius); box-shadow:var(--shadow); padding:16px;
-  backdrop-filter: blur(8px);
-}
-.title{display:flex;align-items:center;gap:10px}
-.title img{height:38px;display:block}
-.menu-wrap{position:relative; z-index: 9001; overflow:visible}
-.hamburger{font:inherit;cursor:pointer;background:var(--chipBg);color:var(--text);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px}
-.menu-dropdown{
-  position:absolute;right:0;top:110%;min-width:260px;z-index:9002 !important;
-  background:var(--panel);border:1px solid var(--panelBorder);border-radius:12px;
-  box-shadow:var(--shadow);padding:6px;display:none
-}
-.menu-dropdown.open{display:block}
-.menu-item{width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
-.menu-item:hover{background:var(--chipBg)}
 
 /* Grid */
 #slots{
@@ -151,17 +134,6 @@ html[data-theme="light"] .slot.editing{ background:rgba(15,22,35,.04); }
 /* Prevent iOS long-press link preview/callout on tiles */
 .tile { -webkit-touch-callout: none; }
 
-/* Drag ghost is sized explicitly via JS (width/height inline) */
-.drag-ghost{
-  position:fixed;
-  pointer-events:none;
-  z-index:9999;
-  transform: translate(-50%,-50%) scale(.98);
-  filter: drop-shadow(0 10px 22px rgba(0,0,0,.35));
-  opacity:.96;
-  overflow:hidden;            /* hide any overflow content */
-  will-change: transform,left,top;
-}
 /* Block native scroll gestures that compete with long-press */
 #slots, #slots .tile { touch-action: none; }
 
@@ -333,20 +305,21 @@ html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
 </head>
 <body>
   <div class="app">
-    <header>
-      <div class="title">
-        <img id="logoImg" src="fambam.png" alt="Fambam">
-      </div>
-      <div class="menu-wrap">
-        <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown" title="Menu">☰</button>
-        <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
-          <button class="menu-item" data-action="pages" role="menuitem">All Pages</button>
-          <button class="menu-item" data-action="edithome" role="menuitem">Edit Home</button>
-          <button class="menu-item" data-action="admin" role="menuitem">Admin Settings</button>
-          <button class="menu-item" data-action="about" role="menuitem">About</button>
-        </div>
-      </div>
-    </header>
+<header class="panel app-header">
+  <a href="./index.html" class="brand" title="Home">
+    <img id="logoImg" src="fambam.png" alt="Fambam">
+  </a>
+
+  <div class="menu-wrap">
+    <button class="hamburger" aria-haspopup="true" aria-expanded="false">☰</button>
+    <div class="menu-dd" role="menu" aria-hidden="true">
+      <button class="mi" data-mi="pages">All Pages</button>
+      <button class="mi" data-mi="edithome">Edit Home</button>
+      <button class="mi" data-mi="admin">Admin Settings</button>
+      <button class="mi" data-mi="about">About</button>
+    </div>
+  </div>
+</header>
 
     <!-- Edit bar -->
     <div id="editBar">
@@ -462,7 +435,7 @@ html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
         <button id="pinClose" class="btn">✖</button>
       </header>
       <div class="body" style="gap:12px">
-        <input id="pinInputModal" class="btn" inputmode="numeric" pattern="\\d*" placeholder="PIN (numbers only)" autofocus />
+        <input id="pinInputModal" class="btn" inputmode="numeric" pattern="[0-9]*" placeholder="PIN (numbers only)" autofocus />
       </div>
       <div class="footer">
         <button id="pinOk" class="btn-primary btn-lg">OK</button>
@@ -606,42 +579,32 @@ function compressImage(file, maxSide=2400, quality=.85){
 }
 </script>
 
-<!-- Menu + PIN gate + All Pages -->
 <script>
-(function menu(){
-  const btn = document.getElementById('btnMenu');
-  const dd  = document.getElementById('menuDropdown');
-  const openDD = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
-  const closeDD= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
-
-  btn?.addEventListener('click,', ()=>{}); // defensive
-  btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?closeDD():openDD(); });
-  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) closeDD(); });
-
-  dd?.addEventListener('click', (e)=>{
-    const el = e.target.closest('.menu-item'); if (!el) return;
-    const action = el.dataset.action;
-    closeDD();
-    if (action === 'pages') openPages();
-    else if (action === 'edithome') toggleEdit(true);
-    else if (action === 'admin') {
-      const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
-      if (hasPin) requestPinUI(openAdmin); else openAdmin();
-    } else if (action === 'about') showModal('aboutModal', true);
-  });
-
-  function openPages(){
-    const body = document.getElementById('pagesBody'); body.innerHTML='';
-    CARDS.forEach(c=>{
-      const row=document.createElement('div'); row.className='item';
-      row.innerHTML=`<div class="grow"><b>${c.label}</b><div style="opacity:.7">${c.hint||''}</div></div><a class="btn" href="${c.href}">Open</a>`;
-      body.appendChild(row);
-    });
-    showModal('pagesModal', true);
+document.querySelector('.menu-wrap')?.addEventListener('menu:select', (e) => {
+  const action = e.detail.action;  // 'pages' | 'edithome' | 'admin' | 'about'
+  if (action === 'pages') openPages();
+  else if (action === 'edithome') toggleEdit(true);
+  else if (action === 'admin') {
+    const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
+    if (hasPin) requestPinUI(openAdmin); else openAdmin();
+  } else if (action === 'about') {
+    showModal('aboutModal', true);
   }
-  document.getElementById('pagesDone').onclick=()=>showModal('pagesModal', false);
-  document.getElementById('pagesClose').onclick=()=>showModal('pagesModal', false);
-})();
+});
+</script>
+
+<script>
+function openPages(){
+  const body = document.getElementById('pagesBody'); body.innerHTML='';
+  CARDS.forEach(c=>{
+    const row=document.createElement('div'); row.className='item';
+    row.innerHTML=`<div class="grow"><b>${c.label}</b><div style="opacity:.7">${c.hint||''}</div></div><a class="btn" href="${c.href}">Open</a>`;
+    body.appendChild(row);
+  });
+  showModal('pagesModal', true);
+}
+document.getElementById('pagesDone').onclick=()=>showModal('pagesModal', false);
+document.getElementById('pagesClose').onclick=()=>showModal('pagesModal', false);
 </script>
 
 <!-- PIN modal helpers -->
