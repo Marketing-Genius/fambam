@@ -231,7 +231,7 @@ header.panel { position: relative; z-index: 1000; }
     <div class="panel">
       <div class="viewer"><img id="big" alt=""></div>
     </div>
-    <div class="panel">
+    <div class="panel side">
       <div class="small" style="margin-bottom:8px">Rotate every:</div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <label><input type="radio" name="iv" value="10000"> 10s</label>
@@ -415,9 +415,6 @@ renderList(); startShow();
 
 /* SW */
 if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-
-<!-- change the right panel div -->
-<div class="panel side">
 
 </script>
 </body>
