@@ -61,3 +61,64 @@ html[data-theme="light"] body::after{ background:rgba(240,236,228,.88) }
 /* Utility */
 .small{font-size:.9rem; color:var(--muted)}
 .z-top{ position:relative; z-index:1000 } /* keep header above content when needed */
+
+/* ---------- Family page ---------- */
+.page-family .app{
+  max-width:1100px;
+  margin:0 auto;
+  padding:20px;
+  display:grid;
+  gap:18px;
+  grid-template-rows:auto 1fr auto;
+}
+
+.page-family header.panel{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+}
+
+.page-family .brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  text-decoration:none;
+  color:inherit;
+}
+.page-family .brand img{ height:38px; display:block; cursor:pointer; }
+
+.page-family .title{ font-weight:800; letter-spacing:.2px; font-size:1.6rem; }
+
+.page-family .grid{
+  display:grid;
+  gap:14px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+@media(min-width:860px){
+  .page-family .grid{ grid-template-columns:repeat(4,minmax(0,1fr)); }
+}
+
+/* If your shared .card/.face/.badge are already in fambam.css, this block is optional. */
+.page-family .card{
+  display:flex; align-items:center; gap:10px;
+  background:var(--card);
+  border:1px solid var(--panelBorder);
+  border-radius:16px; padding:12px;
+  text-decoration:none; color:var(--text);
+}
+.page-family .face{
+  width:64px; height:64px; border-radius:50%; overflow:hidden;
+  display:grid; place-items:center; background:var(--chipBg); border:2px solid var(--chipBorder);
+  font-weight:800; font-size:24px;
+}
+.page-family .face img{ width:100%; height:100%; object-fit:cover; }
+.page-family .name{ font-weight:800; }
+.page-family .badge{
+  margin-left:auto; background:var(--previewBg); border:1px solid var(--previewBorder);
+  border-radius:999px; padding:4px 8px; font-size:.85rem; color:var(--muted);
+}
+
+.page-family footer{ opacity:.75; font-size:.85rem; text-align:center; }
+.page-family .version{ opacity:.6; font-size:.8rem; margin-top:6px; }
