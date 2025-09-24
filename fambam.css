@@ -34,7 +34,11 @@ html[data-theme="light"] body::after{ background:rgba(240,236,228,.88) }
 /* ----- Header component (two variants) ----- */
 .header{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
 .header .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit}
-.header .brand img{height:38px; display:block}
+.brand img {
+  height:38px;
+  width:auto;
+  display:block;
+}
 .header .title .big{font-weight:800; font-size:1.4rem}
 .header .title .small{font-weight:600; font-size:.9rem; color:var(--muted)}
 
@@ -80,13 +84,6 @@ html[data-theme="light"] body::after{ background:rgba(240,236,228,.88) }
   flex-wrap:wrap;
 }
 
-.page-family .brand{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  text-decoration:none;
-  color:inherit;
-}
 .page-family .brand img{ height:38px; display:block; cursor:pointer; }
 
 .page-family .title{ font-weight:800; letter-spacing:.2px; font-size:1.6rem; }
