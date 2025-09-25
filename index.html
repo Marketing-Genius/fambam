@@ -578,45 +578,69 @@ if (!window.Family) {
 
 <!-- Wallpaper utilities (shared helper + safe fallback) -->
 <script>
-function pickWallpaper(){
-  const input = document.getElementById('wallpaper-picker');
-  input.onchange = async (ev)=>{
-    const file = ev.target.files && ev.target.files[0]; if(!file) return;
-    const dataUrl = await compressImage(file, 2400, 0.85);
-
-    // Use the universal API if available
-    if (window.Wallpaper?.set) {
-      Wallpaper.set({ image: dataUrl });
-    } else {
-      // Fallback (legacy)
-      localStorage.setItem('hub:wallpaper:dataurl', dataUrl);
-      document.documentElement.style.setProperty('--wallpaper-image', `url("${dataUrl}")`);
-    }
-    input.value='';
-  };
-  input.click();
-}
-
-function clearWallpaper(){
-  if (window.Wallpaper?.set) {
-    Wallpaper.set({ image: '' });        // clears image
-  } else {
-    localStorage.removeItem('hub:wallpaper:dataurl');
-    document.documentElement.style.setProperty('--wallpaper-image', `url('')`);
+async function compressImage(file, maxSide=2400, quality=.85){
+  function drawToCanvas(source, w, h){
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(source, 0, 0, w, h);
+    return c.toDataURL('image/jpeg', quality);
   }
-}
-function compressImage(file, maxSide=2400, quality=.85){
-  return new Promise(resolve=>{
-    const img=new Image();
-    img.onload=()=>{
-      const scale=Math.min(1, maxSide/Math.max(img.width,img.height));
-      const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
-      const c=document.createElement('canvas'); c.width=w; c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
-      resolve(c.toDataURL('image/jpeg', quality));
-    };
-    const r=new FileReader(); r.onload=()=>img.src=r.result; r.readAsDataURL(file);
-  });
+  function fit(w, h, maxSide){
+    const scale = Math.min(1, maxSide/Math.max(w,h));
+    return { w: Math.max(1, Math.round(w*scale)), h: Math.max(1, Math.round(h*scale)) };
+  }
+
+  // Try createImageBitmap first (often works with HEIC/HEIF)
+  try{
+    if ('createImageBitmap' in window) {
+      const bmp = await createImageBitmap(file);
+      const { w, h } = fit(bmp.width, bmp.height, maxSide);
+      // draw ImageBitmap onto canvas via an offscreen <canvas>
+      const c = document.createElement('canvas'); c.width=w; c.height=h;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(bmp, 0, 0, w, h);
+      return c.toDataURL('image/jpeg', quality);
+    }
+  }catch(e){ /* continue to next attempt */ }
+
+  // Fallback 1: object URL + <img> decode
+  try{
+    const url = URL.createObjectURL(file);
+    const jpeg = await new Promise((resolve, reject)=>{
+      const img = new Image();
+      img.onload = ()=>{ 
+        const { w, h } = fit(img.naturalWidth || img.width, img.naturalHeight || img.height, maxSide);
+        resolve(drawToCanvas(img, w, h));
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = (err)=>{ URL.revokeObjectURL(url); reject(err); };
+      img.src = url;
+    });
+    return jpeg;
+  }catch(e){ /* continue to next attempt */ }
+
+  // Fallback 2: data URL + <img> decode
+  try{
+    const dataUrl = await new Promise((resolve, reject)=>{
+      const r = new FileReader();
+      r.onload = ()=> resolve(String(r.result||'')); 
+      r.onerror = reject; 
+      r.readAsDataURL(file);
+    });
+    const jpeg = await new Promise((resolve, reject)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const { w, h } = fit(img.naturalWidth || img.width, img.naturalHeight || img.height, maxSide);
+        resolve(drawToCanvas(img, w, h));
+      };
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+    return jpeg;
+  }catch(e){
+    alert('That image format isn’t supported by this browser. Please pick a JPG or PNG.');
+    throw e;
+  }
 }
 </script>
 
