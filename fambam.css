@@ -122,3 +122,13 @@ html[data-theme="light"] body::after{ background:rgba(240,236,228,.88) }
 
 .page-family footer{ opacity:.75; font-size:.85rem; text-align:center; }
 .page-family .version{ opacity:.6; font-size:.8rem; margin-top:6px; }
+
+
+/* ----- Global drag/selection suppression (for drag-and-drop) ----- */
+.dragging,
+.dragging * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
