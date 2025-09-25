@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -11,14 +11,13 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
-<!-- Universal wallpaper -->
+<!-- Shared wallpaper + app styles -->
 <link rel="stylesheet" href="wallpaper.css">
+<link rel="stylesheet" href="fambam.css">
 <script src="wallpaper.js" defer></script>
 
+<!-- THEME BOOT (Dark/Light + Accent + Auto Logo Swap, DOM-ready safe) -->
 <script>
-/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap, DOM-ready safe)
-   Reads localStorage `ui:theme` = { mode:"dark"|"light", accent:"#RRGGBB" }.
-   Applies tokens immediately, swaps the Fambam logo after DOM is ready. */
 (function () {
   var DARK_SRC  = 'fambam.png';
   var LIGHT_SRC = 'fambam2.png';
@@ -49,9 +48,8 @@
     var logo = findLogo();
     if (!logo) return;
 
-    // Build path from the *attribute* (relative-safe)
     var curAttr = logo.getAttribute('src') || '';
-    var base = curAttr.replace(/[^/]*$/, ''); // strip filename
+    var base = curAttr.replace(/[^/]*$/, '');
     var file = (currentTheme.mode === 'light') ? LIGHT_SRC : DARK_SRC;
     logo.setAttribute('src', base + file);
 
@@ -59,20 +57,17 @@
     if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
   }
 
-  // Initial tokens
   try {
     var raw = localStorage.getItem('ui:theme');
     applyThemeTokens(raw ? JSON.parse(raw) : {mode:'dark',accent:'#22d3ee'});
   } catch(_) { applyThemeTokens({mode:'dark',accent:'#22d3ee'}); }
 
-  // Swap as soon as DOM has the logo
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', swapLogo, {once:true});
   } else {
     swapLogo();
   }
 
-  // Live updates when theme changes elsewhere
   window.addEventListener('storage', function(e){
     if (e.key !== 'ui:theme') return;
     try { applyThemeTokens(JSON.parse(e.newValue||'{}')); } catch(_){}
@@ -86,93 +81,51 @@
 </script>
 
 <style>
-:root{
-  --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
-  /* required for wallpaper */
-  --wallpaper:url('');
-  --wallpaper-shift:40%;
+/* ---------- Profile (scoped) ---------- */
+.page-profile .app{
+  max-width:980px;margin:0 auto;padding:20px;
+  display:grid;gap:18px;grid-template-rows:auto auto 1fr auto;
 }
 
-/* Light palette overrides (soft ivory) */
-html[data-theme="light"]{
-  --panel:#f2efe7;
-  --muted:#556070;
-  --text:#0f1623;
-  --shadow:0 10px 28px rgba(0,0,0,.08);
-}
+/* Panels pick up base styles from fambam.css; add a soft blur like your original */
+.page-profile .panel{backdrop-filter: blur(8px)}
 
-html,body{height:100%}
-body{
-  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  color:var(--text);
-  background:#404c69;              /* simple fallback (same as index) */
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-  overflow-x:hidden;
-}
-
-/* Wallpaper layers (match the rest of the app) */
-body::before{
-  content:""; position:fixed; inset:0; z-index:-2;
-  background-image: var(--wallpaper);
-  background-size: cover; background-repeat:no-repeat;
-  background-position: center var(--wallpaper-shift);
-  transform: translateZ(0);
-}
-body::after{
-  content:""; position:fixed; inset:0; z-index:-1;
-  background: rgba(64,76,105,.9);   /* same overlay for BOTH themes */
-  pointer-events:none;
-}
-
-/* App shell */
-.app{max-width:980px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
-.panel{
-  background:rgba(17,24,39,.6);
-  border:1px solid #0b1224; box-shadow:var(--shadow); border-radius:var(--radius);
-  padding:14px; backdrop-filter: blur(8px)
-}
-html[data-theme="light"] .panel{
-  background:rgba(255,255,255,.72); border-color:#e6e2da;
-}
-
-header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px}
-.brand img{height:38px;display:block}
-.title{font-weight:800}
+/* Header */
+.page-profile header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.page-profile .brand{display:flex;align-items:center;gap:10px}
+.page-profile .brand img{height:38px;display:block}
+.page-profile .title{font-weight:800}
 
 /* Hero */
-.hero{display:flex;gap:14px;align-items:center}
-.face{
+.page-profile .hero{display:flex;gap:14px;align-items:center}
+.page-profile .face{
   width:96px;height:96px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
-  background:#0b1224;border:3px solid #334155;font-size:40px;font-weight:800;flex:0 0 auto
+  background:var(--chipBg, #0b1224);border:3px solid var(--chipBorder, #334155);
+  font-size:40px;font-weight:800;flex:0 0 auto
 }
-html[data-theme="light"] .face{ background:#f6f3ec; border-color:#d9d3c6; }
-.face img{width:100%;height:100%;object-fit:cover}
-.name{font-weight:800;font-size:1.4rem}
-.sub{color:var(--muted)}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.input{background:#0b1224;border:1px solid #334155;border-radius:12px;color:var(--text);padding:8px 10px;font:inherit}
-html[data-theme="light"] .input{ background:#fffdf7; border-color:#e3ded4; }
-.btn{background:#0b1224;border:1px solid #334155;border-radius:12px;color:var(--text);padding:8px 10px;font:inherit;cursor:pointer}
-html[data-theme="light"] .btn{ background:#fffdf7; border-color:#e3ded4; }
-.badges{display:flex;gap:8px;flex-wrap:wrap}
-.badge{display:inline-flex;gap:6px;align-items:center;background:#0b1224;border:1px solid #334155;border-radius:999px;padding:6px 10px}
-html[data-theme="light"] .badge{ background:#fffdf7; border-color:#e3ded4; }
-.section{display:grid;gap:10px}
-.grid{display:grid;gap:12px}
-@media(min-width:860px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.stat{background:#0b1224;border:1px solid #27324a;border-radius:16px;padding:12px}
-html[data-theme="light"] .stat{ background:#fffdf7; border-color:#ebe6db; }
-.stat .hd{font-weight:800;margin-bottom:6px}
-.note{background:#0b1224;border:1px solid #27324a;border-radius:12px;padding:10px}
-html[data-theme="light"] .note{ background:#fffdf7; border-color:#ebe6db; }
+.page-profile .face img{width:100%;height:100%;object-fit:cover}
+.page-profile .name{font-weight:800;font-size:1.4rem}
+.page-profile .sub{color:var(--muted)}
+.page-profile .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.page-profile .input{background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;color:var(--text);padding:8px 10px;font:inherit}
+.page-profile .btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;color:var(--text);padding:8px 10px;font:inherit;cursor:pointer}
+
+/* Stats grid */
+.page-profile .section{display:grid;gap:10px}
+.page-profile .grid{display:grid;gap:12px}
+@media(min-width:860px){.page-profile .stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.page-profile .stat{background:var(--card);border:1px solid var(--panelBorder);border-radius:16px;padding:12px}
+.page-profile .stat .hd{font-weight:800;margin-bottom:6px}
+.page-profile .badges{display:flex;gap:8px;flex-wrap:wrap}
+.page-profile .badge{display:inline-flex;gap:6px;align-items:center;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;padding:6px 10px}
+.page-profile .note{background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px}
 </style>
 </head>
-<body>
+<body class="page-profile">
 <div class="app">
   <header class="panel">
     <a href="./family.html" class="brand" title="Back">
-      <img src="fambam.png" alt="Fambam">
+      <img id="logoImg" src="fambam.png" alt="Fambam">
     </a>
     <div class="title" id="title">Profile</div>
   </header>
@@ -235,6 +188,7 @@ html[data-theme="light"] .note{ background:#fffdf7; border-color:#ebe6db; }
   <footer style="text-align:center;opacity:.7">Works offline. Data stays on this device (local only).</footer>
 </div>
 
+<!-- Family store -->
 <script src="family.js?v=3.3.6"></script>
 <script>
 /* ---------- utils & stores ---------- */
@@ -258,7 +212,7 @@ function initials(n){const p=(n||'').trim();return p? p[0].toUpperCase():'?';}
 function todayISO(){const d=new Date();const y=d.getFullYear(),m=(d.getMonth()+1+'').padStart(2,'0'),dd=(d.getDate()+'').padStart(2,'0');return `${y}-${m}-${dd}`;}
 function startOfWeekMonday(d=new Date()){const dt=new Date(d.getFullYear(), d.getMonth(), d.getDate()); const day=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-day); return dt;}
 function thisMondayISO(){const m=startOfWeekMonday(new Date()); const y=m.getFullYear(),mm=(m.getMonth()+1+'').padStart(2,'0'),dd=(m.getDate()+'').padStart(2,'0'); return `${y}-${mm}-${dd}`;}
-function todayDowShort(){ return new Date().toLocaleDateString('en-US',{weekday:'short'}); }
+function todayDowShort(){ return new Date().toLocaleDateString(undefined,{weekday:'short'}); }
 function firstSymbol(s){ if(!s) return ''; const t=(s+'').trim(); const ch=[...t][0]; return ch; }
 
 /* ---------- load person ---------- */
@@ -286,20 +240,22 @@ $('#favFood').value   = prof.favorites?.food || '';
 $('#favAnimal').value = prof.favorites?.animal || '';
 $('#favColor').value  = prof.favorites?.color || '';
 $('#saveFav').onclick = ()=>{
+  const newAccent = $('#accent').value || '#22d3ee';
   Prof.save(id, {
-    accent: $('#accent').value,
+    accent: newAccent,
     favorites:{
       food: $('#favFood').value.trim(),
       animal: $('#favAnimal').value.trim(),
       color: $('#favColor').value.trim()
     }
   });
-  $('#avatar').style.borderColor = $('#accent').value;
+  // live update ring color
+  $('#avatar').style.borderColor = newAccent;
   alert('Saved!');
 };
 
 /* ---------- Stats: Points / Chores / Dinner / Breakfast ---------- */
-// Points
+// Points (all-time)
 (function(){
   try{
     const balances = JSON.parse(localStorage.getItem('pts:balances')||'{}');
