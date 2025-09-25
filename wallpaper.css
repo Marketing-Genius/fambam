@@ -12,26 +12,40 @@
 /* Do NOT override these in light theme – the wallpaper stays identical */
 html, body { height: 100%; }
 body{
-  margin:0; background:#404c69; /* fallback */
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation; overflow-x:hidden;
+  margin:0;
+  background:#404c69;                 /* fallback color */
+  position: relative;                  /* create a stacking context */
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  overflow-x:hidden;
 }
 
-/* Image layer */
+/* Image layer (behind overlay, above body background) */
 body::before{
-  content:""; position:fixed; inset:0; z-index:-2;
+  content:"";
+  position:fixed; inset:0;
+  z-index:0;                           /* was -2 */
   background-image: var(--wallpaper-image);
-  background-size: cover; background-repeat:no-repeat;
+  background-size: cover;
+  background-repeat:no-repeat;
   background-position: center var(--wallpaper-shift);
   transform: translateZ(0);
+  pointer-events:none;
 }
 
-/* Overlay layer (solid OR gradient), with master opacity */
+/* Overlay layer (solid OR gradient), with master opacity) */
 body::after{
-  content:""; position:fixed; inset:0; z-index:-1;
+  content:"";
+  position:fixed; inset:0;
+  z-index:1;                           /* was -1 */
   background: var(--wp-overlay);
   opacity: var(--wp-overlay-opacity);
   pointer-events:none;
 }
+
+/* Ensure app content sits above the overlay */
+.app { position: relative; z-index: 2; }
+
 @media print {
   body::before, body::after { display: none; }
 }
