@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Fambam · Points</title>
+<title>Fambam · Breakfast Chooser</title>
 
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,21 +11,22 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
-<!-- Shared wallpaper + app styles -->
+<!-- Shared wallpaper -->
 <link rel="stylesheet" href="wallpaper.css">
-<link rel="stylesheet" href="fambam.css">
 <script src="wallpaper.js" defer></script>
 
-<!-- Theme boot (same pattern as other pages) -->
+<!-- Shared app styles -->
+<link rel="stylesheet" href="fambam.css">
+
+<!-- THEME BOOT (same as other pages) -->
 <script>
-(function () {
+(function themeBoot(){
   try{
-    const raw  = localStorage.getItem('ui:theme');
-    const saved= raw ? JSON.parse(raw) : {mode:'dark',accent:'#22d3ee'};
+    const raw = localStorage.getItem('ui:theme');
+    const saved = raw ? JSON.parse(raw) : { mode:'dark', accent:'#22d3ee' };
     const mode = (saved.mode==='light') ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', mode);
     document.documentElement.style.setProperty('--accent', saved.accent || '#22d3ee');
-
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', mode==='light' ? '#f2efe7' : '#0f172a');
 
@@ -37,8 +38,8 @@
       document.addEventListener('DOMContentLoaded', swapLogo, {once:true});
     } else { swapLogo(); }
 
-    addEventListener('storage', (e)=>{
-      if(e.key!=='ui:theme') return;
+    window.addEventListener('storage', (e)=>{
+      if (e.key!=='ui:theme') return;
       try{
         const t = JSON.parse(e.newValue||'{}');
         const m = (t.mode==='light') ? 'light' : 'dark';
@@ -54,522 +55,494 @@
 </script>
 
 <style>
-/* ---------- Points page (scoped to .page-points) ---------- */
-.page-points :root { --leader-accent: transparent; }
-
-/* App grid */
-.page-points .app{
+/* ===== Breakfast page (scoped) ===== */
+.page-breakfast .app{
   max-width:1100px; margin:0 auto; padding:20px;
   display:grid; gap:18px; grid-template-rows:auto auto 1fr auto;
 }
 
-/* Leader accent ring (page-wide when we know the leader) */
-.page-points #appRoot.leader-on .panel{
-  box-shadow: 0 0 0 2px var(--leader-accent), var(--shadow);
-}
+/* keep header & dropdown above content; align title next to logo, controls+menu on right */
+.page-breakfast header.panel{ position:relative; z-index:1000; }
+.page-breakfast .menu-wrap{ position:relative; z-index:1001; }
+.page-breakfast .menu-dd   { z-index:1002; }
+.page-breakfast .header{ justify-content:flex-start; }
+.page-breakfast .header .right{ margin-left:auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 
-/* Two-column layout */
-.page-points .grid{ display:grid; gap:14px; grid-template-columns:360px 1fr; }
-@media (max-width:960px){ .page-points .grid{ grid-template-columns:1fr; } }
-
-.page-points .section-title{ font-weight:800; margin-bottom:8px; }
-
-/* Leaderboard list */
-.page-points .lb-list{ display:grid; gap:10px; }
-.page-points .lb-item{
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
+/* Kids row — chips */
+.page-breakfast .kids{ display:flex; gap:12px; flex-wrap:wrap }
+.page-breakfast .kid{
+  display:flex; align-items:center; gap:12px;
   background:var(--card); border:1px solid var(--panelBorder);
-  border-radius:12px; padding:10px; cursor:pointer;
+  border-radius:16px; padding:10px 14px; cursor:grab;
+  user-select:none; -webkit-user-select:none;
 }
-.page-points .lb-item.active{ outline:2px solid var(--accent); }
-.page-points .lb-item.leader{
-  border-color: var(--leader-accent);
-  box-shadow: 0 0 0 2px var(--leader-accent);
-}
-.page-points .face{
-  width:42px; height:42px; border-radius:50%;
+.page-breakfast .kid:active{ cursor:grabbing; }
+.page-breakfast .kid[data-active="true"]{ outline:2px solid var(--accent) }
+.page-breakfast .avatar{
+  width:56px; height:56px; border-radius:50%;
   background:var(--chipBg); border:2px solid var(--chipBorder);
-  overflow:hidden; display:grid; place-items:center; font-weight:800;
-}
-.page-points .face img{ width:100%; height:100%; object-fit:cover; }
-.page-points .score{ font-weight:800; }
-.page-points .small{ font-size:.9rem; color:var(--muted); }
-.page-points .levelchip{
-  display:inline-flex; align-items:center; gap:6px;
-  background:var(--chipBg); border:1px solid var(--chipBorder);
-  border-radius:999px; padding:4px 8px; font-size:.85rem; color:var(--text);
+  object-fit:cover; display:grid; place-items:center;
+  font-weight:800; color:var(--text); font-size:1.2rem;
 }
 
-/* Right-side detail */
-.page-points .detail{ display:grid; gap:12px; }
-.page-points .badge{
-  display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
-  border-radius:999px; background:var(--chipBg); border:1px solid var(--chipBorder);
-  color:var(--muted);
-}
-.page-points .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+/* Choices grid + cards */
+.page-breakfast .grid{ display:grid; gap:14px }
+@media(min-width:780px){ .page-breakfast .grid{ grid-template-columns:repeat(2,minmax(0,1fr)) } }
+@media(min-width:1020px){ .page-breakfast .grid{ grid-template-columns:repeat(3,minmax(0,1fr)) } }
 
-/* Ledger & Pending */
-.page-points .ledger{ display:grid; gap:8px; max-height:320px; overflow:auto; padding-right:4px; -webkit-overflow-scrolling:touch; }
-.page-points .entry{
-  display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
-  background:var(--card); border:1px solid var(--panelBorder);
-  border-radius:10px; padding:8px;
+.page-breakfast .card{
+  position:relative; background:var(--panel); border:1px solid var(--panelBorder);
+  border-radius:16px; padding:14px; display:grid; gap:12px
 }
-.page-points .entry .muted{ color:var(--muted); font-size:.9rem; }
-.page-points .positive{ color:#16a34a; } .page-points .negative{ color:#dc2626; }
+.page-breakfast .card .head{ display:flex; align-items:center; justify-content:space-between }
+.page-breakfast .food{ font-size:1.2rem; font-weight:800 }
+.page-breakfast .picks{ display:flex; gap:8px; flex-wrap:wrap }
+.page-breakfast .pill{
+  display:flex; align-items:center; gap:8px; background:var(--card);
+  border:1px solid var(--panelBorder); border-radius:999px; padding:6px 10px
+}
+.page-breakfast .pill img{ width:20px; height:20px; border-radius:50%; object-fit:cover; border:1px solid var(--chipBorder) }
 
-.page-points .pending{ display:grid; gap:10px; }
-.page-points .pending-item{
-  display:grid; gap:8px; background:var(--card);
-  border:1px solid var(--panelBorder); border-radius:12px; padding:10px;
-}
+/* Modal */
+.page-breakfast .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:10000; padding:20px }
+.page-breakfast .modal{ width:min(720px,100%); max-height:90vh; display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--panelBorder); border-radius:16px; box-shadow:var(--shadow) }
+.page-breakfast .modal header{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--panelBorder); position:sticky; top:0; background:inherit }
+.page-breakfast .modal .body{ padding:14px 16px; display:grid; gap:16px; overflow:auto; max-height:70vh }
+.page-breakfast .modal .footer{ padding:14px 16px; border-top:1px solid var(--panelBorder); display:flex; justify-content:flex-end; gap:10px }
+.page-breakfast .list{ display:grid; gap:10px }
+.page-breakfast .item{ display:grid; grid-template-columns:120px 1fr auto; gap:10px; align-items:center; background:var(--card); border:1px solid var(--panelBorder); border-radius:12px; padding:10px }
+.page-breakfast input[type="text"]{ background:var(--card); border:1px solid var(--panelBorder); border-radius:12px; padding:10px 12px; color:var(--text); font:inherit }
 
-/* Admin modal (re-use shared button/input tokens) */
-.page-points .modal-backdrop{
-  position:fixed; inset:0; background:rgba(0,0,0,.55);
-  display:none; align-items:center; justify-content:center; z-index:10000; padding:20px;
-}
-.page-points .modal{
-  width:min(720px,100%); max-height:90vh; display:flex; flex-direction:column;
-  background:var(--panel); border:1px solid var(--panelBorder);
-  border-radius:16px; box-shadow:var(--shadow);
-}
-.page-points .modal header{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 14px; border-bottom:1px solid var(--panelBorder); position:sticky; top:0; background:inherit;
-}
-.page-points .modal .body{ padding:12px 14px; display:grid; gap:12px; overflow:auto; max-height:70vh; }
-.page-points .modal .footer{ padding:12px 14px; border-top:1px solid var(--panelBorder); display:flex; justify-content:space-between; gap:10px; }
-.page-points input[type="number"], .page-points input[type="text"], .page-points select, .page-points textarea{
-  background:var(--chipBg); border:1px solid var(--chipBorder); border-radius:12px; padding:10px 12px; color:var(--text); font:inherit;
-}
+/* Footer */
+.page-breakfast .hint{ opacity:.8; font-size:.9rem; text-align:center }
+.page-breakfast .version{ opacity:.6; font-size:.8rem; margin-top:6px }
 
-/* Keep header (and dropdown) above panels just in case */
-.page-points header.panel{ position:relative; z-index:1000; }
-.page-points .menu-wrap{ position:relative; z-index:1001; }
-.page-points .menu-dd{ z-index:1002; }
+/* Drag infra */
+.page-breakfast .dragging, .page-breakfast .dragging *{ user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent }
+.page-breakfast .dragging{ touch-action:none; cursor:grabbing }
+html.drag-lock, body.drag-lock{ overflow:hidden !important; overscroll-behavior:contain }
+.page-breakfast .drag-shield{ position:fixed; inset:0; z-index:9998; background:transparent; pointer-events:auto; touch-action:none; cursor:grabbing }
+.page-breakfast .drag-ghost{ position:fixed; left:0; top:0; transform:translate(-50%,-50%) scale(.98); z-index:9999; pointer-events:none; filter:drop-shadow(0 10px 22px rgba(0,0,0,.35)); opacity:.96; overflow:hidden; box-sizing:border-box }
+.page-breakfast .kid, .page-breakfast .card{ touch-action:none }
+.page-breakfast .card.drop-target{ outline:2px solid var(--accent); outline-offset:2px }
 </style>
 </head>
 
-<body class="page-points">
-  <div class="app" id="appRoot">
+<body class="page-breakfast">
+  <div class="app">
     <!-- Shared header -->
     <header class="panel header">
-      <a href="./index.html" class="brand" title="Home">
+      <a class="brand" href="./index.html" title="Home">
         <img src="fambam.png" alt="Fambam">
       </a>
       <div class="title">
-        <div class="big">Points</div>
-        <div class="small">Monthly levels (every 50 pts), seasonal leaderboard, and history.</div>
+        <div class="big">Breakfast Chooser</div>
+        <div class="small">Drag your kid onto a food (or tap a kid, then a food).</div>
       </div>
-      <div class="menu-wrap">
-        <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false">☰</button>
-        <div id="menuDD" class="menu-dd" role="menu" aria-hidden="true">
-          <button class="mi" data-action="admin">Admin Settings</button>
-          <button class="mi" data-action="scan">Scan Week &amp; Propose Awards</button>
-          <button class="mi" data-action="clearPending">Clear All Pending</button>
-          <button class="mi" data-action="resetBalances">Reset All Balances</button>
-          <button class="mi" data-action="about">About</button>
+
+      <div class="right">
+        <label for="theDate" class="small">Date</label>
+        <input id="theDate" class="btn" type="date"/>
+        <div class="menu-wrap">
+          <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false">☰</button>
+          <div id="menuDD" class="menu-dd" role="menu" aria-hidden="true">
+            <button class="mi" data-action="reset">Reset</button>
+            <button class="mi" data-action="random">Random</button>
+            <button class="mi" data-action="share">Share</button>
+            <button class="mi" data-action="manage">Manage</button>
+          </div>
         </div>
       </div>
     </header>
 
-    <section class="grid">
-      <!-- Left: leaderboard -->
-      <div class="panel">
-        <div class="section-title">Leaderboard · <span id="monthLabel"></span></div>
-        <div id="lb" class="lb-list"></div>
-      </div>
-
-      <!-- Right: detail -->
-      <div class="panel detail">
-        <div class="row" style="justify-content:space-between">
-          <div class="section-title" id="kidTitle">Select a child</div>
-          <div class="badge">Weekly goal: 100</div>
-        </div>
-
-        <div>
-          <div class="section-title" style="margin-bottom:6px">Pending Awards</div>
-          <div id="pending" class="pending"></div>
-        </div>
-
-        <div>
-          <div class="section-title" style="margin-bottom:6px">Ledger</div>
-          <div id="ledger" class="ledger"></div>
-        </div>
-      </div>
+    <section class="panel">
+      <div class="kids" id="kidsRow"></div>
     </section>
 
-    <div class="small" style="text-align:center;opacity:.75">
+    <section class="grid" id="choicesGrid"></section>
+
+    <div class="hint">
       Works offline. Data stays on this device (local only).
-      <div class="version">Points v0.4.0 — leader highlight + encouragement</div>
+      <div class="version">Breakfast v3.6.2 — theme-ready</div>
     </div>
   </div>
 
-  <!-- Admin Settings Modal -->
-  <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
+  <!-- Manage Modal -->
+  <div class="modal-backdrop" id="menuModal" aria-hidden="true" role="dialog" aria-labelledby="menuTitle">
     <div class="modal">
       <header>
-        <div id="adminTitle" style="font-weight:800">Admin Settings</div>
-        <button id="adminClose" class="btn">✖</button>
+        <div id="menuTitle" style="font-weight:800">Manage Breakfast Choices</div>
+        <button id="menuClose" class="btn">✖</button>
       </header>
       <div class="body">
-        <div style="font-weight:700">Grant / Adjust Points</div>
-        <div class="row" style="flex-wrap:wrap;gap:10px">
-          <select id="adminKid" title="Choose child" style="min-width:180px"></select>
-          <input id="adminDelta" type="number" value="10" step="1" min="-999" style="width:110px"/>
-          <input id="adminReason" type="text" placeholder="Reason (e.g., Helped with dishes)" style="min-width:240px;flex:1"/>
-          <button id="adminApply" class="btn-primary">Apply</button>
-        </div>
-        <div class="row" style="gap:6px">
-          <button class="btn" data-admin-quick="+5">+5</button>
-          <button class="btn" data-admin-quick="+10">+10</button>
-          <button class="btn" data-admin-quick="+20">+20</button>
-          <button class="btn" data-admin-quick="-5">−5</button>
-        </div>
-        <div class="small">No PIN (yet). Intended for an adult to use.</div>
+        <div class="small" style="opacity:.8">Edit up to 8 choices (emoji + name)</div>
+        <div id="menuList" class="list"></div>
       </div>
       <div class="footer">
-        <div></div>
-        <div><button id="adminDone" class="btn">Done</button></div>
+        <button id="menuDone" class="btn-primary">Done</button>
       </div>
     </div>
   </div>
 
-  <!-- Family store (unchanged) -->
+  <!-- Family store -->
   <script src="family.js?v=3.3.6"></script>
   <script>
   if(!window.Family){
     (function(){
-      const K={kids:'hub:family:kids'};
+      const K={kids:'hub:family:kids', pin:'hub:family:pin'};
       const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
-      window.Family={ getKids(){ return load(K.kids,[]); }, getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false);} };
+      window.Family={
+        getKids(){ return load(K.kids,[]); },
+        verifyPin(p){ const real=load(K.pin,null); return real?String(real)===String(p):true; },
+        onChange(){ return ()=>{}; }
+      };
     })();
   }
   </script>
 
-  <!-- Page logic (unchanged except menu class names) -->
+  <!-- Breakfast logic (unchanged except menu IDs/classes) -->
   <script>
-/* ------- Config ------- */
-const POINTS_PER_DOT = 20;
-const WEEK_CAP       = 100;
-const LEVEL_STRIDE   = 50;
+  const LS = { menu:'bf:menu', day:(iso)=>`bf:day:${iso}` };
+  const $=(s,e=document)=>e.querySelector(s);
+  const $$=(s,e=document)=>[...e.querySelectorAll(s)];
+  const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
+  const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 
-/* ------- Storage keys ------- */
-const PTS_BAL='pts:balances';
-const PTS_LED='pts:ledger';
-const PTS_PEN='pts:pending';
-const PTS_MBAL = (m)=>`pts:balances:${m}`;
-
-/* Chores keys */
-const CH_WEEK =(m)=>`ch:assign:${m}`;
-const CH_DONE =(m)=>`ch:done:${m}`;
-
-/* ------- Utilities ------- */
-const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
-const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
-const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-const uid=()=>Math.random().toString(36).slice(2,10);
-const initials=n=>((n||'?').trim()[0]||'?').toUpperCase();
-const firstSymbol = s => (s||'').trim() ? [...(s+'')][0] : '';
-
-/* Profile mini-store */
-const Prof = { key:id=>`prof:${id}`, load(id){ try{return JSON.parse(localStorage.getItem(this.key(id)))||{}}catch{return{}} } };
-
-/* Month helpers */
-function monthId(d=new Date()){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
-function monthLabelText(mid=monthId()){ const [Y,M]=mid.split('-').map(n=>+n); const dt=new Date(Y,M-1,1); return dt.toLocaleDateString(undefined,{month:'long', year:'numeric'}); }
-
-/* Local week helpers */
-function localISO(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
-function startOfWeekMondayLocal(d=new Date()){const m=new Date(d.getFullYear(),d.getMonth(),d.getDate());const off=(m.getDay()+6)%7;m.setDate(m.getDate()-off);return m;}
-function thisMondayISO(){ return localISO(startOfWeekMondayLocal(new Date())); }
-function weekLabel(mISO){ const [Y,M,D]=mISO.split('-').map(Number); const s=new Date(Y,M-1,D); const e=new Date(s); e.setDate(e.getDate()+6); const f=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'}); return `${f(s)} – ${f(e)}`; }
-
-/* ------- State ------- */
-let activeKidId=null;
-const CURRENT_MONTH = monthId();
-
-/* ------- Family ------- */
-function kids(){ try{ return (Family.getActiveKids&&Family.getActiveKids())||[]; }catch{ return []; } }
-
-/* ------- Balances / Ledger ------- */
-function allTimeBalances(){ return load(PTS_BAL, {}); }
-function setAllTimeBalances(b){ save(PTS_BAL,b); }
-
-function monthBalances(mid=CURRENT_MONTH){ return load(PTS_MBAL(mid), {}); }
-function setMonthBalances(b, mid=CURRENT_MONTH){ save(PTS_MBAL(mid), b); }
-
-function ledger(){ return load(PTS_LED, []); }
-function setLedger(a){ save(PTS_LED,a); }
-
-function pendings(){ return load(PTS_PEN, []); }
-function setPendings(a){ save(PTS_PEN,a); }
-
-/* ------- Levels / Ranks ------- */
-function levelFor(points){ return Math.floor((+points||0)/LEVEL_STRIDE); }
-function ranksForMonth(mid=CURRENT_MONTH){
-  const k=kids(); const mb=monthBalances(mid);
-  const rows = k.map(x=>({kid:x,score:(+mb[x.id]||0)})).sort((a,b)=>b.score-a.score);
-  let rank=0, prev=null, seen=0;
-  return rows.map(r=>{
-    seen++;
-    if(prev===null || r.score<prev){ rank=seen; prev=r.score; }
-    return {...r, rank};
-  });
-}
-function rankIcon(n){ return n===1?'🥇':n===2?'🥈':n===3?'🥉':`#${n}`; }
-
-/* ------- Rendering ------- */
-function renderLeaderboard(){
-  $('#monthLabel').textContent = monthLabelText(CURRENT_MONTH);
-  const lb=$('#lb'); lb.innerHTML='';
-
-  const rows = ranksForMonth(CURRENT_MONTH);
-  const leader = rows[0];
-  const leaderId = leader?.kid?.id;
-  const leaderProf = leaderId ? Prof.load(leaderId) : {};
-  const leaderAccent = leaderProf.accent || getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#22d3ee';
-  const leaderAnimal = firstSymbol(leaderProf?.favorites?.animal) || '';
-
-  // Paint the page with leader's accent
-  const app = document.getElementById('appRoot');
-  if (leader) {
-    document.documentElement.style.setProperty('--leader-accent', leaderAccent);
-    app.classList.add('leader-on');
-  } else {
-    document.documentElement.style.setProperty('--leader-accent', 'transparent');
-    app.classList.remove('leader-on');
+  function todayISO(){
+    const v = $('#theDate').value;
+    if (v) return v;
+    const d = new Date();
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
   }
-
-  rows.forEach(({kid,score,rank}, idx)=>{
-    const row=document.createElement('div');
-    const lvl=levelFor(score);
-    const isLeader = idx===0;
-
-    let encouragement = '';
-    if (!isLeader && leader) {
-      const diff = Math.max(0, (leader.score||0) - score);
-      if (diff>0) encouragement = `${diff} pts behind ${leader.kid.name} — keep going!`;
+  function prettyFromISO(iso){
+    const [y,m,d] = iso.split('-').map(Number);
+    const local = new Date(y, m-1, d);
+    return local.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});
+  }
+  function seedMenu(){
+    let m = load(LS.menu, null);
+    if (!Array.isArray(m) || m.length === 0){
+      m = [
+        {emoji:'🧇',label:'Waffles (Eggo)'},
+        {emoji:'🥧',label:'Pop-Tart'},
+        {emoji:'🥣',label:'Cereal'},
+        {emoji:'🥯',label:'Bagel & Cream Cheese'}
+      ];
+      save(LS.menu, m);
     }
-
-    row.className='lb-item' + (isLeader?' leader':'');
-    row.dataset.id=kid.id;
-    row.innerHTML=`
-      <div class="person" style="display:flex;align-items:center;gap:10px">
-        <div class="face" style="${isLeader?`border-color:${leaderAccent}`:''}">${kid.photo?`<img src="${kid.photo}" alt="">`:`<span>${initials(kid.name)}</span>`}</div>
-        <div style="display:flex;flex-direction:column">
-          <div style="font-weight:700">${rankIcon(rank)} ${isLeader?'👑 ':''}${kid.name}${isLeader && leaderAnimal?` ${leaderAnimal}`:''}</div>
-          <div class="small" style="margin-top:2px"><span class="levelchip">Lv ${lvl}</span></div>
-          ${!isLeader && encouragement ? `<div class="small" style="margin-top:2px">${encouragement}</div>` : ''}
-        </div>
-      </div>
-      <div class="score">${score} pts</div>
-    `;
-    row.onclick=()=>{ activeKidId=kid.id; highlightActive(); renderDetail(); };
-    lb.appendChild(row);
-  });
-
-  highlightActive();
-}
-function highlightActive(){ $$('#lb .lb-item').forEach(r=>r.classList.toggle('active', r.dataset.id===activeKidId)); }
-
-function renderDetail(){
-  const k=kids(); const kid=k.find(x=>x.id===activeKidId);
-  if(!kid){ $('#kidTitle').textContent='Select a child'; $('#ledger').innerHTML=''; $('#pending').innerHTML=''; return; }
-  const mb=monthBalances();
-  const pts=+mb[kid.id]||0;
-  const lvl=levelFor(pts);
-  $('#kidTitle').textContent = `${kid.name} · ${pts} pts · Lv ${lvl}`;
-  renderPending();
-  renderLedger();
-}
-
-function renderLedger(){
-  const wrap=$('#ledger'); wrap.innerHTML='';
-  if(!activeKidId){ wrap.innerHTML='<div class="small">Select a child to see history.</div>'; return; }
-  const rows=ledger().filter(e=>e.kidId===activeKidId).sort((a,b)=>b.ts-a.ts);
-  if(!rows.length){ wrap.innerHTML='<div class="small">No entries yet.</div>'; return; }
-  rows.forEach(e=>{
-    const div=document.createElement('div'); div.className='entry';
-    const when=new Date(e.ts).toLocaleString();
-    const sign=e.delta>=0?'+':'';
-    div.innerHTML=`<div><div>${e.reason||'(no reason)'} <span class="muted">· ${e.source||'manual'}</span></div><div class="muted">${when}</div></div>
-                   <div class="${e.delta>=0?'positive':'negative'}" style="font-weight:800">${sign}${e.delta}</div>`;
-    wrap.appendChild(div);
-  });
-}
-
-function renderPending(){
-  const wrap=$('#pending'); wrap.innerHTML='';
-  const list=pendings().filter(p=>!activeKidId || p.kidId===activeKidId);
-  if(!list.length){ wrap.innerHTML='<div class="small">No pending awards.</div>'; return; }
-  list.sort((a,b)=>a.kidId.localeCompare(b.kidId));
-  const kmap=new Map(kids().map(x=>[x.id,x]));
-  list.forEach(p=>{
-    const kid=kmap.get(p.kidId);
-    const el=document.createElement('div'); el.className='pending-item';
-    el.innerHTML=`
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="face" style="width:34px;height:34px">${kid?.photo?`<img src="${kid.photo}" alt="">`:`<span style="font-size:.9rem">${initials(kid?.name)}</span>`}</div>
-          <div><b>${kid?.name||'Unknown'}</b> · Week ${weekLabel(p.weekISO)}</div>
-        </div>
-        <div style="font-weight:800">${p.delta>0?'+':''}${p.delta} pts</div>
-      </div>
-      <div class="small">${p.reason || 'Weekly award from Chores'}${p.calc?` — ${p.calc}`:''}</div>
-      <div class="row">
-        <button class="btn-primary" data-approve>Approve</button>
-        <button class="btn btn-warn" data-reject>Reject</button>
-      </div>
-    `;
-    el.querySelector('[data-approve]').onclick=()=>approvePending(p.id);
-    el.querySelector('[data-reject]').onclick =()=>rejectPending(p.id);
-    wrap.appendChild(el);
-  });
-}
-
-/* ------- Balance & ledger ops ------- */
-function applyDelta(kidId, delta, reason, source='admin'){
-  delta = Number(delta)||0; if(!delta) return;
-
-  const all=allTimeBalances(); all[kidId]=(all[kidId]||0)+delta; setAllTimeBalances(all);
-  const mb=monthBalances();    mb[kidId]=(mb[kidId]||0)+delta; setMonthBalances(mb);
-
-  const a=ledger(); a.push({id:uid(), kidId, delta, reason:reason||'', ts:Date.now(), source}); setLedger(a);
-
-  renderLeaderboard(); renderDetail();
-}
-
-/* ------- Pending approvals ------- */
-function approvePending(id){
-  const list=pendings();
-  const p=list.find(x=>x.id===id); if(!p) return;
-  applyDelta(p.kidId, p.delta, p.reason||'Chores award', 'chores');
-  setPendings(list.filter(x=>x.id!==id));
-  renderPending();
-}
-function rejectPending(id){
-  const list=pendings().filter(x=>x.id!==id); setPendings(list); renderPending();
-}
-
-/* ------- Import from Chores (proposal only) ------- */
-function scanWeekAndPropose(){
-  const mISO=thisMondayISO();
-  const assigns = load(CH_WEEK(mISO), null) || {};
-  const doneMap = load(CH_DONE(mISO),  {}) || {};
-
-  const perKidDots = {};
-  for(const [choreId,kidId] of Object.entries(assigns)){
-    const days = doneMap[choreId] || {};
-    const count = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].reduce((n,k)=> n + (days[k]?1:0), 0);
-    perKidDots[kidId] = (perKidDots[kidId]||0) + count;
+  }
+  async function shareText(content){
+    try{ if(navigator.share){ await navigator.share({text:content}); return; } }catch{}
+    const encoded=encodeURIComponent(content);
+    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+    const href=isIOS?`sms:&body=${encoded}`:`sms:?body=${encoded}`;
+    try{ location.href=href; return; }catch{}
+    try{ await navigator.clipboard.writeText(content); alert('Copied to clipboard.'); }
+    catch{ alert('Share unavailable. Copy/paste this:\n\n'+content); }
   }
 
-  const newPendings = [];
-  const kset = new Set(kids().map(k=>k.id));
-  for(const kidId of kset){
-    const dots = perKidDots[kidId]||0;
-    const calcPts = Math.min(WEEK_CAP, dots * POINTS_PER_DOT);
-    if(calcPts<=0) continue;
+  let activeKidId=null;
 
-    const already = pendings().some(p=>p.kidId===kidId && p.weekISO===mISO);
-    if(already) continue;
+  function renderKids(){
+    const wrap=$('#kidsRow'); wrap.innerHTML='';
+    const kids=(Family.getKids&&Family.getKids())||[];
+    if(!kids.length){ wrap.innerHTML='<span class="small" style="color:#cbd5e1">No kids yet. Add them in Home → Admin Settings.</span>'; return; }
 
-    newPendings.push({
-      id: uid(),
-      kidId,
-      delta: calcPts,
-      reason: 'Weekly Chores Award',
-      weekISO: mISO,
-      calc: `${dots} day${dots===1?'':'s'} × ${POINTS_PER_DOT} = ${calcPts}${calcPts===WEEK_CAP?' (capped)':''}`
+    kids.forEach(k=>{
+      const el=document.createElement('button');
+      el.className='kid'; el.dataset.id=k.id; el.dataset.active=activeKidId===k.id;
+      const imgHtml = k.photo
+        ? `<img class="avatar" src="${k.photo}" alt="${k.name}">`
+        : `<div class="avatar">${(k.name||'?').slice(0,1).toUpperCase()}</div>`;
+      el.innerHTML=`${imgHtml}<span>${k.name}</span>`;
+      el.onclick=()=>{ activeKidId=(activeKidId===k.id? null : k.id); renderKids(); };
+      attachKidDrag(el, k.id);
+      wrap.appendChild(el);
     });
   }
-  if(!newPendings.length){ alert('No new awards found for this week.'); return; }
-  setPendings( pendings().concat(newPendings) );
-  renderPending();
-  alert(`Proposed ${newPendings.length} award${newPendings.length>1?'s':''} for week ${weekLabel(mISO)}.`);
-}
 
-/* ------- Hamburger / Modals (use shared menu classes) ------- */
-function show(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
-function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
+  function renderChoices(){
+    const grid = $('#choicesGrid'); grid.innerHTML = '';
+    const menu = load(LS.menu, []);
+    const iso  = todayISO();
+    const map  = load(LS.day(iso), {});
+    const kids = (Family.getKids && Family.getKids()) || [];
 
-(function menu(){
-  const btn = document.getElementById('btnMenu');
-  const dd  = document.getElementById('menuDD');
-  const open=()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
-  const close=()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
+    menu.forEach((opt, idx)=>{
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.dataset.idx = String(idx);
+      el.innerHTML = `
+        <div class="head">
+          <div class="food">${opt.emoji} ${opt.label}</div>
+          <button class="btn" data-choose="${idx}">Choose</button>
+        </div>
+        <div class="picks" id="picks-${idx}"></div>
+      `;
+      grid.appendChild(el);
+    });
 
-  btn.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?close():open(); });
-  document.addEventListener('click', (e)=>{ if(!dd.contains(e.target) && e.target!==btn) close(); });
+    menu.forEach((_, idx)=>{
+      const row = $(`#picks-${idx}`);
+      Object.entries(map).forEach(([kidId, choiceIdx])=>{
+        if (Number(choiceIdx) === idx){
+          const kid = kids.find(k => String(k.id) === String(kidId));
+          if (!kid) return;
+          const pill = document.createElement('div');
+          pill.className = 'pill';
+          pill.innerHTML = kid.photo
+            ? `<img src="${kid.photo}" alt=""> <span>${kid.name}</span>`
+            : `<div class="avatar" style="width:22px;height:22px;font-size:.8rem">${(kid.name||'?').slice(0,1).toUpperCase()}</div><span>${kid.name}</span>`;
+          row.appendChild(pill);
+        }
+      });
+    });
 
-  dd.addEventListener('click', (e)=>{
-    const a=e.target.closest('.mi'); if(!a) return; close();
-    const act=a.dataset.action;
-    if (act==='admin'){ openAdmin(); }
-    else if (act==='scan'){ scanWeekAndPropose(); }
-    else if (act==='clearPending'){ if(confirm('Clear ALL pending awards?')){ setPendings([]); renderPending(); } }
-    else if (act==='resetBalances'){
-      if(confirm('Reset ALL balances to 0? (Keeps ledger)')){
-        const bAll={}; kids().forEach(k=>bAll[k.id]=0); setAllTimeBalances(bAll);
-        const bMonth={}; kids().forEach(k=>bMonth[k.id]=0); setMonthBalances(bMonth);
-        renderLeaderboard(); renderDetail();
+    $$('[data-choose]').forEach(btn=>{
+      btn.onclick = ()=>{
+        if (!activeKidId){ alert('Tap a child first.'); return; }
+        const idx = Number(btn.dataset.choose);
+        const m = load(LS.day(iso), {});
+        m[activeKidId] = idx;
+        save(LS.day(iso), m);
+        renderChoices();
+      };
+    });
+
+    BF_DND.setDropZones($$('.card'));
+  }
+
+  function buildSummary(){
+    const iso = todayISO();
+    const dateTxt = prettyFromISO(iso);
+    const menu=load(LS.menu,[]);
+    const map=load(LS.day(iso),{});
+    const kids=(Family.getKids&&Family.getKids())||[];
+    const lines=[`🍳 Fambam Breakfast — ${dateTxt}`];
+    kids.forEach(k=>{
+      const c = map[k.id]; const food = (c!=null? `${menu[c].emoji} ${menu[c].label}` : '—');
+      lines.push(`${k.name}: ${food}`);
+    });
+    return lines.join('\n');
+  }
+
+  /* Drag & Drop */
+  const BF_DND = { active:false, timer:null, pressMs:200, cancelMovePx:8, startX:0, startY:0, ghost:null, shield:null, kidId:null, hoverIdx:-1, dropZones:[], autoscrollDir:0, autoscrollRAF:0 };
+  BF_DND.setDropZones = function(zones){ this.dropZones = Array.from(zones||[]); };
+
+  function attachKidDrag(kidEl, kidId){
+    kidEl.addEventListener('dragstart', e=>e.preventDefault());
+    kidEl.addEventListener('contextmenu', e=>e.preventDefault(), {passive:false});
+
+    const onDown = (e)=>{
+      if (e.button === 2) return;
+      const p = getPoint(e);
+      BF_DND.startX = p.x; BF_DND.startY = p.y;
+      BF_DND.kidId = kidId; BF_DND.hoverIdx = -1;
+
+      BF_DND.timer = setTimeout(()=> beginKidDrag(kidEl, kidId, p), BF_DND.pressMs);
+
+      window.addEventListener('pointermove', onMove, {passive:false});
+      window.addEventListener('pointerup', onUp, {passive:false, once:true});
+      window.addEventListener('pointercancel', onCancel, {passive:false, once:true});
+      document.addEventListener('visibilitychange', onCancel, {once:true});
+    };
+
+    const onMove = (e)=>{
+      const p = getPoint(e);
+      if (!BF_DND.active){
+        if (dist(BF_DND.startX,BF_DND.startY,p.x,p.y) > BF_DND.cancelMovePx){
+          clearTimeout(BF_DND.timer); BF_DND.timer=null;
+        }
+        return;
       }
-    } else if (act==='about'){
-      alert('Monthly seasons: levels increase every 50 points and reset automatically each calendar month. This page is kid-friendly; use Admin Settings to grant/adjust points.');
+      e.preventDefault();
+      positionGhost(p);
+      updateEdgeScroll(p.y);
+      const idx = dropIndexFromPoint(p.x, p.y);
+      if (idx !== BF_DND.hoverIdx){
+        BF_DND.hoverIdx = idx;
+        highlightDrop(idx);
+      }
+    };
+
+    const onUp = ()=>{
+      if (!BF_DND.active){
+        clearTimeout(BF_DND.timer); BF_DND.timer=null;
+        cleanupKidDrag(); return;
+      }
+      if (BF_DND.hoverIdx !== -1){
+        const iso = todayISO();
+        const m = load(LS.day(iso),{});
+        m[BF_DND.kidId] = BF_DND.hoverIdx;
+        save(LS.day(iso), m);
+        renderChoices();
+      }
+      endKidDrag();
+    };
+
+    const onCancel = ()=>{
+      clearTimeout(BF_DND.timer); BF_DND.timer=null;
+      if (BF_DND.active) endKidDrag();
+    };
+
+    kidEl.addEventListener('pointerdown', onDown, {passive:false});
+  }
+
+  function beginKidDrag(kidEl, kidId, point){
+    BF_DND.active = true;
+    try{ navigator.vibrate && navigator.vibrate(7); }catch(_){}
+    document.documentElement.classList.add('drag-lock');
+    document.body.classList.add('drag-lock','dragging');
+
+    const shield = document.createElement('div');
+    shield.className = 'drag-shield';
+    document.body.appendChild(shield);
+    BF_DND.shield = shield;
+
+    const rect  = kidEl.getBoundingClientRect();
+    const clone = kidEl.cloneNode(true);
+    clone.classList.add('drag-ghost');
+    Object.assign(clone.style, {
+      width: rect.width + 'px', height: rect.height + 'px',
+      minWidth: rect.width + 'px', minHeight: rect.height + 'px',
+      maxWidth: rect.width + 'px', maxHeight: rect.height + 'px',
+      left: point.x + 'px', top: point.y + 'px',
+      borderRadius: '16px'
+    });
+    document.body.appendChild(clone);
+    BF_DND.ghost = clone;
+
+    highlightDrop(-1);
+  }
+  function endKidDrag(){ setAutoscroll(0); cleanupKidDrag(); highlightDrop(-1); }
+  function cleanupKidDrag(){
+    if (BF_DND.ghost) BF_DND.ghost.remove();
+    if (BF_DND.shield) BF_DND.shield.remove();
+    BF_DND.ghost = null; BF_DND.shield = null;
+    document.body.classList.remove('dragging','drag-lock');
+    document.documentElement.classList.remove('drag-lock');
+    BF_DND.active=false; BF_DND.kidId=null; BF_DND.hoverIdx=-1;
+  }
+  function positionGhost(p){ if (BF_DND.ghost){ BF_DND.ghost.style.left = p.x+'px'; BF_DND.ghost.style.top = p.y+'px'; } }
+  function getPoint(e){ const t=(e.touches&&e.touches[0])||e; return {x:t.clientX,y:t.clientY}; }
+  function dist(x1,y1,x2,y2){ const dx=x2-x1, dy=y2-y1; return Math.hypot(dx,dy); }
+  function dropIndexFromPoint(x,y){
+    let best=-1, bestScore=0;
+    for (const el of BF_DND.dropZones){
+      const r=el.getBoundingClientRect(), idx=Number(el.dataset.idx||-1);
+      const inside=(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom);
+      if (inside) return idx;
+      const cx=(r.left+r.right)/2, cy=(r.top+r.bottom)/2;
+      const score=1/Math.max(1,Math.hypot(cx-x,cy-y));
+      if (score>bestScore){ bestScore=score; best=idx; }
     }
-  });
-})();
+    return best;
+  }
+  function highlightDrop(idx){
+    BF_DND.dropZones.forEach(el=>{
+      el.classList.toggle('drop-target', Number(el.dataset.idx)===Number(idx));
+    });
+  }
+  function setAutoscroll(dir){
+    if (dir === BF_DND.autoscrollDir) return;
+    BF_DND.autoscrollDir = dir;
+    if (BF_DND.autoscrollRAF) { cancelAnimationFrame(BF_DND.autoscrollRAF); BF_DND.autoscrollRAF = 0; }
+    if (!dir) return;
+    const speed = 16;
+    const step = ()=>{
+      if (!BF_DND.active || !BF_DND.autoscrollDir) { BF_DND.autoscrollRAF = 0; return; }
+      window.scrollBy(0, BF_DND.autoscrollDir * speed);
+      BF_DND.autoscrollRAF = requestAnimationFrame(step);
+    };
+    BF_DND.autoscrollRAF = requestAnimationFrame(step);
+  }
+  function updateEdgeScroll(y){
+    const edge = 80;
+    if (y < edge) setAutoscroll(-1);
+    else if (y > (window.innerHeight - edge)) setAutoscroll(1);
+    else setAutoscroll(0);
+  }
 
-/* ------- Admin Modal ------- */
-const adminModal = document.getElementById('adminModal');
-document.getElementById('adminClose').onclick = ()=> hide(adminModal);
-document.getElementById('adminDone').onclick  = ()=> hide(adminModal);
+  /* Manage modal */
+  const manageModal=$('#menuModal');
+  const closeManage=()=>{manageModal.style.display='none';manageModal.setAttribute('aria-hidden','true');};
+  const openManage =()=>{buildMenuList();manageModal.style.display='flex';manageModal.setAttribute('aria-hidden','false');};
+  $('#menuClose').onclick=closeManage; $('#menuDone').onclick=closeManage;
 
-function populateAdminKidSelect(){
-  const sel = document.getElementById('adminKid'); sel.innerHTML='';
-  const list = kids();
-  list.forEach(k=>{
-    const o=document.createElement('option'); o.value=k.id; o.textContent=k.name; sel.appendChild(o);
-  });
-  if(activeKidId){ sel.value = activeKidId; }
-  if(!sel.value && list[0]) sel.value=list[0].id;
-}
-function openAdmin(){ populateAdminKidSelect(); show(adminModal); }
+  function buildMenuList(){
+    const list=$('#menuList'); list.innerHTML='';
+    const menu=load(LS.menu,[]); const MAX=8;
 
-document.getElementById('adminApply').onclick = ()=>{
-  const kidId = document.getElementById('adminKid').value;
-  if(!kidId){ alert('Choose a child.'); return; }
-  const delta = parseInt((document.getElementById('adminDelta').value||'0'), 10);
-  if(!delta) return;
-  applyDelta(kidId, delta, (document.getElementById('adminReason').value||'').trim(), 'admin');
-  document.getElementById('adminReason').value='';
-};
+    menu.forEach((m,idx)=>{
+      const row=document.createElement('div'); row.className='item';
+      row.innerHTML=`
+        <input data-emo type="text" value="${m.emoji||''}" placeholder="🍳" style="width:100px;text-align:center"/>
+        <input data-label type="text" value="${m.label||''}" placeholder="Item name (e.g., Waffles)"/>
+        <div style="display:flex;gap:8px">
+          <button class="btn" data-save>Save</button>
+          <button class="btn" data-del>Remove</button>
+        </div>`;
+      row.querySelector('[data-save]').onclick=()=>{
+        menu[idx]={ emoji: row.querySelector('[data-emo]').value||'🍳',
+                    label: row.querySelector('[data-label]').value||'Item' };
+        save(LS.menu,menu); renderChoices();
+      };
+      row.querySelector('[data-del]').onclick=()=>{
+        menu.splice(idx,1); save(LS.menu,menu); buildMenuList(); renderChoices();
+      };
+      list.appendChild(row);
+    });
 
-$$('[data-admin-quick]').forEach(b=>{
-  b.onclick=()=>{
-    const kidId = document.getElementById('adminKid').value;
-    if(!kidId){ alert('Choose a child.'); return; }
-    const v=parseInt(b.dataset.adminQuick,10);
-    applyDelta(kidId, v, v>0? 'Quick award':'Quick adjustment', 'admin');
-  };
-});
+    const add=document.createElement('div'); add.className='item';
+    add.innerHTML=`<div style="opacity:.8">Add another choice</div><div></div><button class="btn" id="addChoice" ${menu.length>=MAX?'disabled':''}>Add</button>`;
+    add.querySelector('#addChoice').onclick=()=>{
+      if(menu.length>=MAX) return;
+      menu.push({emoji:'🍳',label:'New choice'});
+      save(LS.menu,menu); buildMenuList(); renderChoices();
+    };
+    list.appendChild(add);
+  }
 
-/* ------- Boot ------- */
-(function init(){
-  const all=allTimeBalances(); const mb = monthBalances();
-  kids().forEach(k=>{
-    if(typeof all[k.id]!=='number') all[k.id]=0;
-    if(typeof mb[k.id]!=='number')  mb[k.id]=0;
-  });
-  setAllTimeBalances(all); setMonthBalances(mb);
-  renderLeaderboard(); renderDetail();
-})();
+  /* Header menu (shared classes) */
+  (function menu(){
+    const btn = document.getElementById('btnMenu');
+    const dd  = document.getElementById('menuDD');
+    const open = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
+    const close= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
 
-/* Service Worker */
-if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+    btn?.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?close():open(); });
+    document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) close(); });
+
+    dd?.addEventListener('click', async (e)=>{
+      const el = e.target.closest('.mi'); if (!el) return;
+      const action = el.dataset.action;
+      const iso = todayISO(); close();
+
+      if (action === 'reset') {
+        if(confirm('Clear choices for this date?')){ localStorage.removeItem(LS.day(iso)); renderChoices(); }
+      } else if (action === 'random') {
+        const kids=(Family.getKids&&Family.getKids())||[]; if(!kids.length) return;
+        const menu=load(LS.menu,[]); const map={}; kids.forEach(k=>{ map[k.id]=Math.floor(Math.random()*menu.length); });
+        save(LS.day(iso),map); renderChoices();
+      } else if (action === 'share') { shareText(buildSummary()); }
+      else if (action === 'manage') { openManage(); }
+    });
+  })();
+
+  (function initDate(){
+    const d=new Date();
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+    $('#theDate').value=`${y}-${m}-${dd}`;
+    $('#theDate').onchange=()=>renderChoices();
+  })();
+
+  seedMenu();
+  renderKids();
+  renderChoices();
+
+  if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
   </script>
 </body>
 </html>
