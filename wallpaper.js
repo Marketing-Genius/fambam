@@ -16,7 +16,25 @@
     if (img && !cfg.image) cfg.image = img;
     return cfg;
   }
-
+// ---- One-time migration from legacy key ----
+try {
+  const NEW_KEY = 'ui:wallpaper';
+  const LEGACY_KEY = 'hub:wallpaper:dataurl';
+  const hasNew = !!localStorage.getItem(NEW_KEY);
+  const legacy = localStorage.getItem(LEGACY_KEY);
+  if (!hasNew && legacy) {
+    // Seed the new config from the old data URL
+    const cfg = {
+      image: legacy,
+      overlay: { type: 'solid', color: 'rgba(64,76,105,1)', opacity: 0.90 },
+      shift: '40%'
+    };
+    localStorage.setItem(NEW_KEY, JSON.stringify(cfg));
+    // Optional: keep or clear the legacy key
+    // localStorage.removeItem(LEGACY_KEY);
+  }
+} catch {}
+  
   function apply(cfg){
     cfg = cfg || {};
     // image
