@@ -40,7 +40,7 @@ try {
     // image
     droot.style.setProperty('--wallpaper-image', cfg.image ? `url('${cfg.image}')` : `url('')`);
     // vertical shift
-    if (cfg.shift) droot.style.setProperty('--wallpaper-shift', cfg.shift);
+    if (cfg.shift) droot.style.setProperty('--wallpaper-shift', cfg.shift || '40%');
 
     // overlay
     const ov = cfg.overlay || {};
@@ -70,8 +70,11 @@ try {
 
     // image is stored under KEY_IMG for legacy pages
     if ('image' in patch){
-      try { localStorage.setItem(KEY_IMG, patch.image || ''); } catch {}
-    }
+    try {
+      if (patch.image) localStorage.setItem(KEY_IMG, patch.image);
+      else localStorage.removeItem(KEY_IMG);  // <-- clear if empty
+    } catch {}
+  }
 
     // never persist "image" inside KEY_CFG
     const { image, ...persist } = next;
