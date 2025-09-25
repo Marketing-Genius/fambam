@@ -11,171 +11,166 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
+<!-- Shared wallpaper + app styles -->
 <link rel="stylesheet" href="wallpaper.css">
+<link rel="stylesheet" href="fambam.css">
 <script src="wallpaper.js" defer></script>
 
+<!-- Theme boot (same pattern as other pages) -->
 <script>
-/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap) */
 (function () {
-  var DARK_SRC='fambam.png', LIGHT_SRC='fambam2.png';
-  function findLogo(){
-    return document.getElementById('logoImg')
-        || document.querySelector('.brand img')
-        || document.querySelector('img[alt="Fambam"]')
-        || null;
-  }
-  function applyTheme(t){
-    var mode=(t&&t.mode==='light')?'light':'dark';
-    var accent=(t&&t.accent)||'#22d3ee';
+  try{
+    const raw  = localStorage.getItem('ui:theme');
+    const saved= raw ? JSON.parse(raw) : {mode:'dark',accent:'#22d3ee'};
+    const mode = (saved.mode==='light') ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', mode);
-    document.documentElement.style.setProperty('--accent', accent);
-    var meta=document.querySelector('meta[name="theme-color"]');
-    if(meta) meta.setAttribute('content', mode==='light'?'#f2efe7':'#0f172a');
-    var logo=findLogo();
-    if(logo){
-      var url=new URL(logo.src, location.href);
-      var base=url.pathname.replace(/[^/]+$/,'');
-      logo.src = (mode==='light') ? (base+LIGHT_SRC) : (base+DARK_SRC);
-      var a=logo.closest('a'); if(a && !a.getAttribute('href')) a.setAttribute('href','./index.html');
-    }
-  }
-  try{ applyTheme(JSON.parse(localStorage.getItem('ui:theme')||'{}')); }
-  catch{ applyTheme({mode:'dark',accent:'#22d3ee'}); }
-  addEventListener('storage', e=>{ if(e.key==='ui:theme') try{applyTheme(JSON.parse(e.newValue||'{}'))}catch{}; });
+    document.documentElement.style.setProperty('--accent', saved.accent || '#22d3ee');
+
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', mode==='light' ? '#f2efe7' : '#0f172a');
+
+    const swapLogo = ()=>{
+      const logo = document.querySelector('.brand img');
+      if (logo) logo.src = (mode==='light') ? 'fambam2.png' : 'fambam.png';
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', swapLogo, {once:true});
+    } else { swapLogo(); }
+
+    addEventListener('storage', (e)=>{
+      if(e.key!=='ui:theme') return;
+      try{
+        const t = JSON.parse(e.newValue||'{}');
+        const m = (t.mode==='light') ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', m);
+        document.documentElement.style.setProperty('--accent', t.accent || '#22d3ee');
+        if (meta) meta.setAttribute('content', m==='light' ? '#f2efe7' : '#0f172a');
+        const logo = document.querySelector('.brand img');
+        if (logo) logo.src = (m==='light') ? 'fambam2.png' : 'fambam.png';
+      }catch(_){}
+    });
+  }catch(_){}
 })();
 </script>
 
 <style>
-*, *::before, *::after { box-sizing: border-box; }
+/* ---------- Points page (scoped to .page-points) ---------- */
+.page-points :root { --leader-accent: transparent; }
 
-/* Tokens */
-:root{
-  --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
-  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
-
-  --panelBorder:#0b1224;
-  --chipBg:#0b1224;
-  --chipBorder:#334155;
-
-  --dropdownBg:#111827;
-  --dropdownBorder:#1f2937;
-
-  /* Wallpaper hooks */
-  --wallpaper:url('');
-  --wallpaper-shift:40%;
-
-  /* Leader accent (set at runtime) */
-  --leader-accent: transparent;
-}
-/* LIGHT THEME */
-html[data-theme="light"]{
-  --panel:#f2efe7; --card:#ffffff; --muted:#556070; --text:#0f1623; --bg:#f0ece4; --shadow:0 10px 28px rgba(0,0,0,.08);
-  --panelBorder:#e6e2da; --chipBg:#f6f3ec; --chipBorder:#e3ded4;
-  --dropdownBg:#ffffff; --dropdownBorder:#ebe7df;
+/* App grid */
+.page-points .app{
+  max-width:1100px; margin:0 auto; padding:20px;
+  display:grid; gap:18px; grid-template-rows:auto auto 1fr auto;
 }
 
-html,body{height:100%}
-body{
-  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  color:var(--text); background:#404c69; -webkit-tap-highlight-color:transparent; touch-action:manipulation; overflow-x:hidden;
+/* Leader accent ring (page-wide when we know the leader) */
+.page-points #appRoot.leader-on .panel{
+  box-shadow: 0 0 0 2px var(--leader-accent), var(--shadow);
 }
-/* Wallpaper layers */
-body::before{
-  content:""; position:fixed; inset:0; z-index:-2;
-  background-image: var(--wallpaper);
-  background-size: cover; background-repeat:no-repeat;
-  background-position: center var(--wallpaper-shift);
+
+/* Two-column layout */
+.page-points .grid{ display:grid; gap:14px; grid-template-columns:360px 1fr; }
+@media (max-width:960px){ .page-points .grid{ grid-template-columns:1fr; } }
+
+.page-points .section-title{ font-weight:800; margin-bottom:8px; }
+
+/* Leaderboard list */
+.page-points .lb-list{ display:grid; gap:10px; }
+.page-points .lb-item{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:var(--card); border:1px solid var(--panelBorder);
+  border-radius:12px; padding:10px; cursor:pointer;
 }
-body::after{ content:""; position:fixed; inset:0; z-index:-1; background: rgba(64,76,105,.9); pointer-events:none; }
+.page-points .lb-item.active{ outline:2px solid var(--accent); }
+.page-points .lb-item.leader{
+  border-color: var(--leader-accent);
+  box-shadow: 0 0 0 2px var(--leader-accent);
+}
+.page-points .face{
+  width:42px; height:42px; border-radius:50%;
+  background:var(--chipBg); border:2px solid var(--chipBorder);
+  overflow:hidden; display:grid; place-items:center; font-weight:800;
+}
+.page-points .face img{ width:100%; height:100%; object-fit:cover; }
+.page-points .score{ font-weight:800; }
+.page-points .small{ font-size:.9rem; color:var(--muted); }
+.page-points .levelchip{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--chipBg); border:1px solid var(--chipBorder);
+  border-radius:999px; padding:4px 8px; font-size:.85rem; color:var(--text);
+}
 
-/* App + leader glow */
-.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto auto 1fr auto}
-.panel{background:var(--panel);border:1px solid var(--panelBorder);box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
-.leader-on .panel{ box-shadow: 0 0 0 2px var(--leader-accent), var(--shadow); }
+/* Right-side detail */
+.page-points .detail{ display:grid; gap:12px; }
+.page-points .badge{
+  display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
+  border-radius:999px; background:var(--chipBg); border:1px solid var(--chipBorder);
+  color:var(--muted);
+}
+.page-points .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
-/* Header */
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.h-left{display:flex;align-items:center;gap:14px;min-width:0}
-.brand{display:flex;align-items:center;gap:10px}
-.brand img{height:38px;display:block;cursor:pointer}
-.title{font-weight:800}
-.title .small{font-weight:600;font-size:.9rem;color:var(--muted)}
-.menu-wrap{position:relative}
-.hamburger{font:inherit;cursor:pointer;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;color:var(--text);padding:10px 12px}
-.menu-dropdown{position:absolute; right:0; top:110%; min-width:240px; z-index:20; background:var(--dropdownBg); border:1px solid var(--dropdownBorder); border-radius:12px; box-shadow:var(--shadow); padding:6px; display:none;}
-.menu-dropdown.open{display:block}
-.menu-item{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
-.menu-item:hover{background:var(--chipBg)}
+/* Ledger & Pending */
+.page-points .ledger{ display:grid; gap:8px; max-height:320px; overflow:auto; padding-right:4px; -webkit-overflow-scrolling:touch; }
+.page-points .entry{
+  display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
+  background:var(--card); border:1px solid var(--panelBorder);
+  border-radius:10px; padding:8px;
+}
+.page-points .entry .muted{ color:var(--muted); font-size:.9rem; }
+.page-points .positive{ color:#16a34a; } .page-points .negative{ color:#dc2626; }
 
-/* Layout */
-.grid{display:grid;gap:14px;grid-template-columns:360px 1fr}
-@media(max-width:960px){.grid{grid-template-columns:1fr}}
-.section-title{font-weight:800;margin-bottom:8px}
+.page-points .pending{ display:grid; gap:10px; }
+.page-points .pending-item{
+  display:grid; gap:8px; background:var(--card);
+  border:1px solid var(--panelBorder); border-radius:12px; padding:10px;
+}
 
-/* Leaderboard */
-.lb-list{display:grid;gap:10px}
-.lb-item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px;cursor:pointer;position:relative}
-.lb-item.active{outline:2px solid var(--accent)}
-.lb-item.leader{ border-color: var(--leader-accent); box-shadow: 0 0 0 2px var(--leader-accent); }
-.lb-item.leader .face{ border-color: var(--leader-accent); }
-.person{display:flex;align-items:center;gap:10px}
-.face{width:42px;height:42px;border-radius:50%;background:var(--chipBg);border:2px solid var(--chipBorder);overflow:hidden;display:grid;place-items:center;font-weight:800}
-.face img{width:100%;height:100%;object-fit:cover}
-.score{font-weight:800}
-.small{font-size:.9rem;color:var(--muted)}
-.levelchip{display:inline-flex;align-items:center;gap:6px;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;padding:4px 8px;font-size:.85rem;color:var(--text)}
+/* Admin modal (re-use shared button/input tokens) */
+.page-points .modal-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.55);
+  display:none; align-items:center; justify-content:center; z-index:10000; padding:20px;
+}
+.page-points .modal{
+  width:min(720px,100%); max-height:90vh; display:flex; flex-direction:column;
+  background:var(--panel); border:1px solid var(--panelBorder);
+  border-radius:16px; box-shadow:var(--shadow);
+}
+.page-points .modal header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 14px; border-bottom:1px solid var(--panelBorder); position:sticky; top:0; background:inherit;
+}
+.page-points .modal .body{ padding:12px 14px; display:grid; gap:12px; overflow:auto; max-height:70vh; }
+.page-points .modal .footer{ padding:12px 14px; border-top:1px solid var(--panelBorder); display:flex; justify-content:space-between; gap:10px; }
+.page-points input[type="number"], .page-points input[type="text"], .page-points select, .page-points textarea{
+  background:var(--chipBg); border:1px solid var(--chipBorder); border-radius:12px; padding:10px 12px; color:var(--text); font:inherit;
+}
 
-/* Detail (view-only) */
-.detail{display:grid;gap:12px}
-.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chipBg);border:1px solid var(--chipBorder);color:var(--muted)}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-
-/* Ledger */
-.ledger{display:grid;gap:8px;max-height:320px;overflow:auto;padding-right:4px;-webkit-overflow-scrolling:touch}
-.entry{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--card);border:1px solid var(--panelBorder);border-radius:10px;padding:8px}
-.entry .muted{color:var(--muted);font-size:.9rem}
-.positive{color:#16a34a}
-.negative{color:#dc2626}
-
-/* Pending approvals */
-.pending{display:grid;gap:10px}
-.pending-item{display:grid;gap:8px;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px}
-
-/* Modal (Admin Settings) */
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
-.modal{width:min(720px,100%);max-height:90vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--dropdownBorder);border-radius:16px;box-shadow:var(--shadow)}
-.modal header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--dropdownBorder);position:sticky;top:0;background:inherit}
-.modal .body{padding:12px 14px;display:grid;gap:12px;overflow:auto;max-height:70vh}
-.modal .footer{padding:12px 14px;border-top:1px solid var(--dropdownBorder);display:flex;justify-content:space-between;gap:10px}
-input[type="number"],input[type="text"],select,textarea{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit}
-.btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit;cursor:pointer}
-.btn-primary{background:linear-gradient(180deg,var(--accent),color-mix(in oklab, var(--accent) 70%, #0891b2 30%));color:#001018;border:none;font-weight:800}
-.btn-warn{background:#3f1620;border:1px solid #7f1d1d;color:#fecaca}
-
-.hint{opacity:.8;font-size:.9rem;text-align:center}
-.version{opacity:.6;font-size:.8rem;margin-top:6px}
+/* Keep header (and dropdown) above panels just in case */
+.page-points header.panel{ position:relative; z-index:1000; }
+.page-points .menu-wrap{ position:relative; z-index:1001; }
+.page-points .menu-dd{ z-index:1002; }
 </style>
 </head>
-<body>
+
+<body class="page-points">
   <div class="app" id="appRoot">
-    <header class="panel">
-      <div class="h-left">
-        <a href="./index.html" class="brand" title="Home">
-          <img id="logoImg" src="fambam.png" alt="Fambam">
-        </a>
-        <div class="title">
-          <div style="font-size:1.6rem">Points</div>
-          <div class="small">Monthly levels (every 50 pts), seasonal leaderboard, and history.</div>
-        </div>
+    <!-- Shared header -->
+    <header class="panel header">
+      <a href="./index.html" class="brand" title="Home">
+        <img src="fambam.png" alt="Fambam">
+      </a>
+      <div class="title">
+        <div class="big">Points</div>
+        <div class="small">Monthly levels (every 50 pts), seasonal leaderboard, and history.</div>
       </div>
       <div class="menu-wrap">
-        <button id="btnHamburger" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown">☰</button>
-        <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
-          <button class="menu-item" data-action="admin">Admin Settings</button>
-          <button class="menu-item" data-action="scan">Scan Week & Propose Awards</button>
-          <button class="menu-item" data-action="clearPending">Clear All Pending</button>
-          <button class="menu-item" data-action="resetBalances">Reset All Balances</button>
-          <button class="menu-item" data-action="about">About</button>
+        <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false">☰</button>
+        <div id="menuDD" class="menu-dd" role="menu" aria-hidden="true">
+          <button class="mi" data-action="admin">Admin Settings</button>
+          <button class="mi" data-action="scan">Scan Week &amp; Propose Awards</button>
+          <button class="mi" data-action="clearPending">Clear All Pending</button>
+          <button class="mi" data-action="resetBalances">Reset All Balances</button>
+          <button class="mi" data-action="about">About</button>
         </div>
       </div>
     </header>
@@ -187,7 +182,7 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
         <div id="lb" class="lb-list"></div>
       </div>
 
-      <!-- Right: detail (kid-friendly: view only) -->
+      <!-- Right: detail -->
       <div class="panel detail">
         <div class="row" style="justify-content:space-between">
           <div class="section-title" id="kidTitle">Select a child</div>
@@ -206,7 +201,7 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
       </div>
     </section>
 
-    <div class="hint">
+    <div class="small" style="text-align:center;opacity:.75">
       Works offline. Data stays on this device (local only).
       <div class="version">Points v0.4.0 — leader highlight + encouragement</div>
     </div>
@@ -242,7 +237,7 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
     </div>
   </div>
 
-  <!-- Family store -->
+  <!-- Family store (unchanged) -->
   <script src="family.js?v=3.3.6"></script>
   <script>
   if(!window.Family){
@@ -254,6 +249,7 @@ input[type="number"],input[type="text"],select,textarea{background:var(--chipBg)
   }
   </script>
 
+  <!-- Page logic (unchanged except menu class names) -->
   <script>
 /* ------- Config ------- */
 const POINTS_PER_DOT = 20;
@@ -261,10 +257,10 @@ const WEEK_CAP       = 100;
 const LEVEL_STRIDE   = 50;
 
 /* ------- Storage keys ------- */
-const PTS_BAL='pts:balances';                         // ALL-TIME
-const PTS_LED='pts:ledger';                           // ALL-TIME ledger
+const PTS_BAL='pts:balances';
+const PTS_LED='pts:ledger';
 const PTS_PEN='pts:pending';
-const PTS_MBAL = (m)=>`pts:balances:${m}`;            // MONTHLY
+const PTS_MBAL = (m)=>`pts:balances:${m}`;
 
 /* Chores keys */
 const CH_WEEK =(m)=>`ch:assign:${m}`;
@@ -278,11 +274,8 @@ const uid=()=>Math.random().toString(36).slice(2,10);
 const initials=n=>((n||'?').trim()[0]||'?').toUpperCase();
 const firstSymbol = s => (s||'').trim() ? [...(s+'')][0] : '';
 
-/* Profile mini-store (to read accent + favorite animal) */
-const Prof = {
-  key:id=>`prof:${id}`,
-  load(id){ try{return JSON.parse(localStorage.getItem(this.key(id)))||{}}catch{return{}} }
-};
+/* Profile mini-store */
+const Prof = { key:id=>`prof:${id}`, load(id){ try{return JSON.parse(localStorage.getItem(this.key(id)))||{}}catch{return{}} } };
 
 /* Month helpers */
 function monthId(d=new Date()){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
@@ -334,7 +327,7 @@ function renderLeaderboard(){
   const lb=$('#lb'); lb.innerHTML='';
 
   const rows = ranksForMonth(CURRENT_MONTH);
-  const leader = rows[0]; // first in sorted list (ties still OK)
+  const leader = rows[0];
   const leaderId = leader?.kid?.id;
   const leaderProf = leaderId ? Prof.load(leaderId) : {};
   const leaderAccent = leaderProf.accent || getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#22d3ee';
@@ -353,9 +346,8 @@ function renderLeaderboard(){
   rows.forEach(({kid,score,rank}, idx)=>{
     const row=document.createElement('div');
     const lvl=levelFor(score);
-    const isLeader = idx===0; // visual leader slot
+    const isLeader = idx===0;
 
-    // Encourage non-leaders
     let encouragement = '';
     if (!isLeader && leader) {
       const diff = Math.max(0, (leader.score||0) - score);
@@ -365,7 +357,7 @@ function renderLeaderboard(){
     row.className='lb-item' + (isLeader?' leader':'');
     row.dataset.id=kid.id;
     row.innerHTML=`
-      <div class="person">
+      <div class="person" style="display:flex;align-items:center;gap:10px">
         <div class="face" style="${isLeader?`border-color:${leaderAccent}`:''}">${kid.photo?`<img src="${kid.photo}" alt="">`:`<span>${initials(kid.name)}</span>`}</div>
         <div style="display:flex;flex-direction:column">
           <div style="font-weight:700">${rankIcon(rank)} ${isLeader?'👑 ':''}${kid.name}${isLeader && leaderAnimal?` ${leaderAnimal}`:''}</div>
@@ -429,7 +421,7 @@ function renderPending(){
       <div class="small">${p.reason || 'Weekly award from Chores'}${p.calc?` — ${p.calc}`:''}</div>
       <div class="row">
         <button class="btn-primary" data-approve>Approve</button>
-        <button class="btn-warn" data-reject>Reject</button>
+        <button class="btn btn-warn" data-reject>Reject</button>
       </div>
     `;
     el.querySelector('[data-approve]').onclick=()=>approvePending(p.id);
@@ -442,13 +434,9 @@ function renderPending(){
 function applyDelta(kidId, delta, reason, source='admin'){
   delta = Number(delta)||0; if(!delta) return;
 
-  // 1) ALL-TIME
   const all=allTimeBalances(); all[kidId]=(all[kidId]||0)+delta; setAllTimeBalances(all);
+  const mb=monthBalances();    mb[kidId]=(mb[kidId]||0)+delta; setMonthBalances(mb);
 
-  // 2) MONTHLY
-  const mb=monthBalances(); mb[kidId]=(mb[kidId]||0)+delta; setMonthBalances(mb);
-
-  // Ledger
   const a=ledger(); a.push({id:uid(), kidId, delta, reason:reason||'', ts:Date.now(), source}); setLedger(a);
 
   renderLeaderboard(); renderDetail();
@@ -504,23 +492,22 @@ function scanWeekAndPropose(){
   alert(`Proposed ${newPendings.length} award${newPendings.length>1?'s':''} for week ${weekLabel(mISO)}.`);
 }
 
-/* ------- Hamburger / Modals ------- */
+/* ------- Hamburger / Modals (use shared menu classes) ------- */
 function show(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
 function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
 
-(function hamburger(){
-  const btn = $('#btnHamburger');
-  const dd  = $('#menuDropdown');
-  const open = ()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
-  const close= ()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
+(function menu(){
+  const btn = document.getElementById('btnMenu');
+  const dd  = document.getElementById('menuDD');
+  const open=()=>{ dd.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.setAttribute('aria-hidden','false'); };
+  const close=()=>{ dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); };
 
   btn.addEventListener('click', (e)=>{ e.stopPropagation(); dd.classList.contains('open')?close():open(); });
-  document.addEventListener('click', (e)=>{ if (!dd.contains(e.target) && e.target!==btn) close(); });
+  document.addEventListener('click', (e)=>{ if(!dd.contains(e.target) && e.target!==btn) close(); });
 
   dd.addEventListener('click', (e)=>{
-    const a = e.target.closest('.menu-item'); if(!a) return;
-    close();
-    const act = a.dataset.action;
+    const a=e.target.closest('.mi'); if(!a) return; close();
+    const act=a.dataset.action;
     if (act==='admin'){ openAdmin(); }
     else if (act==='scan'){ scanWeekAndPropose(); }
     else if (act==='clearPending'){ if(confirm('Clear ALL pending awards?')){ setPendings([]); renderPending(); } }
@@ -537,35 +524,33 @@ function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); 
 })();
 
 /* ------- Admin Modal ------- */
-const adminModal = $('#adminModal');
-$('#adminClose').onclick = ()=> hide(adminModal);
-$('#adminDone').onclick  = ()=> hide(adminModal);
+const adminModal = document.getElementById('adminModal');
+document.getElementById('adminClose').onclick = ()=> hide(adminModal);
+document.getElementById('adminDone').onclick  = ()=> hide(adminModal);
 
 function populateAdminKidSelect(){
-  const sel = $('#adminKid'); sel.innerHTML='';
+  const sel = document.getElementById('adminKid'); sel.innerHTML='';
   const list = kids();
   list.forEach(k=>{
-    const o=document.createElement('option');
-    o.value=k.id; o.textContent=k.name;
-    sel.appendChild(o);
+    const o=document.createElement('option'); o.value=k.id; o.textContent=k.name; sel.appendChild(o);
   });
   if(activeKidId){ sel.value = activeKidId; }
   if(!sel.value && list[0]) sel.value=list[0].id;
 }
 function openAdmin(){ populateAdminKidSelect(); show(adminModal); }
 
-$('#adminApply').onclick = ()=>{
-  const kidId = $('#adminKid').value;
+document.getElementById('adminApply').onclick = ()=>{
+  const kidId = document.getElementById('adminKid').value;
   if(!kidId){ alert('Choose a child.'); return; }
-  const delta = parseInt(($('#adminDelta').value||'0'), 10);
+  const delta = parseInt((document.getElementById('adminDelta').value||'0'), 10);
   if(!delta) return;
-  applyDelta(kidId, delta, ($('#adminReason').value||'').trim(), 'admin');
-  $('#adminReason').value='';
+  applyDelta(kidId, delta, (document.getElementById('adminReason').value||'').trim(), 'admin');
+  document.getElementById('adminReason').value='';
 };
 
 $$('[data-admin-quick]').forEach(b=>{
   b.onclick=()=>{
-    const kidId = $('#adminKid').value;
+    const kidId = document.getElementById('adminKid').value;
     if(!kidId){ alert('Choose a child.'); return; }
     const v=parseInt(b.dataset.adminQuick,10);
     applyDelta(kidId, v, v>0? 'Quick award':'Quick adjustment', 'admin');
@@ -574,18 +559,13 @@ $$('[data-admin-quick]').forEach(b=>{
 
 /* ------- Boot ------- */
 (function init(){
-  // Ensure every kid has ALL-TIME and MONTH entries
-  const all=allTimeBalances();
-  const mb = monthBalances();
+  const all=allTimeBalances(); const mb = monthBalances();
   kids().forEach(k=>{
     if(typeof all[k.id]!=='number') all[k.id]=0;
     if(typeof mb[k.id]!=='number')  mb[k.id]=0;
   });
-  setAllTimeBalances(all);
-  setMonthBalances(mb);
-
-  renderLeaderboard();
-  renderDetail();
+  setAllTimeBalances(all); setMonthBalances(mb);
+  renderLeaderboard(); renderDetail();
 })();
 
 /* Service Worker */
