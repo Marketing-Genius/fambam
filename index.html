@@ -748,7 +748,15 @@ document.querySelector('.menu-wrap')?.addEventListener('menu:select', (e) => {
   if (action === 'pages') openPages();
   else if (action === 'edithome') toggleEdit(true);
   else if (action === 'admin') {
-  const pinIsRequired = (Family.isPinRequired?.() !== false); // default true
+  const pinIsRequired = (() => {
+    if (Family.isPinRequired) return !!Family.isPinRequired();
+    // fallback: read raw localStorage (default = true)
+    try {
+      const raw = localStorage.getItem('hub:family:pinRequired');
+      return raw === null ? true : !!JSON.parse(raw);
+    } catch { return true; }
+  })();
+
   const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
   if (pinIsRequired && hasPin) requestPinUI(openAdmin);
   else openAdmin();
@@ -805,7 +813,12 @@ function requestPinUI(onSuccess){
 window.addEventListener('load', ()=>{
   if (location.hash === '#admin') {
     const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
-    const requirePin = Family?.isPinRequired ? Family.isPinRequired() : true;
+    const requirePin = Family?.isPinRequired ? !!Family.isPinRequired() : (()=>{
+      try {
+        const raw = localStorage.getItem('hub:family:pinRequired');
+        return raw === null ? true : !!JSON.parse(raw);
+      } catch { return true; }
+    })();
     if (hasPin && requirePin) requestPinUI(openAdmin); else openAdmin();
   }
 });
@@ -849,6 +862,39 @@ function buildParents(){
     if (pin && !/^\d{1,8}$/.test(pin)) { alert('PIN must be 1–8 digits.'); return; }
     Family.setPin(pin); alert(pin ? 'PIN saved.' : 'PIN cleared.');
   };
+
+// === Require Admin PIN toggle wiring ===
+const pinInput   = document.getElementById('pinInput');
+const savePinBtn = document.getElementById('savePin');
+const pinReqEl   = document.getElementById('pinRequired');
+
+function getPinRequired(){
+  if (Family.isPinRequired) return !!Family.isPinRequired();
+  try {
+    const raw = localStorage.getItem('hub:family:pinRequired');
+    return raw === null ? true : !!JSON.parse(raw);
+  } catch { return true; }
+}
+function setPinRequired(on){
+  if (Family.setPinRequired) return Family.setPinRequired(!!on);
+  localStorage.setItem('hub:family:pinRequired', JSON.stringify(!!on));
+}
+
+pinReqEl.checked = getPinRequired();
+
+function syncPinRowUI(){
+  const on = pinReqEl.checked;
+  pinInput.disabled = !on;
+  savePinBtn.disabled = !on;
+  pinInput.placeholder = on ? 'Set Admin PIN (optional)' : 'PIN disabled';
+}
+syncPinRowUI();
+
+pinReqEl.onchange = ()=>{
+  setPinRequired(pinReqEl.checked);
+  syncPinRowUI();
+};
+  
   list.querySelectorAll('.item').forEach(row=>{
     const id = row.dataset.id;
     row.querySelector('input').oninput = (e)=> Family.upsertParent({ id, name:e.target.value });
