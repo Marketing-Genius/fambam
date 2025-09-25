@@ -11,8 +11,9 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
-<!-- Universal wallpaper -->
+<!-- Shared wallpaper + app styles -->
 <link rel="stylesheet" href="wallpaper.css">
+<link rel="stylesheet" href="fambam.css">
 <script src="wallpaper.js" defer></script>
 
 <!-- THEME BOOT (mode + accent + auto logo swap) -->
@@ -47,114 +48,73 @@
 </script>
 
 <style>
-*, *::before, *::after { box-sizing: border-box; }
-
-/* Tokens */
-:root{
-  --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
-  --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
-  --ring:#334155; --ring-soft:#1f2937;
-
-  --wallpaper:url(''); --wallpaper-shift:40%;
+/* ---------- Store page (scoped) ---------- */
+.page-store .app{
+  max-width:1100px; margin:0 auto; padding:20px;
+  display:grid; gap:16px; grid-template-rows:auto auto 1fr auto;
 }
-html[data-theme="light"]{
-  --panel:#f2efe7; --card:#ffffff; --muted:#556070; --text:#0f1623;
-  --shadow:0 10px 28px rgba(0,0,0,.08);
-  --ring:#e3ded4; --ring-soft:#ebe6db;
-}
-
-html,body{height:100%}
-body{
-  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  color:var(--text); background:#404c69; -webkit-tap-highlight-color:transparent; touch-action:manipulation; overflow-x:hidden;
-}
-/* Wallpaper layers */
-body::before{
-  content:""; position:fixed; inset:0; z-index:-2;
-  background-image: var(--wallpaper); background-size:cover; background-repeat:no-repeat; background-position:center var(--wallpaper-shift);
-}
-body::after{ content:""; position:fixed; inset:0; z-index:-1; background:rgba(64,76,105,.9); pointer-events:none; }
-
-/* Shell */
-.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:16px;grid-template-rows:auto auto 1fr auto}
-.panel{background:var(--panel);border:1px solid var(--ring);box-shadow:var(--shadow);border-radius:var(--radius);padding:14px}
-
-/* Header */
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.h-left{display:flex;align-items:center;gap:14px;min-width:0}
-.brand{display:flex;align-items:center;gap:10px}
-.brand img{height:38px;display:block;cursor:pointer}
-.title{font-weight:800}
-.title .small{font-weight:600;font-size:.9rem;color:var(--muted)}
-.menu-wrap{position:relative}
-.hamburger{font:inherit;cursor:pointer;background:var(--card);border:1px solid var(--ring);border-radius:12px;color:var(--text);padding:10px 12px}
-.menu-dropdown{position:absolute;right:0;top:110%;min-width:240px;z-index:50;background:var(--panel);border:1px solid var(--ring);border-radius:12px;box-shadow:var(--shadow);padding:6px;display:none}
-.menu-dropdown.open{display:block}
-.menu-item{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
-.menu-item:hover{background:var(--card)}
 
 /* Top bar */
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.kidpick{display:flex;align-items:center;gap:10px}
-.select{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:8px 10px;color:var(--text);font:inherit}
+.page-store .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.page-store .kidpick{display:flex;align-items:center;gap:10px}
 
 /* Layout */
-.grid{display:grid;gap:14px;grid-template-columns:1fr 360px}
-@media(max-width:960px){.grid{grid-template-columns:1fr}}
-.section-title{font-weight:800;margin-bottom:8px}
+.page-store .grid{display:grid;gap:14px;grid-template-columns:1fr 360px}
+@media(max-width:960px){.page-store .grid{grid-template-columns:1fr}}
+.page-store .section-title{font-weight:800;margin-bottom:8px}
 
 /* Store grid */
-.store{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-@media(max-width:700px){.store{grid-template-columns:1fr}}
-.item{display:grid;gap:8px;background:var(--card);border:1px solid var(--ring-soft);border-radius:14px;padding:12px}
-.item .hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.item .name{font-weight:800}
-.item .cost{font-weight:700}
-.btn{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:8px 10px;color:var(--text);font:inherit;cursor:pointer}
-.btn-primary{background:linear-gradient(180deg,var(--accent),color-mix(in oklab, var(--accent) 70%, #0891b2 30%));color:#001018;border:none;font-weight:800}
-.small{font-size:.9rem;color:var(--muted)}
-.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--card);border:1px solid var(--ring);color:var(--muted)}
+.page-store .store{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:700px){.page-store .store{grid-template-columns:1fr}}
+.page-store .item{display:grid;gap:8px;background:var(--card);border:1px solid var(--panelBorder);border-radius:14px;padding:12px}
+.page-store .item .hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.page-store .item .name{font-weight:800}
+.page-store .item .cost{font-weight:700}
 
 /* Sidebar */
-.side{display:grid;gap:10px}
-.card{background:var(--panel);border:1px solid var(--ring-soft);border-radius:14px;padding:12px}
-.row{display:flex;align-items:center;justify-content:space-between}
+.page-store .side{display:grid;gap:10px}
+.page-store .card{background:var(--panel);border:1px solid var(--panelBorder);border-radius:14px;padding:12px}
+.page-store .row{display:flex;align-items:center;justify-content:space-between}
 
 /* Modal */
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
-.modal{width:min(900px,100%);max-height:90vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--ring);border-radius:16px;box-shadow:var(--shadow)}
-.modal header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--ring);position:sticky;top:0;background:inherit}
-.modal .body{padding:12px 14px;display:grid;gap:12px;overflow:auto;max-height:70vh}
-.modal .footer{padding:12px 14px;border-top:1px solid var(--ring);display:flex;justify-content:space-between;gap:10px}
-.input{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:8px 10px;color:var(--text);font:inherit}
-.list{display:grid;gap:8px}
-.rowx{display:grid;grid-template-columns:1fr 120px auto;gap:8px;align-items:center;background:var(--card);border:1px solid var(--ring-soft);border-radius:12px;padding:8px}
+.page-store .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.page-store .modal{width:min(900px,100%);max-height:90vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--panelBorder);border-radius:16px;box-shadow:var(--shadow)}
+.page-store .modal header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--panelBorder);position:sticky;top:0;background:inherit}
+.page-store .modal .body{padding:12px 14px;display:grid;gap:12px;overflow:auto;max-height:70vh}
+.page-store .modal .footer{padding:12px 14px;border-top:1px solid var(--panelBorder);display:flex;justify-content:space-between;gap:10px}
+.page-store .input{background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:8px 10px;color:var(--text);font:inherit}
+.page-store .list{display:grid;gap:8px}
+.page-store .rowx{display:grid;grid-template-columns:1fr 120px auto;gap:8px;align-items:center;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:8px}
 
 /* Pending list */
-.pending{display:grid;gap:10px}
-.pending-item{display:grid;gap:8px;background:var(--card);border:1px solid var(--ring-soft);border-radius:12px;padding:10px}
+.page-store .pending{display:grid;gap:10px}
+.page-store .pending-item{display:grid;gap:8px;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px}
+
+/* Keep header/menu above panels */
+.page-store header.panel{position:relative;z-index:1000}
+.page-store .menu-wrap{position:relative;z-index:1001}
+.page-store .menu-dd{z-index:1002}
 </style>
 </head>
-<body>
+
+<body class="page-store">
   <div class="app">
-    <!-- Header -->
-    <header class="panel">
-      <div class="h-left">
-        <a href="./index.html" class="brand" title="Home">
-          <img id="logoImg" src="fambam.png" alt="Fambam">
-        </a>
-        <div class="title">
-          <div style="font-size:1.6rem">Store</div>
-          <div class="small">Redeem points for rewards. Parents approve redemptions.</div>
-        </div>
+    <!-- Shared header -->
+    <header class="panel header">
+      <a href="./index.html" class="brand" title="Home">
+        <img id="logoImg" src="fambam.png" alt="Fambam">
+      </a>
+      <div class="title">
+        <div class="big">Store</div>
+        <div class="small">Redeem points for rewards. Parents approve redemptions.</div>
       </div>
       <div class="menu-wrap">
-        <button id="btnHamburger" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown">☰</button>
-        <div id="menuDropdown" class="menu-dropdown" role="menu" aria-hidden="true">
-          <button class="menu-item" data-action="admin">Admin Settings</button>
-          <button class="menu-item" data-action="pending">Pending Redemptions</button>
-          <button class="menu-item" data-action="seed">Load Default Items</button>
-          <button class="menu-item" data-action="about">About</button>
+        <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false">☰</button>
+        <div id="menuDD" class="menu-dd" role="menu" aria-hidden="true">
+          <button class="mi" data-action="admin">Admin Settings</button>
+          <button class="mi" data-action="pending">Pending Redemptions</button>
+          <button class="mi" data-action="seed">Load Default Items</button>
+          <button class="mi" data-action="about">About</button>
         </div>
       </div>
     </header>
@@ -254,12 +214,12 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 <script>
 /* ---------- Storage keys ---------- */
 const STORE_ITEMS='store:items';    // [{id,emoji,name,cost}]
-const STORE_ORDERS='store:orders';  // [{id,kidId,itemId,label,cost,ts,status:'pending'|'approved'|'rejected'}]
+const STORE_ORDERS='store:orders';  // [{id,kidId,itemId,label,cost,ts,status}]
 
 /* Points system keys (reusing from points) */
-const PTS_BAL='pts:balances';                         // all-time
+const PTS_BAL='pts:balances';
 const PTS_LED='pts:ledger';
-const PTS_MBAL = (m)=>`pts:balances:${m}`;            // monthly
+const PTS_MBAL = (m)=>`pts:balances:${m}`;
 
 /* Utilities */
 const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
@@ -272,7 +232,7 @@ const LEVEL_STRIDE = 50;
 function levelFor(points){ return Math.floor((+points||0)/LEVEL_STRIDE); }
 const initials=n=>((n||'?').trim()[0]||'?').toUpperCase();
 
-/* Profiles (to maybe show emoji later) */
+/* Profiles (future use) */
 const Prof = { key:id=>`prof:${id}`, load(id){ try{return JSON.parse(localStorage.getItem(this.key(id)))||{}}catch{return{}} } };
 
 /* Data access */
@@ -461,7 +421,7 @@ function openPending(){
     div.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:34px;height:34px;border-radius:50%;background:var(--card);border:1px solid var(--ring);display:grid;place-items:center;overflow:hidden">
+          <div style="width:34px;height:34px;border-radius:50%;background:var(--card);border:1px solid var(--panelBorder);display:grid;place-items:center;overflow:hidden">
             ${kid?.photo?`<img src="${kid.photo}" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-weight:800">${initials(kid?.name)}</span>`}
           </div>
           <div><b>${kid?.name||'Unknown'}</b><div class="small">${when}</div></div>
@@ -475,7 +435,6 @@ function openPending(){
       </div>
     `;
     div.querySelector('[data-approve]').onclick=()=>{
-      // Check balance first
       const mb=monthBalances(); const pts=+(mb[o.kidId]||0);
       if(pts < o.cost){ alert('Not enough points to approve.'); return; }
       applyDelta(o.kidId, -o.cost, `Redeemed: ${o.label}`, 'store');
@@ -491,15 +450,15 @@ function openPending(){
   show(pendingModal);
 }
 
-/* ---------- Hamburger ---------- */
-(function hamburger(){
-  const btn=$('#btnHamburger'), dd=$('#menuDropdown');
+/* ---------- Hamburger (shared classes) ---------- */
+(function menu(){
+  const btn=document.getElementById('btnMenu'), dd=document.getElementById('menuDD');
   const open=()=>{dd.classList.add('open');btn.setAttribute('aria-expanded','true');dd.setAttribute('aria-hidden','false');};
   const close=()=>{dd.classList.remove('open');btn.setAttribute('aria-expanded','false');dd.setAttribute('aria-hidden','true');};
   btn.addEventListener('click',e=>{e.stopPropagation(); dd.classList.contains('open')?close():open();});
-  document.addEventListener('click',e=>{ if(!dd.contains(e.target) && e.target!==btn) close(); });
+  document.addEventListener('click',e=>{ if(!dd.contains(e.target)&&e.target!==btn) close(); });
   dd.addEventListener('click',e=>{
-    const a=e.target.closest('.menu-item'); if(!a) return; close();
+    const a=e.target.closest('.mi'); if(!a) return; close();
     const act=a.dataset.action;
     if(act==='admin') openAdmin();
     else if(act==='pending') openPending();
@@ -509,16 +468,13 @@ function openPending(){
 })();
 
 /* ---------- Wires ---------- */
-$('#kidSel').onchange = ()=>{ currentKidId = $('#kidSel').value || null; renderTop(); };
+document.getElementById('kidSel').onchange = ()=>{ currentKidId = document.getElementById('kidSel').value || null; renderTop(); };
 
 /* ---------- Boot ---------- */
 (function init(){
-  // Ensure balances entries exist for current month & all-time
   const all=allTimeBalances(); const mb=monthBalances();
   kids().forEach(k=>{ if(typeof all[k.id]!=='number') all[k.id]=0; if(typeof mb[k.id]!=='number') mb[k.id]=0; });
   setAllTimeBalances(all); setMonthBalances(mb);
-
-  // Don’t auto-seed; parent can via menu. (Call seedDefaults() here if you want them by default)
   renderTop();
 })();
 </script>
