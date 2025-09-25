@@ -1,88 +1,81 @@
-(() => {
-  const KEY = 'hub:wallpaper:dataurl';
+/* wallpaper.js — universal wallpaper + overlay */
+(function(){
+  const KEY_CFG = 'ui:wallpaper';              // overlay + shift live here
+  const KEY_IMG = 'hub:wallpaper:dataurl';     // legacy image store
 
-  function apply() {
-    try {
-      const data = localStorage.getItem(KEY);
-      const val = data ? `url("${data}")` : `url("")`;
-      document.documentElement.style.setProperty('--wallpaper', val);
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  function set(dataUrl) {
-    try { localStorage.setItem(KEY, dataUrl || ''); } catch {}
-    apply();
-  }
-
-  function clear() {
-    try { localStorage.removeItem(KEY); } catch {}
-    apply();
-  }
-
-  // Export
-  window.Wallpaper = { apply, set, clear, KEY };
-
-  // Run on normal load…
-  document.addEventListener('DOMContentLoaded', apply, { once: true });
-  // …and when coming back via back/forward cache
-  window.addEventListener('pageshow', apply);
-  // keep pages in sync if storage changes elsewhere
-  window.addEventListener('storage', (e) => { if (e.key === KEY) apply(); });
-})();
-/* wallpaper.js: global wallpaper/overlay manager */
-(function () {
-  const KEY = 'ui:wallpaper';
   const droot = document.documentElement;
-
-  function applyWallpaper(cfg){
-    cfg = cfg || {};
-    // Image/shift (optional)
-    if (cfg.image) droot.style.setProperty('--wallpaper-image', `url('${cfg.image}')`);
-    if (cfg.shift) droot.style.setProperty('--wallpaper-shift', cfg.shift);
-
-    // Overlay
-    const type = cfg.overlay?.type || 'solid'; // 'solid'|'gradient'
-    const opacity = clamp01(cfg.overlay?.opacity ?? 0.90);
-    droot.style.setProperty('--wp-overlay-opacity', String(opacity));
-
-    let overlay = 'rgba(64,76,105,0.90)';
-    if (type === 'solid') {
-      const color = cfg.overlay?.color || 'rgba(64,76,105,1)';
-      overlay = color; // can be rgba/hex8
-    } else {
-      const start = cfg.overlay?.start || 'rgba(64,76,105,1)';
-      const end   = cfg.overlay?.end   || 'rgba(30,41,59,1)';
-      const angle = Number(cfg.overlay?.angle ?? 180);
-      overlay = `linear-gradient(${angle}deg, ${start}, ${end})`;
-    }
-    droot.style.setProperty('--wp-overlay', overlay);
-  }
 
   function clamp01(v){ v = Number(v); return isNaN(v) ? 1 : Math.max(0, Math.min(1, v)); }
 
   function loadCfg(){
-    try { return JSON.parse(localStorage.getItem(KEY) || '{}') } catch { return {}; }
+    // overlay + shift
+    let cfg = {};
+    try { cfg = JSON.parse(localStorage.getItem(KEY_CFG) || '{}') || {}; } catch {}
+    // image (kept separately for backwards compatibility)
+    const img = localStorage.getItem(KEY_IMG) || '';
+    if (img && !cfg.image) cfg.image = img;
+    return cfg;
   }
 
-  // Initial
-  applyWallpaper(loadCfg());
+  function apply(cfg){
+    cfg = cfg || {};
+    // image
+    droot.style.setProperty('--wallpaper-image', cfg.image ? `url('${cfg.image}')` : `url('')`);
+    // vertical shift
+    if (cfg.shift) droot.style.setProperty('--wallpaper-shift', cfg.shift);
 
-  // Live updates from any tab
-  window.addEventListener('storage', (e)=>{
-    if (e.key === KEY) {
-      try { applyWallpaper(JSON.parse(e.newValue || '{}')); } catch {}
+    // overlay
+    const ov = cfg.overlay || {};
+    const type = ov.type || 'solid';
+    const opacity = clamp01(ov.opacity ?? 0.90);
+
+    let overlay = 'rgba(64,76,105,0.90)';
+
+    if (type === 'solid'){
+      // Expect hex8 or rgba; if hex without alpha, opacity will come from the color
+      overlay = ov.color || overlay;
+    } else {
+      const start = ov.start || 'rgba(64,76,105,1)';
+      const end   = ov.end   || 'rgba(30,41,59,1)';
+      const angle = Number(ov.angle ?? 180);
+      overlay = `linear-gradient(${angle}deg, ${start}, ${end})`;
     }
-  });
 
-  // Expose a tiny API (optional)
+    droot.style.setProperty('--wp-overlay', overlay);
+    // Optional: expose opacity for themes that use it in CSS
+    droot.style.setProperty('--wp-overlay-opacity', String(opacity));
+  }
+
+  function saveCfg(patch){
+    const cur = loadCfg();
+    const next = { ...cur, ...patch };
+
+    // image is stored under KEY_IMG for legacy pages
+    if ('image' in patch){
+      try { localStorage.setItem(KEY_IMG, patch.image || ''); } catch {}
+    }
+
+    // never persist "image" inside KEY_CFG
+    const { image, ...persist } = next;
+    try { localStorage.setItem(KEY_CFG, JSON.stringify(persist)); } catch {}
+
+    apply(next);
+  }
+
+  // Boot
+  function boot(){ apply(loadCfg()); }
+
+  // Sync across tabs & BFCache
+  window.addEventListener('storage', (e)=>{
+    if (e.key === KEY_CFG || e.key === KEY_IMG) boot();
+  });
+  document.addEventListener('DOMContentLoaded', boot, { once:true });
+  window.addEventListener('pageshow', boot);
+
+  // Public API
   window.Wallpaper = {
     get: loadCfg,
-    set(next){
-      const merged = { ...loadCfg(), ...next };
-      localStorage.setItem(KEY, JSON.stringify(merged));
-      applyWallpaper(merged);
-    }
+    set(patch){ saveCfg(patch || {}); },
+    clearImage(){ try{ localStorage.removeItem(KEY_IMG); }catch{}; boot(); }
   };
 })();
