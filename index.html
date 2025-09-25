@@ -856,8 +856,6 @@ function initWallpaperOverlayUI(){
   (function hydrate(){
     const cfg = loadCfg();
     const ov  = cfg.overlay || DEF.overlay;
-    const cfg = loadCfg();
-const ov  = cfg.overlay || DEF.overlay;
 
     el.mode.value = ov.type || 'solid';
     el.op.value   = (ov.opacity ?? DEF.overlay.opacity);
