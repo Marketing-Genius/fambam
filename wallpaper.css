@@ -32,3 +32,7 @@ body::after{
   opacity: var(--wp-overlay-opacity);
   pointer-events:none;
 }
+
+@media print {
+  body::before, body::after { display: none; }
+}
