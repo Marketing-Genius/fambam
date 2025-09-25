@@ -49,6 +49,32 @@
 })();
 </script>
 
+<script>
+(function bootWallpaper(){
+  try{
+    const dataUrl = localStorage.getItem('hub:wallpaper:dataurl');
+    if (dataUrl) {
+      document.documentElement.style.setProperty('--wallpaper-image', `url("${dataUrl}")`);
+    }
+    // Also re-apply overlay/shift if saved
+    const cfg = JSON.parse(localStorage.getItem('ui:wallpaper') || '{}');
+    if (cfg.shift) document.documentElement.style.setProperty('--wallpaper-shift', String(cfg.shift));
+    const ov = cfg.overlay;
+    if (ov) {
+      if (ov.type === 'solid' && ov.color) {
+        document.documentElement.style.setProperty('--wp-overlay', ov.color);
+      } else if (ov.type === 'gradient' && ov.start && ov.end) {
+        const angle = Number(ov.angle ?? 180);
+        document.documentElement.style.setProperty('--wp-overlay', `linear-gradient(${angle}deg, ${ov.start}, ${ov.end})`);
+      }
+      if (typeof ov.opacity === 'number') {
+        document.documentElement.style.setProperty('--wp-overlay-opacity', String(ov.opacity));
+      }
+    }
+  }catch(_){}
+})();
+</script>
+  
 <style>
 /* --- layout sanity --- */
 *, *::before, *::after { box-sizing: border-box; }
@@ -594,21 +620,22 @@ function pickWallpaper(){
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0];
     if (!file) return;
-    try{
-      const dataUrl = await compressImage(file, 2400, 0.85);
+   try{
+  const dataUrl = await compressImage(file, 2400, 0.85);
 
-      // Use the universal API if available
-      if (window.Wallpaper?.set) {
-        Wallpaper.set({ image: dataUrl });
-      } else {
-        // Fallback (legacy)
-        localStorage.setItem('hub:wallpaper:dataurl', dataUrl);
-        document.documentElement.style.setProperty('--wallpaper-image', `url("${dataUrl}")`);
-      }
-    } finally {
-      // always clear so selecting the same file again still fires change
-      input.value = '';
-    }
+  // Persist no matter what
+  localStorage.setItem('hub:wallpaper:dataurl', dataUrl);
+
+  // Apply immediately via CSS var (works even if wallpaper.js is broken/missing)
+  document.documentElement.style.setProperty('--wallpaper-image', `url("${dataUrl}")`);
+
+  // If your wallpaper.js wants to do extra stuff (like overlay/shift), let it try too
+  if (window.Wallpaper?.set) {
+    Wallpaper.set({ image: dataUrl });
+  }
+} finally {
+  input.value = '';
+}
   };
 
   // must be triggered by a user gesture (your button click)
