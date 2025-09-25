@@ -11,14 +11,14 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
-<!-- Shared wallpaper + tokens -->
+<!-- Shared wallpaper -->
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
 <!-- Shared app styles -->
 <link rel="stylesheet" href="fambam.css">
 
-<!-- THEME BOOT (same as other pages) -->
+<!-- THEME BOOT (same across pages) -->
 <script>
 (function themeBoot(){
   try{
@@ -60,24 +60,22 @@
   max-width:1100px; margin:0 auto; padding:20px;
   display:grid; gap:18px; grid-template-rows:auto auto 1fr auto;
 }
-
-/* keep header and its dropdown above content */
+/* keep header/dropdown above content */
 .page-chores header.panel { position:relative; z-index:1000; }
 .page-chores .menu-wrap { position:relative; z-index:1001; }
 .page-chores .menu-dd    { z-index:1002; }
+/* make title sit next to logo; push menu right (safety if not in global css) */
+.page-chores .header{ justify-content:flex-start; }
+.page-chores .header .menu-wrap{ margin-left:auto; }
 
-/* Week panel line */
 .page-chores #weekPanel .row{ display:flex; align-items:center; gap:10px; }
 
-/* Board grid */
 .page-chores .board{
   display:grid; grid-template-columns:repeat(1,minmax(0,1fr)); gap:14px;
 }
 @media(min-width:900px){
   .page-chores .board{ grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
-
-/* Chore card */
 .page-chores .card{
   display:grid; gap:10px;
   background:var(--panel); border:1px solid var(--panelBorder);
@@ -103,7 +101,6 @@
 .page-chores .swap[aria-selected="true"]{ outline:2px solid var(--accent); }
 .page-chores .help{ opacity:.8; }
 
-/* Done dots */
 .page-chores .dots{ display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; }
 .page-chores .dot{
   width:36px; height:36px; border-radius:999px; cursor:pointer; user-select:none;
@@ -145,7 +142,7 @@ html[data-theme="light"] .page-chores .dot{ color:#334155; }
 .page-chores .footer{ text-align:center; opacity:.7; font-size:.85rem; }
 .page-chores .version{ opacity:.6; font-size:.8rem; margin-top:6px; }
 
-/* Inputs that aren't covered by shared .btn styles */
+/* Inputs */
 .page-chores input[type="text"]{
   background:var(--card); border:1px solid var(--panelBorder);
   border-radius:12px; padding:10px 12px; color:var(--text); font:inherit;
@@ -224,11 +221,326 @@ html[data-theme="light"] .page-chores .dot{ color:#334155; }
 <!-- Family Store -->
 <script src="family.js?v=3.3.6"></script>
 <script>
-/* ===== Keep your existing logic (unchanged except for menu wiring names) ===== */
-/* ... all your JS from the previous file, starting at the Family shim, storage keys,
-   helpers, rotation logic, renderBoard, manage modal, etc. Paste it here verbatim. ... */
+/* ---------- Family shim (if family.js fails) ---------- */
+if (!window.Family) {
+  console.warn('family.js not loaded — using fallback Family shim (Chores).');
+  (function(){
+    const K={parents:'hub:family:parents', kids:'hub:family:kids'};
+    const uid=()=>Math.random().toString(36).slice(2,10);
+    const load=(k,f)=>{ try{const v=JSON.parse(localStorage.getItem(k)); return v ?? f;}catch{ return f; } };
+    const save=(k,v)=>localStorage.setItem(k, JSON.stringify(v));
+    window.Family = {
+      getKids(){ return load(K.kids, []); },
+      getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false); },
+      upsertKid(k){ const a=this.getKids(); const i=a.findIndex(x=>x.id===k.id);
+        if(i>=0) a[i]={...a[i],...k}; else a.push({...k,id:k.id||uid(),enabled:true}); save(K.kids,a); },
+      onChange(){ return ()=>{}; }
+    };
+  })();
+}
 
-/* --- Simple shared-style menu (uses .menu-wrap/.menu-dd/.mi) --- */
+/* ---------- Storage keys ---------- */
+const LS = {
+  chores: 'ch:chores:list',                 // [{id,label}]
+  elig:   'ch:eligible:kids',               // [kidId]
+  week:   (mondayISO)=> `ch:assign:${mondayISO}`, // { [choreId]: kidId }
+  done:   (mondayISO)=> `ch:done:${mondayISO}`    // { [choreId]: {Mon:true,...} }
+};
+
+/* ---------- Helpers ---------- */
+const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
+const uid=()=>Math.random().toString(36).slice(2,10);
+const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{ return f;}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const initials=n=>((n||'?').trim()[0]||'?').toUpperCase();
+
+function getKids(){
+  try{
+    if(Family && typeof Family.getActiveKids==='function'){
+      const k=Family.getActiveKids(); if(Array.isArray(k)) return k;
+    }
+    if(Family && typeof Family.getKids==='function'){
+      const k=Family.getKids(); if(Array.isArray(k)) return k.filter(x=>x.enabled!==false);
+    }
+  }catch(e){ console.warn('Family store unavailable',e); }
+  return [];
+}
+
+/* ---------- Local week helpers (Mon–Sun, local time) ---------- */
+function localISO(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function startOfWeekMondayLocal(d=new Date()){
+  const monday=new Date(d);
+  monday.setHours(0,0,0,0);
+  const offset=((monday.getDay()+6)%7); // Mon=0..Sun=6
+  monday.setDate(monday.getDate()-offset);
+  return monday;
+}
+function thisMondayISO(){ return localISO(startOfWeekMondayLocal(new Date())); }
+
+/* ---------- Defaults ---------- */
+function ensureDefaults(){
+  let chores = load(LS.chores, null);
+  if(!Array.isArray(chores) || !chores.length){
+    chores = [
+      {id:uid(), label:'Trash'},
+      {id:uid(), label:'Vacuuming'},
+      {id:uid(), label:'Feed Dogs'}
+    ];
+    save(LS.chores, chores);
+  }
+  // Default eligible kids = all current kids
+  let elig = load(LS.elig, null);
+  const kids = getKids().slice().sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+  if(!Array.isArray(elig) || elig.length===0){
+    elig = kids.map(k=>k.id);
+    save(LS.elig, elig);
+  }
+}
+
+/* ---------- Rotation logic ---------- */
+function rotateForWeek(mondayISO){
+  const chores = load(LS.chores, []);
+  const eligIds = load(LS.elig, []).filter(id => getKids().some(k=>k.id===id));
+  if(!chores.length || !eligIds.length) return {};
+
+  // previous week
+  const prev = new Date(mondayISO);
+  prev.setDate(prev.getDate()-7);
+  const prevISO = localISO(prev);
+  const prevMap = load(LS.week(prevISO), null);
+
+  let assignment = {};
+  if(prevMap){
+    const base = eligIds.slice();
+    chores.forEach((c,i)=> assignment[c.id] = base[(i+1)%base.length]); // rotate
+  } else {
+    chores.forEach((c,i)=> assignment[c.id] = eligIds[i%eligIds.length]);
+  }
+  save(LS.week(mondayISO), assignment);
+  return assignment;
+}
+
+/* ---------- Done map (per week) ---------- */
+const DAY_KEYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_LABELS = ['M','T','W','T','F','S','S'];
+
+function loadWeekDone(){ return load(LS.done(thisMondayISO()), {}) || {}; }
+function saveWeekDone(map){ save(LS.done(thisMondayISO()), map); }
+
+/* ---------- UI ---------- */
+let selectedChoreId = null;
+
+function weekLabelText(mISO){
+  const [Y,M,D]=mISO.split('-').map(n=>parseInt(n,10));
+  const m = new Date(Y, M-1, D, 0,0,0,0);
+  const e = new Date(m); e.setDate(e.getDate()+6);
+  const fmt = d => d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  return `${fmt(m)} – ${fmt(e)}`;
+}
+
+function renderBoard(){
+  const mondayISO = thisMondayISO();
+  $('#weekLabel').textContent = weekLabelText(mondayISO);
+
+  const chores = load(LS.chores, []);
+  const kids = getKids();
+  const assigns = load(LS.week(mondayISO), {}) || {};
+  const doneMap = loadWeekDone();
+
+  const board = $('#board'); board.innerHTML='';
+  if(!chores.length){
+    const n=document.createElement('div'); n.className='panel'; n.textContent='No chores defined. Tap “Manage”.';
+    board.appendChild(n); return;
+  }
+  if(!kids.length){
+    const n=document.createElement('div'); n.className='panel'; n.textContent='No active kids. Add/enable kids in Admin (on Home).';
+    board.appendChild(n); return;
+  }
+
+  chores.forEach(c=>{
+    const kidId = assigns[c.id];
+    const kid = kids.find(k=>k.id===kidId) || null;
+    const done = doneMap[c.id] || {};
+
+    const dotsHTML = DAY_KEYS.map((k,idx)=>{
+      const lbl = DAY_LABELS[idx];
+      const isDone = !!done[k];
+      return `<button class="dot ${isDone?'done':''}" data-chore="${c.id}" data-day="${k}" aria-pressed="${isDone}" title="${k}">${lbl}</button>`;
+    }).join('');
+
+    const card=document.createElement('div'); card.className='card'; card.dataset.chore=c.id;
+    card.innerHTML = `
+      <div class="head">
+        <div class="chore-name">${c.label}</div>
+        <div class="badge">Weekly</div>
+      </div>
+      <div class="person">
+        <div class="face">${kid?.photo?`<img src="${kid.photo}" alt="">`:`<span>${initials(kid?.name||'?')}</span>`}</div>
+        <div style="font-weight:800">${kid? kid.name : 'Unassigned'}</div>
+      </div>
+      <div class="selector">
+        <label class="sr-only" for="sel-${c.id}">Assign</label>
+        <select id="sel-${c.id}" class="select">
+          ${kidOptions(kidId)}
+        </select>
+        <button class="btn swapBtn" title="Tap to select for swap">🔁</button>
+      </div>
+      <div class="dots" aria-label="Completion">${dotsHTML}</div>
+    `;
+    board.appendChild(card);
+  });
+
+  // assignment changes
+  $$('.card .select', board).forEach(sel=>{
+    sel.onchange = (e)=>{
+      const choreId = e.target.id.slice(4);
+      assignKid(choreId, e.target.value);
+    };
+  });
+
+  // swap
+  $$('.swapBtn', board).forEach(btn=>{
+    btn.onclick = ()=>{
+      const card = btn.closest('.card');
+      const cid = card.dataset.chore;
+      if(selectedChoreId === cid){
+        selectedChoreId = null;
+        card.classList.remove('swap'); card.setAttribute('aria-selected','false');
+        return;
+      }
+      if(selectedChoreId){
+        const a = selectedChoreId, b = cid; selectedChoreId=null;
+        $$('.card').forEach(c=>{c.classList.remove('swap'); c.setAttribute('aria-selected','false');});
+        swapAssignees(a,b);
+      } else {
+        selectedChoreId = cid;
+        card.classList.add('swap'); card.setAttribute('aria-selected','true');
+      }
+    };
+  });
+
+  // done toggles
+  $$('.dot', board).forEach(dot=>{
+    dot.onclick = ()=>{
+      const choreId = dot.dataset.chore;
+      const dayKey  = dot.dataset.day;
+      const map = loadWeekDone();
+      const entry = map[choreId] || {};
+      entry[dayKey] = !entry[dayKey];
+      map[choreId] = entry;
+      saveWeekDone(map);
+      dot.classList.toggle('done', !!entry[dayKey]);
+      dot.setAttribute('aria-pressed', entry[dayKey] ? 'true' : 'false');
+    };
+  });
+}
+
+function kidOptions(selectedId){
+  const eligIds = load(LS.elig, []);
+  const kids = getKids().filter(k=> eligIds.includes(k.id));
+  return kids.map(k=>`<option value="${k.id}" ${k.id===selectedId?'selected':''}>${k.name}</option>`).join('');
+}
+
+/* ---------- Assignments ---------- */
+function currentAssigns(){ return load(LS.week(thisMondayISO()), {}) || {}; }
+function saveAssigns(a){ save(LS.week(thisMondayISO()), a); renderBoard(); }
+function assignKid(choreId, kidId){ const a = currentAssigns(); a[choreId]=kidId; saveAssigns(a); }
+function swapAssignees(choreIdA, choreIdB){
+  const a = currentAssigns();
+  const x=a[choreIdA], y=a[choreIdB]; a[choreIdA]=y; a[choreIdB]=x; saveAssigns(a);
+}
+
+/* ---------- Manage modal ---------- */
+const manageModal = document.getElementById('manageModal');
+document.getElementById('manageClose').onclick = ()=> hide(manageModal);
+document.getElementById('manageSave').onclick = ()=>{
+  hide(manageModal);
+  ensureAssignmentsForThisWeek();
+  renderBoard();
+};
+document.getElementById('addChore').onclick = ()=>{
+  const label = (document.getElementById('newChore').value||'').trim();
+  if(!label) return;
+  const chores = load(LS.chores, []);
+  chores.push({id:uid(), label});
+  save(LS.chores, chores);
+  document.getElementById('newChore').value=''; buildManageLists();
+};
+
+function openManage(){ buildManageLists(); show(manageModal); }
+function buildManageLists(){
+  const chores = load(LS.chores, []);
+  const list = document.getElementById('choreList'); list.innerHTML='';
+  chores.forEach(c=>{
+    const row=document.createElement('div'); row.className='item'; row.dataset.id=c.id;
+    row.innerHTML=`
+      <input class="lbl" type="text" value="${escapeHtml(c.label)}"/>
+      <button class="btn" data-remove>Remove</button>
+    `;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.item').forEach(row=>{
+    const id=row.dataset.id;
+    row.querySelector('.lbl').oninput = (e)=>{
+      const chores = load(LS.chores, []);
+      const i=chores.findIndex(x=>x.id===id); if(i>=0){ chores[i].label=e.target.value; save(LS.chores, chores); renderBoard(); }
+    };
+    row.querySelector('[data-remove]').onclick = ()=>{
+      const chores = load(LS.chores, []).filter(x=>x.id!==id);
+      save(LS.chores, chores);
+      const a = currentAssigns(); if(id in a){ delete a[id]; saveAssigns(a); }
+      const d = loadWeekDone(); if(id in d){ delete d[id]; saveWeekDone(d); }
+      buildManageLists(); renderBoard();
+    };
+  });
+
+  // Eligible kids
+  const wrap = document.getElementById('kidChecks'); wrap.innerHTML='';
+  const kids = getKids();
+  let elig = load(LS.elig, []);
+  if(!Array.isArray(elig) || elig.length===0){ elig = kids.map(k=>k.id); save(LS.elig, elig); }
+  kids.forEach(k=>{
+    const id=`k-${k.id}`;
+    const div=document.createElement('label'); div.style.display='flex'; div.style.gap='8px'; div.style.alignItems='center';
+    div.innerHTML=`<input id="${id}" type="checkbox" ${elig.includes(k.id)?'checked':''}/> ${escapeHtml(k.name)}`;
+    wrap.appendChild(div);
+    div.querySelector('input').onchange = (e)=>{
+      let cur = load(LS.elig, []);
+      if(e.target.checked){ if(!cur.includes(k.id)) cur.push(k.id); }
+      else { cur = cur.filter(x=>x!==k.id); }
+      save(LS.elig, cur);
+      ensureAssignmentsForThisWeek();
+      renderBoard();
+    };
+  });
+}
+
+function show(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
+function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) }
+
+/* ---------- Boot / weekly ensure ---------- */
+function ensureAssignmentsForThisWeek(){
+  const mondayISO = thisMondayISO();
+  let a = load(LS.week(mondayISO), null);
+  if(!a){
+    a = rotateForWeek(mondayISO);
+  } else {
+    const chores = load(LS.chores, []);
+    const eligIds = load(LS.elig, []);
+    const kids = getKids().filter(k=>eligIds.includes(k.id));
+    chores.forEach((c,i)=>{
+      if(!a[c.id] && kids.length){ a[c.id]=kids[i%kids.length].id; }
+    });
+    save(LS.week(mondayISO), a);
+  }
+}
+
+/* ----- Header menu (shared styles) ----- */
 (function menu(){
   const btn = document.getElementById('btnMenu');
   const dd  = document.getElementById('menuDD');
@@ -246,6 +558,27 @@ html[data-theme="light"] .page-chores .dot{ color:#334155; }
     else if (act==='manage'){ openManage(); }
   });
 })();
+
+/* ----- Init & react to Family changes ----- */
+ensureDefaults();
+ensureAssignmentsForThisWeek();
+renderBoard();
+
+try {
+  Family.onChange && Family.onChange(()=> {
+    const kids = getKids();
+    let elig = load(LS.elig, []);
+    if(!Array.isArray(elig) || elig.length===0){
+      elig = kids.map(k=>k.id); save(LS.elig, elig);
+    }
+    ensureAssignmentsForThisWeek();
+    renderBoard();
+  });
+} catch(_){}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
 </script>
 </body>
 </html>
