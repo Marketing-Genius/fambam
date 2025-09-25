@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -15,207 +15,114 @@
 <link rel="stylesheet" href="wallpaper.css">
 <script src="wallpaper.js" defer></script>
 
+<!-- Shared app styles -->
+<link rel="stylesheet" href="fambam.css">
+
+<!-- THEME BOOT (same as other pages) -->
 <script>
-/* THEME BOOT (Dark/Light + Accent + Auto Logo Swap, DOM-ready safe) */
-(function () {
-  var DARK_SRC  = 'fambam.png';
-  var LIGHT_SRC = 'fambam2.png';
-  var currentTheme = { mode: 'dark', accent: '#22d3ee' };
-
-  function applyThemeTokens(t){
-    var mode = (t && t.mode === 'light') ? 'light' : 'dark';
-    var accent = (t && t.accent) || '#22d3ee';
-    currentTheme = { mode: mode, accent: accent };
-
-    document.documentElement.setAttribute('data-theme', mode);
-    document.documentElement.style.setProperty('--accent', accent);
-
-    var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
-  }
-
-  function findLogo(){
-    return (
-      document.getElementById('logoImg') ||
-      document.querySelector('.brand img') ||
-      document.querySelector('header img[alt="Fambam"]') ||
-      null
-    );
-  }
-
-  function swapLogo(){
-    var logo = findLogo();
-    if (!logo) return;
-
-    // Keep the same folder the current src attribute came from
-    var curAttr = logo.getAttribute('src') || '';
-    var base = curAttr.replace(/[^/]*$/, '');  // strip filename
-    var file = (currentTheme.mode === 'light') ? LIGHT_SRC : DARK_SRC;
-    logo.setAttribute('src', base + file);
-
-    var a = logo.closest('a');
-    if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
-  }
-
-  // Initial tokens
+(function themeBoot(){
   try{
-    var raw = localStorage.getItem('ui:theme');
-    applyThemeTokens(raw ? JSON.parse(raw) : {mode:'dark',accent:'#22d3ee'});
-  }catch(_){ applyThemeTokens({mode:'dark',accent:'#22d3ee'}); }
+    const raw = localStorage.getItem('ui:theme');
+    const saved = raw ? JSON.parse(raw) : { mode:'dark', accent:'#22d3ee' };
+    const mode = (saved.mode==='light') ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.style.setProperty('--accent', saved.accent || '#22d3ee');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', mode==='light' ? '#f2efe7' : '#0f172a');
 
-  // Swap as soon as DOM is ready (logo exists)
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', swapLogo, { once:true });
-  } else {
-    swapLogo();
-  }
-
-  // Live updates from other pages/tabs
-  window.addEventListener('storage', function (e) {
-    if (e.key !== 'ui:theme') return;
-    try { applyThemeTokens(JSON.parse(e.newValue||'{}')); } catch(_){}
-    // Swap again after storage update
+    const swapLogo = ()=>{
+      const logo = document.querySelector('.brand img');
+      if (logo) logo.src = (mode==='light') ? 'fambam2.png' : 'fambam.png';
+    };
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', swapLogo, { once:true });
-    } else {
-      swapLogo();
-    }
-  });
+      document.addEventListener('DOMContentLoaded', swapLogo, {once:true});
+    } else { swapLogo(); }
+
+    window.addEventListener('storage', (e)=>{
+      if (e.key!=='ui:theme') return;
+      try{
+        const t = JSON.parse(e.newValue||'{}');
+        const m = (t.mode==='light') ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', m);
+        document.documentElement.style.setProperty('--accent', t.accent || '#22d3ee');
+        if (meta) meta.setAttribute('content', m==='light' ? '#f2efe7' : '#0f172a');
+        const logo = document.querySelector('.brand img');
+        if (logo) logo.src = (m==='light') ? 'fambam2.png' : 'fambam.png';
+      }catch(_){}
+    });
+  }catch(_){}
 })();
 </script>
 
 <style>
-:root{
-  --panel:#111827; --card:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --accent:#22d3ee;
-  --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
-  --wallpaper:url(''); --wallpaper-shift:40%;
-}
-/* Light palette overrides (soft ivory) */
-html[data-theme="light"]{
-  --panel:#f2efe7; --card:#ffffff; --text:#0f1623; --muted:#556070;
-  --shadow:0 10px 28px rgba(0,0,0,.08);
+/* ---------- Photos page (scoped) ---------- */
+.page-photos .app{
+  max-width:1100px; margin:0 auto; padding:20px;
+  display:grid; gap:18px; grid-template-rows:auto 1fr auto;
 }
 
-html,body{height:100%}
-body{
-  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  color:var(--text); background:#404c69;
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation; overflow-x:hidden;
-}
-/* Wallpaper layers (consistent across app) */
-body::before{
-  content:""; position:fixed; inset:0; z-index:-2;
-  background-image: var(--wallpaper);
-  background-size: cover; background-repeat:no-repeat;
-  background-position: center var(--wallpaper-shift);
-  transform: translateZ(0);
-}
-body::after{
-  content:""; position:fixed; inset:0; z-index:-1;
-  background: rgba(64,76,105,.9);
-  pointer-events:none;
-}
+/* keep header above dropdown/content */
+.page-photos header.panel { position:relative; z-index:1000; }
+.page-photos .menu-wrap { position:relative; z-index:1001; }
+.page-photos .menu-dd    { z-index:1002; }
 
-.app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-rows:auto 1fr auto}
+/* layout */
+.page-photos .grid{ display:grid; gap:14px; grid-template-columns:1fr 360px; }
+@media(max-width:900px){ .page-photos .grid{ grid-template-columns:1fr; } }
 
-/* Panels */
-.panel{
-  background:rgba(17,24,39,.6); border:1px solid #0b1224;
-  box-shadow:var(--shadow); border-radius:var(--radius); padding:14px; backdrop-filter: blur(8px);
+/* viewer */
+.page-photos .viewer{
+  position:relative; height:60vh; min-height:360px; border-radius:16px; overflow:hidden;
+  background:var(--chipBg); border:1px solid var(--chipBorder);
 }
-html[data-theme="light"] .panel{ background:rgba(255,255,255,.72); border-color:#e6e2da; }
+.page-photos .viewer img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:opacity .5s; }
 
-/* Header */
-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.head-left{display:flex;align-items:center;gap:10px}
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
-.brand img{height:36px;display:block;cursor:pointer}
-.title{font-weight:800}
-.title .small{font-weight:600;font-size:.9rem;color:var(--muted)}
-.menu-wrap{position:relative}
-.hamburger{
-  font:inherit;cursor:pointer;background:#0b1224;border:1px solid #334155;border-radius:12px;padding:10px 12px;color:var(--text)
-}
-html[data-theme="light"] .hamburger{ background:#fffdf7; border-color:#e3ded4; }
-.menu-dd{
-  position:absolute;right:0;top:110%;min-width:220px;background:var(--panel);
-  border:1px solid #0b1224;border-radius:12px;box-shadow:var(--shadow);display:none;padding:6px;z-index:10
-}
-html[data-theme="light"] .menu-dd{ border-color:#e6e2da; }
-.menu-dd.open{display:block}
-.mi{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
-.mi:hover{background:#0b1224}
-html[data-theme="light"] .mi:hover{ background:#f6f3ec; }
+/* right panel as a column so the list can grow */
+.page-photos .panel.side{ display:flex; flex-direction:column; }
+.page-photos .panel.side .list{ flex:1; min-height:0; overflow:auto; }
 
-/* Layout */
-.grid{display:grid;gap:14px;grid-template-columns:1fr 360px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}}
-.viewer{
-  position:relative;height:60vh;min-height:360px;border-radius:16px;overflow:hidden;
-  background:#0b1224;border:1px solid #334155
-}
-html[data-theme="light"] .viewer{ background:#fffdf7; border-color:#e3ded4; }
-.viewer img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .5s}
-
-/* List (scrollable) */
-.list{
-  display:grid;gap:10px;max-height:60vh;overflow:auto;padding-right:4px;
+/* list */
+.page-photos .list{
+  display:grid; gap:10px; max-height:60vh; padding-right:4px;
   -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
 }
-.row{
-  display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;
-  background:#1f2937;border:1px solid #111827;border-radius:12px;padding:8px 10px;cursor:pointer
+.page-photos .row{
+  display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
+  background:var(--card); border:1px solid var(--panelBorder);
+  border-radius:12px; padding:8px 10px; cursor:pointer;
 }
-html[data-theme="light"] .row{ background:#fffdf7; border-color:#ebe6db; }
-.row:hover{background:#1e293b}
-html[data-theme="light"] .row:hover{ background:#f3efe6; }
-.row.active{ box-shadow: inset 0 0 0 2px var(--accent); }
-.thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;background:#0b1224;border:1px solid #334155}
-html[data-theme="light"] .thumb{ background:#f6f3ec; border-color:#e3ded4; }
-.row .name{font-size:.92rem;color:var(--text)}
-.btn{
-  font:inherit;color:var(--text);background:#0b1224;border:1px solid #334155;border-radius:10px;padding:8px 10px;cursor:pointer
+.page-photos .row:hover{ filter:brightness(1.02); }
+.page-photos .row.active{ box-shadow: inset 0 0 0 2px var(--accent); }
+.page-photos .thumb{
+  width:52px; height:52px; border-radius:10px; object-fit:cover;
+  background:var(--chipBg); border:1px solid var(--chipBorder);
 }
-html[data-theme="light"] .btn{ background:#fffdf7; border-color:#e3ded4; }
-.small{font-size:.9rem;color:var(--muted)}
+.page-photos .row .name{ font-size:.92rem; color:var(--text); }
 
-/* Hide file input completely */
-input[type="file"].sr-only{ display:none !important; }
+/* hidden input */
+.page-photos input[type="file"].sr-only{ display:none !important; }
 
-/* Toast */
-.toast{
-  position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
-  background:#0b1224;border:1px solid #334155;color:var(--text);
-  padding:10px 12px;border-radius:10px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .25s
+/* toast */
+.page-photos .toast{
+  position:fixed; left:50%; bottom:20px; transform:translateX(-50%);
+  background:var(--chipBg); border:1px solid var(--chipBorder); color:var(--text);
+  padding:10px 12px; border-radius:10px; box-shadow:var(--shadow);
+  opacity:0; pointer-events:none; transition:opacity .25s;
 }
-html[data-theme="light"] .toast{ background:#fffdf7; border-color:#e3ded4; }
-.toast.show{opacity:1}
-
-/* keep the header (and its dropdown) above the rest */
-header.panel { position: relative; z-index: 1000; }
-.menu-wrap { position: relative; z-index: 1001; }    /* container */
-.menu-dd    { z-index: 1002; }                       /* the dropdown itself */
-
-/* right-hand details column becomes a flex column */
-.panel.side { display: flex; flex-direction: column; }
-
-/* let the list grow and scroll properly within the panel */
-.panel.side .list { flex: 1; min-height: 0; overflow: auto; }
-
+.page-photos .toast.show{ opacity:1; }
 </style>
 </head>
-<body>
+
+<body class="page-photos">
 <div class="app">
-  <!-- Header -->
-  <header class="panel">
-    <div class="head-left">
-      <a href="./index.html" class="brand" title="Home">
-        <img src="fambam.png" alt="Fambam">
-      </a>
-      <div class="title">
-        <div style="font-size:1.4rem">Photos</div>
-        <div class="small">Pick images for the home slideshow card.</div>
-      </div>
+  <!-- Shared header (uses fambam.css) -->
+  <header class="panel header">
+    <a href="./index.html" class="brand" title="Home">
+      <img src="fambam.png" alt="Fambam">
+    </a>
+    <div class="title">
+      <div class="big">Photos</div>
+      <div class="small">Pick images for the home slideshow card.</div>
     </div>
     <div class="menu-wrap">
       <button id="btnMenu" class="hamburger" aria-haspopup="true" aria-expanded="false">☰</button>
@@ -262,7 +169,7 @@ const MAX_PHOTOS = 20;
 const $=(s,e=document)=>e.querySelector(s);
 const listEl=$('#list'), big=$('#big'), picker=$('#picker');
 
-/* ---------- Menu ---------- */
+/* --- Simple menu (keeps your custom items) --- */
 (function menu(){
   const btn=$('#btnMenu'), dd=$('#menuDD');
   const open=()=>{dd.classList.add('open');btn.setAttribute('aria-expanded','true');dd.setAttribute('aria-hidden','false');};
@@ -280,16 +187,16 @@ const listEl=$('#list'), big=$('#big'), picker=$('#picker');
   });
 })();
 
-/* ---------- Storage ---------- */
+/* --- Storage helpers --- */
 function loadList(){ try{const v=JSON.parse(localStorage.getItem(LS_LIST)); if(Array.isArray(v)) return v; }catch{} return []; }
 function saveList(a){ localStorage.setItem(LS_LIST, JSON.stringify(a)); }
 function loadIv(){ const v=+localStorage.getItem(LS_IV)||10000; return [10000,30000,60000].includes(v)?v:10000; }
 function saveIv(v){ localStorage.setItem(LS_IV, v); }
 
-/* ---------- State ---------- */
+/* --- State --- */
 let imgs=loadList(); let iv=loadIv(); let idx=0; let timer=null;
 
-/* ---------- UI render ---------- */
+/* --- UI render --- */
 function renderList(){
   listEl.innerHTML='';
   if(!imgs.length){
@@ -303,15 +210,10 @@ function renderList(){
       <div class="name">Photo ${i+1}</div>
       <button class="btn" data-remove>Remove</button>
     `;
-    row.onclick = (ev)=>{
-      if(ev.target.closest('[data-remove]')) return;
-      jumpTo(i);
-    };
+    row.onclick = (ev)=>{ if(ev.target.closest('[data-remove]')) return; jumpTo(i); };
     row.querySelector('[data-remove]').onclick=()=>{
       const wasCurrent = i===idx;
-      imgs.splice(i,1);
-      saveList(imgs);
-      renderList();
+      imgs.splice(i,1); saveList(imgs); renderList();
       if(wasCurrent) idx = Math.max(0, idx-1);
       startShow();
     };
@@ -331,7 +233,7 @@ function jumpTo(i){
   highlightActive();
 }
 
-/* ---------- Slideshow ---------- */
+/* --- Slideshow --- */
 function startShow(){
   if(timer) clearInterval(timer);
   if(!imgs.length){ big.removeAttribute('src'); return; }
@@ -343,11 +245,9 @@ document.querySelectorAll('input[name="iv"]').forEach(r=>{
   r.onchange=()=>{ iv=+r.value; saveIv(iv); startShow(); };
 });
 
-/* ---------- Import pipeline (HEIC-friendly, resize, cap 20) ---------- */
+/* --- Import pipeline (HEIC-friendly, resize, cap 20) --- */
 picker.onchange = async (e)=>{
-  const all=[...e.target.files||[]];
-  if(!all.length) return;
-
+  const all=[...e.target.files||[]]; if(!all.length) return;
   const slotsLeft = Math.max(0, MAX_PHOTOS - imgs.length);
   const files = all.slice(0, slotsLeft);
   const skippedForCap = all.length - files.length;
@@ -363,7 +263,6 @@ picker.onchange = async (e)=>{
   if(added) showToast(`Added ${added} photo${added>1?'s':''}${(failed||skippedForCap)?` · Skipped ${failed+skippedForCap}`:''}`);
   else showToast('No supported photos were added.');
 };
-
 async function readAndShrinkSmart(file, maxSide=1800, quality=.9){
   const bitmap = await decodeToBitmap(file).catch(()=>null);
   if(!bitmap) return null;
@@ -371,8 +270,7 @@ async function readAndShrinkSmart(file, maxSide=1800, quality=.9){
   const w = Math.max(1, Math.round(bitmap.width * scale));
   const h = Math.max(1, Math.round(bitmap.height * scale));
   const c = document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
-  ctx.drawImage(bitmap, 0, 0, w, h);
+  c.getContext('2d').drawImage(bitmap,0,0,w,h);
   return c.toDataURL('image/jpeg', quality);
 }
 function decodeToBitmap(file){
@@ -403,19 +301,20 @@ function decodeToBitmap(file){
   });
 }
 
-/* ---------- Toast ---------- */
+/* --- Toast --- */
 let toastTimer=null;
 function showToast(msg){
   const t=$('#toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'), 2400);
 }
 
-/* ---------- Boot ---------- */
+/* --- Boot --- */
 renderList(); startShow();
 
 /* SW */
-if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
 </script>
 </body>
 </html>
