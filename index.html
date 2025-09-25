@@ -328,8 +328,15 @@ body::after{ background: var(--wp-overlay, rgba(64,76,105,.9)); }
   </div>
 
   <!-- Hidden pickers -->
-  <input type="file" id="file-picker" accept="image/*" class="sr-only"/>
-  <input type="file" id="wallpaper-picker" accept="image/*" class="sr-only"/>
+<input
+  type="file"
+  id="file-picker"
+  accept="image/*,.heic,.heif,.heic-sequence,.heif-sequence"
+  class="sr-only"
+/>
+  <input type="file" id="wallpaper-picker"
+       accept="image/*,.heic,.heif,.heic-sequence,.heif-sequence"
+       class="sr-only"/>
 
   <!-- Admin Modal -->
   <div class="modal-backdrop" id="adminModal" aria-hidden="true" role="dialog" aria-labelledby="adminTitle">
@@ -578,6 +585,45 @@ if (!window.Family) {
 
 <!-- Wallpaper utilities (shared helper + safe fallback) -->
 <script>
+function pickWallpaper(){
+  const input = document.getElementById('wallpaper-picker');
+  // allow HEIC/HEIF too (some browsers require explicit extensions)
+  input.accept = 'image/*,.heic,.heif,.heic-sequence,.heif-sequence';
+  input.removeAttribute('capture'); // avoid camera-only on mobile
+
+  input.onchange = async (ev)=>{
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    try{
+      const dataUrl = await compressImage(file, 2400, 0.85);
+
+      // Use the universal API if available
+      if (window.Wallpaper?.set) {
+        Wallpaper.set({ image: dataUrl });
+      } else {
+        // Fallback (legacy)
+        localStorage.setItem('hub:wallpaper:dataurl', dataUrl);
+        document.documentElement.style.setProperty('--wallpaper-image', `url("${dataUrl}")`);
+      }
+    } finally {
+      // always clear so selecting the same file again still fires change
+      input.value = '';
+    }
+  };
+
+  // must be triggered by a user gesture (your button click)
+  input.click();
+}
+
+function clearWallpaper(){
+  if (window.Wallpaper?.set) {
+    Wallpaper.set({ image: '' });
+  } else {
+    localStorage.removeItem('hub:wallpaper:dataurl');
+    document.documentElement.style.setProperty('--wallpaper-image', `url('')`);
+  }
+}
+  
 async function compressImage(file, maxSide=2400, quality=.85){
   function drawToCanvas(source, w, h){
     const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -788,7 +834,7 @@ function pickPhoto(kind, id){
   input.removeAttribute('capture');
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0]; if(!file) return;
-    const dataUrl = await compress(ev.target.files[0], 256, 0.8);
+    const dataUrl = await compressImage(ev.target.files[0], 512, 0.82);
     try{
       if (kind==='kid') Family.upsertKid({ id, photo:dataUrl });
       else Family.upsertParent({ id, photo:dataUrl });
