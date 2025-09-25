@@ -18,31 +18,6 @@
 <!-- Shared styles -->
 <link rel="stylesheet" href="fambam.css">
 
-<!-- Theme boot (kept) -->
-<script>
-(function () {
-  var DARK_SRC='fambam.png', LIGHT_SRC='fambam2.png';
-  function findLogo(){ return document.getElementById('logoImg')||document.querySelector('.brand img')||document.querySelector('img[alt="Fambam"]'); }
-  function swap(mode){ var logo=findLogo(); if(!logo) return;
-    var cur=logo.getAttribute('src')||'', next=/fambam2?\.png$/i.test(cur)
-      ? cur.replace(/fambam2?\.png$/i, mode==='light'?'fambam2.png':'fambam.png')
-      : (mode==='light'?LIGHT_SRC:DARK_SRC);
-    logo.setAttribute('src', next);
-    var a=logo.closest('a'); if(a && !a.getAttribute('href')) a.setAttribute('href','./index.html');
-  }
-  function apply(t){
-    var mode=(t&&t.mode==='light')?'light':'dark', accent=(t&&t.accent)||'#22d3ee';
-    document.documentElement.setAttribute('data-theme', mode);
-    document.documentElement.style.setProperty('--accent', accent);
-    var meta=document.querySelector('meta[name="theme-color"]');
-    if(meta) meta.setAttribute('content', mode==='light' ? '#f2efe7' : '#0f172a');
-    swap(mode); document.addEventListener('DOMContentLoaded', function(){ swap(mode); }, {once:true});
-  }
-  try{ apply(JSON.parse(localStorage.getItem('ui:theme')||'null')||{mode:'dark',accent:'#22d3ee'}); }catch{ apply({mode:'dark',accent:'#22d3ee'}); }
-  window.addEventListener('storage', function(e){ if(e.key==='ui:theme'){ try{ apply(JSON.parse(e.newValue||'{}')); }catch{} }});
-})();
-</script>
-
 <script>
 /* Wallpaper boot: read saved image + overlay/shift and apply CSS vars */
 (function bootWallpaper(){
@@ -96,6 +71,31 @@
       }
     });
   }catch(_){}
+})();
+</script>
+
+<!-- Theme boot (kept) -->
+<script>
+(function () {
+  var DARK_SRC='fambam.png', LIGHT_SRC='fambam2.png';
+  function findLogo(){ return document.getElementById('logoImg')||document.querySelector('.brand img')||document.querySelector('img[alt="Fambam"]'); }
+  function swap(mode){ var logo=findLogo(); if(!logo) return;
+    var cur=logo.getAttribute('src')||'', next=/fambam2?\.png$/i.test(cur)
+      ? cur.replace(/fambam2?\.png$/i, mode==='light'?'fambam2.png':'fambam.png')
+      : (mode==='light'?LIGHT_SRC:DARK_SRC);
+    logo.setAttribute('src', next);
+    var a=logo.closest('a'); if(a && !a.getAttribute('href')) a.setAttribute('href','./index.html');
+  }
+  function apply(t){
+    var mode=(t&&t.mode==='light')?'light':'dark', accent=(t&&t.accent)||'#22d3ee';
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.style.setProperty('--accent', accent);
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', mode==='light' ? '#f2efe7' : '#0f172a');
+    swap(mode); document.addEventListener('DOMContentLoaded', function(){ swap(mode); }, {once:true});
+  }
+  try{ apply(JSON.parse(localStorage.getItem('ui:theme')||'null')||{mode:'dark',accent:'#22d3ee'}); }catch{ apply({mode:'dark',accent:'#22d3ee'}); }
+  window.addEventListener('storage', function(e){ if(e.key==='ui:theme'){ try{ apply(JSON.parse(e.newValue||'{}')); }catch{} }});
 })();
 </script>
   
