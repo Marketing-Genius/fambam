@@ -18,54 +18,53 @@
 <!-- Shared styles -->
 <link rel="stylesheet" href="fambam.css">
 
-<script>
-/* Wallpaper boot: read saved image + overlay/shift and apply CSS vars */
+<script defer>
 (function bootWallpaper(){
   try{
-    // 1) Image (data URL persisted by the picker)
     const dataUrl = localStorage.getItem('hub:wallpaper:dataurl');
     if (dataUrl) {
-      document.documentElement.style.setProperty('--wallpaper-image', `url("${dataUrl}")`);
+      document.documentElement.style
+        .setProperty('--wallpaper-image', `url("${dataUrl}")`);
     }
-
-    // 2) Overlay + shift (ui:wallpaper object)
     const cfg = JSON.parse(localStorage.getItem('ui:wallpaper') || '{}');
-    if (cfg.shift) {
-      document.documentElement.style.setProperty('--wallpaper-shift', String(cfg.shift));
-    }
+    if (cfg.shift) document.documentElement.style
+      .setProperty('--wallpaper-shift', String(cfg.shift));
     const ov = cfg.overlay;
     if (ov) {
-      if (ov.type === 'solid' && ov.color) {
+      if (ov.type==='solid' && ov.color) {
         document.documentElement.style.setProperty('--wp-overlay', ov.color);
-      } else if (ov.type === 'gradient' && ov.start && ov.end) {
+      } else if (ov.type==='gradient' && ov.start && ov.end) {
         const angle = Number(ov.angle ?? 180);
-        document.documentElement.style.setProperty('--wp-overlay', `linear-gradient(${angle}deg, ${ov.start}, ${ov.end})`);
+        document.documentElement.style
+          .setProperty('--wp-overlay', `linear-gradient(${angle}deg, ${ov.start}, ${ov.end})`);
       }
-      if (typeof ov.opacity === 'number') {
-        document.documentElement.style.setProperty('--wp-overlay-opacity', String(ov.opacity));
+      if (typeof ov.opacity==='number') {
+        document.documentElement.style
+          .setProperty('--wp-overlay-opacity', String(ov.opacity));
       }
     }
-
-    // 3) React live when Home changes settings
+    // keep the storage listener if you want live sync
     window.addEventListener('storage', (e)=>{
-      if (e.key === 'hub:wallpaper:dataurl' && e.newValue) {
-        document.documentElement.style.setProperty('--wallpaper-image', `url("${e.newValue}")`);
+      if (e.key==='hub:wallpaper:dataurl' && e.newValue) {
+        document.documentElement.style
+          .setProperty('--wallpaper-image', `url("${e.newValue}")`);
       }
-      if (e.key === 'ui:wallpaper') {
+      if (e.key==='ui:wallpaper') {
         try{
-          const next = JSON.parse(e.newValue || '{}');
-          if (next.shift) {
-            document.documentElement.style.setProperty('--wallpaper-shift', String(next.shift));
-          }
+          const next = JSON.parse(e.newValue||'{}');
+          if (next.shift) document.documentElement.style
+            .setProperty('--wallpaper-shift', String(next.shift));
           const o = next.overlay || {};
-          if (o.type === 'solid' && o.color) {
+          if (o.type==='solid' && o.color) {
             document.documentElement.style.setProperty('--wp-overlay', o.color);
-          } else if (o.type === 'gradient' && o.start && o.end) {
+          } else if (o.type==='gradient' && o.start && o.end) {
             const ang = Number(o.angle ?? 180);
-            document.documentElement.style.setProperty('--wp-overlay', `linear-gradient(${ang}deg, ${o.start}, ${o.end})`);
+            document.documentElement.style
+              .setProperty('--wp-overlay', `linear-gradient(${ang}deg, ${o.start}, ${o.end})`);
           }
-          if (typeof o.opacity === 'number') {
-            document.documentElement.style.setProperty('--wp-overlay-opacity', String(o.opacity));
+          if (typeof o.opacity==='number') {
+            document.documentElement.style
+              .setProperty('--wp-overlay-opacity', String(o.opacity));
           }
         }catch(_){}
       }
