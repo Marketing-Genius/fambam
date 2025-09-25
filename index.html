@@ -81,19 +81,6 @@ body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
   color:var(--text); background:#404c69; overflow-x:hidden;
 }
-/* Wallpaper */
-body::before{
-  content:""; position:fixed; inset:0; z-index:-2;
-  background-image: var(--wallpaper);
-  background-size: cover; background-repeat:no-repeat;
-  background-position: center var(--wallpaper-shift);
-  transform: translateZ(0);
-}
-body::after{
-  content:""; position:fixed; inset:0; z-index:-1;
-  background: rgba(64,76,105,.9);
-  pointer-events:none;
-}
   
 /* App */
 .app{
@@ -301,6 +288,13 @@ html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
 
 /* Drag target outline during preview */
 .slot.drag-target{ outline:2px solid var(--accent); outline-offset:2px; }
+
+ /* Make the wallpaper overlay follow a variable (same for dark/light) */
+body::after{ background: var(--wp-overlay, rgba(64,76,105,.9)); }
+
+/* If you want a nice visible preview ring around the demo, optional: */
+.wp-preview{ border-radius: 12px; border: 1px solid rgba(255,255,255,.2); overflow:hidden }
+  
 </style>
 </head>
 <body>
@@ -401,6 +395,52 @@ html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
               </div>
             </div>
           </div>
+
+<!-- Wallpaper Overlay controls -->
+<div class="item">
+  <div class="grow">
+    <div class="section-title" style="font-weight:800; margin-bottom:6px">Wallpaper Overlay</div>
+
+    <div class="grid" style="gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))">
+      <label>Mode
+        <select id="wpMode">
+          <option value="solid">Solid</option>
+          <option value="gradient">Gradient</option>
+        </select>
+      </label>
+
+      <label>Opacity
+        <input id="wpOpacity" type="range" min="0" max="1" step="0.01">
+      </label>
+
+      <label id="wpSolidWrap">Color (solid)
+        <input id="wpSolidColor" type="color">
+      </label>
+
+      <label id="wpGradStart">Gradient start
+        <input id="wpStart" type="color">
+      </label>
+
+      <label id="wpGradEnd">Gradient end
+        <input id="wpEnd" type="color">
+      </label>
+
+      <label id="wpGradAngle">Angle (deg)
+        <input id="wpAngle" type="number" min="0" max="360" step="1">
+      </label>
+
+      <!-- ✅ New: Vertical shift control -->
+      <label id="wpShiftWrap">Vertical shift (%)
+        <input id="wpShift" type="range" min="0" max="100" step="1">
+      </label>
+    </div>
+
+    <div class="row" style="margin-top:8px;gap:8px">
+      <button id="wpSave" class="btn">Save Overlay</button>
+      <button id="wpReset" class="btn">Reset to Default</button>
+    </div>
+  </div>
+</div>
           
 <div class="item">
   <div class="grow">
@@ -544,24 +584,26 @@ function pickWallpaper(){
   input.onchange = async (ev)=>{
     const file = ev.target.files && ev.target.files[0]; if(!file) return;
     const dataUrl = await compressImage(file, 2400, 0.85);
-    if (window.Wallpaper && typeof Wallpaper.set === 'function') {
-      Wallpaper.set(dataUrl);
+
+    // Use the universal API if available
+    if (window.Wallpaper?.set) {
+      Wallpaper.set({ image: dataUrl });
     } else {
-      const KEY = 'hub:wallpaper:dataurl';
-      localStorage.setItem(KEY, dataUrl);
-      document.documentElement.style.setProperty('--wallpaper', `url("${dataUrl}")`);
+      // Fallback (legacy)
+      localStorage.setItem('hub:wallpaper:dataurl', dataUrl);
+      document.documentElement.style.setProperty('--wallpaper-image', `url("${dataUrl}")`);
     }
     input.value='';
   };
   input.click();
 }
+
 function clearWallpaper(){
-  if (window.Wallpaper && typeof Wallpaper.clear === 'function') {
-    Wallpaper.clear();
+  if (window.Wallpaper?.set) {
+    Wallpaper.set({ image: '' });        // clears image
   } else {
-    const KEY = 'hub:wallpaper:dataurl';
-    localStorage.removeItem(KEY);
-    document.documentElement.style.setProperty('--wallpaper', `url('')`);
+    localStorage.removeItem('hub:wallpaper:dataurl');
+    document.documentElement.style.setProperty('--wallpaper-image', `url('')`);
   }
 }
 function compressImage(file, maxSide=2400, quality=.85){
@@ -659,7 +701,7 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.querySelectorAll('.tab-panel').forEach(p=>p.style.display = (p.dataset.panel===tab?'':'none'));
   });
 });
-function openAdmin(){ buildParents(); buildKids(); initGlobalSettings(); showModal('adminModal', true); }
+function openAdmin(){ buildParents(); buildKids(); initGlobalSettings(); initWallpaperOverlayUI(); showModal('adminModal', true); }
 function closeAdmin(){ showModal('adminModal', false); }
 
 /* Parents UI */
@@ -767,6 +809,117 @@ function initGlobalSettings(){
     document.getElementById('btnPickWallpaper').onclick = pickWallpaper;
     document.getElementById('btnClearWallpaper').onclick = clearWallpaper;
   }catch(e){ console.warn('initGlobalSettings failed', e); }
+}
+function initWallpaperOverlayUI(){
+  const KEY = 'ui:wallpaper';
+
+  // Grab form controls
+  const el = {
+    mode:  document.getElementById('wpMode'),
+    op:    document.getElementById('wpOpacity'),
+    solid: document.getElementById('wpSolidColor'),
+    start: document.getElementById('wpStart'),
+    end:   document.getElementById('wpEnd'),
+    angle: document.getElementById('wpAngle'),
+    solidWrap: document.getElementById('wpSolidWrap'),
+    gradStart: document.getElementById('wpGradStart'),
+    gradEnd:   document.getElementById('wpGradEnd'),
+    gradAngle: document.getElementById('wpGradAngle'),
+    save:  document.getElementById('wpSave'),
+    shift: document.getElementById('wpShift'),
+    reset: document.getElementById('wpReset')
+  };
+
+  const DEF = {
+    // Defaults match the old look (deep blue solid @ 90%)
+    overlay:{ type:'solid', color:'#404C69E6', opacity:0.90 },
+    shift:'40%'
+  };
+
+  function loadCfg(){
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}') } catch { return {}; }
+  }
+  function saveCfg(next){
+    const cur = loadCfg();
+    const merged = { ...cur, ...next };
+    localStorage.setItem(KEY, JSON.stringify(merged));
+    // Apply immediately if wallpaper.js is present
+    if (window.Wallpaper?.set) Wallpaper.set(merged);
+  }
+  function setVisibility(mode){
+    const isSolid = (mode === 'solid');
+    el.solidWrap.style.display = isSolid ? '' : 'none';
+    el.gradStart.style.display = el.gradEnd.style.display = el.gradAngle.style.display = isSolid ? 'none' : '';
+  }
+
+  // Hydrate form from saved values
+  (function hydrate(){
+    const cfg = loadCfg();
+    const ov  = cfg.overlay || DEF.overlay;
+    const cfg = loadCfg();
+const ov  = cfg.overlay || DEF.overlay;
+
+    el.mode.value = ov.type || 'solid';
+    el.op.value   = (ov.opacity ?? DEF.overlay.opacity);
+
+    // Provide sensible defaults if missing
+    el.solid.value = ov.color || '#404C69E6';
+    el.start.value = ov.start || '#404C69E6';
+    el.end.value   = ov.end   || '#1E293BE6';
+    el.angle.value = (ov.angle ?? 180);
+
+const sh  = (cfg.shift || DEF.shift || '40%').toString().replace('%','');
+  el.shift.value = sh;
+
+    setVisibility(el.mode.value);
+  })();
+
+  // Mode toggle shows/hides relevant inputs
+  el.mode.onchange = ()=> setVisibility(el.mode.value);
+
+  // ✅ live preview + persist latest slider value
+el.shift.oninput = ()=>{
+  const pct = `${el.shift.value}%`;
+  if (window.Wallpaper?.set) Wallpaper.set({ shift: pct });
+  document.documentElement.style.setProperty('--wallpaper-shift', pct);
+  const cur = loadCfg();
+  localStorage.setItem(KEY, JSON.stringify({ ...cur, shift: pct }));
+};
+
+  // Save overlay → persists + live-applies via wallpaper.js
+  el.save.onclick = ()=>{
+    const mode = el.mode.value;
+    const next = { overlay: { type: mode, opacity: Number(el.op.value) },
+    shift: `${el.shift.value}%`
+    };
+    if (mode === 'solid') {
+      next.overlay.color = el.solid.value;        // hex8 or rgba OK
+    } else {
+      next.overlay.start = el.start.value;
+      next.overlay.end   = el.end.value;
+      next.overlay.angle = Number(el.angle.value);
+    }
+    saveCfg(next);
+    alert('Wallpaper overlay saved.');
+  };
+
+  // Reset to defaults
+  el.reset.onclick = ()=>{
+    localStorage.setItem(KEY, JSON.stringify(DEF));
+    if (window.Wallpaper?.set) Wallpaper.set(DEF);
+    // Rehydrate form to defaults
+    el.mode.value = 'solid';
+    el.op.value = DEF.overlay.opacity;
+    el.solid.value = DEF.overlay.color;
+    el.start.value = '#404C69E6';
+    el.end.value   = '#1E293BE6';
+    el.angle.value = 180;
+    el.shift.value = parseInt((DEF.shift || '40%'), 10);
+  document.documentElement.style.setProperty('--wallpaper-shift', DEF.shift);
+    
+    setVisibility('solid');
+    alert('Wallpaper overlay reset.');
+  };
 }
 function setTheme(patch){
   try{
