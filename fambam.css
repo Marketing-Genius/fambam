@@ -13,6 +13,65 @@ html[data-theme="light"]{
   --chipBg:#fffdf7; --chipBorder:#e3ded4; --panelBorder:#e6e2da;
 }
 
+/* ----- Tokens (global) ----- */
+:root{
+  /* surfaces */
+  --panel:#111827;
+  --card:rgba(31,41,55,0.40); /* translucent card */
+
+  /* text & accent */
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --accent:#22d3ee;
+
+  /* background + effects */
+  --bg-dim:#404c69;                 /* fallback page bg when no wallpaper */
+  --shadow:0 10px 30px rgba(0,0,0,.35);
+  --radius:18px;
+
+  /* borders/chips used by tiles & menus */
+  --panelBorder:#0b1224;
+  --tileBorder:rgba(31,41,55,.95);  /* <-- add (was only in index.html) */
+  --chipBg:#0b1224;
+  --chipBorder:#334155;
+
+  /* preview boxes (Breakfast/Chores/Points) */
+  --previewBg:#081228;              /* <-- add */
+  --previewBorder:#27324a;          /* <-- add */
+
+  /* optional glass header tint if you use it elsewhere */
+  --glassHeader:rgba(17,24,39,.5);  /* <-- add */
+}
+
+html[data-theme="light"]{
+  --panel:#f2efe7;
+  --card:rgba(255,255,255,0.55);    /* translucent in light */
+  --text:#0f1623;
+  --muted:#556070;
+
+  --bg-dim:#f0ece4;                 /* fallback bg in light */
+  --shadow:0 10px 28px rgba(0,0,0,.08);
+
+  --panelBorder:#e6e2da;
+  --tileBorder:#ebe7df;             /* <-- add */
+  --chipBg:#fffdf7;
+  --chipBorder:#e3ded4;
+
+  --previewBg:#fffdf7;              /* <-- add */
+  --previewBorder:#ebe6db;          /* <-- add */
+
+  --glassHeader:rgba(255,255,255,.72); /* <-- add */
+}
+
+/* Base layout (shared) */
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  color:var(--text);
+  background:var(--bg-dim); /* neutral fallback when no wallpaper */
+}
+
 /* ----- Base layout helpers ----- */
 html,body{height:100%}
 body{
