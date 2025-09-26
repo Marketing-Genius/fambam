@@ -92,37 +92,8 @@ body.header-float .app-header{
   min-height: 44px;
 }
 
-/* nice little lift so icons don’t get lost on photos */
-body.header-float .app-header .brand img,
-body.header-float .app-header .hamburger {
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
-}
+.menu-wrap { position: relative; z-index: 2000; }
 
-/* Menu button + dropdown (shared) */
-.menu-wrap{ position:relative; z-index: 2000; }
-.hamburger{
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-
-  background: rgba(0, 0, 0, .25);   /* 25% transparent circle */
-  color: var(--accent);             /* crisp hamburger lines */
-
-  backdrop-filter: blur(8px) saturate(1.1);
-  -webkit-backdrop-filter: blur(8px) saturate(1.1);
-
-  cursor: pointer;
-  font: inherit;
-}
-.hamburger:hover { background: rgba(0,0,0,.32); }
-.hamburger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-html[data-theme="light"] .hamburger{
-  background: rgba(0, 0, 0, .25);   /* same treatment for light */
-}
 .menu-dd{
   position:absolute; right:0; top:110%; min-width:220px; z-index:2001;
   background: var(--panel);              /* ← make opaque */
@@ -217,32 +188,33 @@ html[data-theme="light"] .hamburger{
   background-clip: padding-box;
 }
 
-/* Ultra-minimal floating hamburger — same in light/dark, no border/shadow */
+/* Ultra-minimal hamburger — circle, 25% bg, no border/shadow */
 .menu-wrap .hamburger{
-  --hb-size: 54px;
-  width: var(--hb-size);
-  height: var(--hb-size);
-  padding: 0;
-  border-radius: 9999px;                   /* circle */
+  all: unset;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  width: 54px;
+  height: 54px;
+  border-radius: 9999px;
   background: color-mix(in oklab, var(--panel) 25%, transparent);
-  border: none !important;                 /* iOS: kill any residual stroke */
-  box-shadow: none !important;             /* remove drop shadow */
-  filter: none !important;                 /* beats any earlier drop-shadow */
-  backdrop-filter: none !important;        /* keep it subtle */
-  -webkit-appearance: none;
-  appearance: none;
-  outline: none;
+  color: var(--accent);
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Also nuke focus ring variants Safari may add */
+/* No rings/shadows ever */
+.menu-wrap .hamburger,
 .menu-wrap .hamburger:focus,
-.menu-wrap .hamburger:focus-visible,
-.menu-wrap .hamburger:active{
+.menu-wrap .hamburger:active,
+.menu-wrap .hamburger:focus-visible{
+  border: none !important;
   outline: none !important;
   box-shadow: none !important;
   filter: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
-/* If you kept the “floating header” lift, override it too */
-body.header-float .app-header .hamburger{ filter: none !important; }
+/* If you kept the floating-header image lift, avoid applying it to the hamburger */
+body.header-float .app-header .brand img { filter: drop-shadow(0 2px 6px rgba(0,0,0,.35)); }
+body.header-float .app-header .hamburger { filter: none !important; }
