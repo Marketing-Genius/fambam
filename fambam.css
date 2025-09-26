@@ -83,11 +83,25 @@ body{
 /* Floating header: just a row, no panel chrome */
 .header.floating{ padding:0; background:transparent; border:none; box-shadow:none }
 
+/* When this class is on <body>, make the main app header float */
+body.header-float .app-header { min-height: 44px; } {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* nice little lift so icons don’t get lost on photos */
+body.header-float .app-header .brand img,
+body.header-float .app-header .hamburger {
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+}
+
 /* Menu button + dropdown (shared) */
-.menu-wrap{ position:relative; z-index: 1001; }
+.menu-wrap{ position:relative; z-index: 2000; }
 .hamburger{ background:var(--chipBg); border:1px solid var(--chipBorder); border-radius:12px; padding:10px 12px }
 .menu-dd{
-  position:absolute; right:0; top:110%; min-width:220px; z-index:1002;
+  position:absolute; right:0; top:110%; min-width:220px; z-index:2001;
   background: var(--panel);              /* ← make opaque */
   border:1px solid var(--panelBorder);
   border-radius:12px; box-shadow:var(--shadow); padding:6px; display:none;
