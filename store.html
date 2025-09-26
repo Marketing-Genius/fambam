@@ -95,12 +95,34 @@
 .page-store .menu-wrap{position:relative;z-index:1001}
 .page-store .menu-dd{z-index:1002}
 </style>
+
+<script>
+/* HEADER FLOAT BOOT (reads ui:headerFloat) */
+(function headerBoot(){
+  function apply(){
+    try{
+      const on = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
+      document.body && document.body.classList.toggle('header-float', on);
+    }catch(_){}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply, {once:true});
+  } else {
+    apply();
+  }
+  // live-sync if changed elsewhere (e.g., Admin on Home)
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'ui:headerFloat') apply();
+  });
+})();
+</script>
+  
 </head>
 
 <body class="page-store">
   <div class="app">
     <!-- Shared header -->
-    <header class="panel header">
+    <header class="panel header app-header">
       <a href="./index.html" class="brand" title="Home">
         <img id="logoImg" src="fambam.png" alt="Fambam">
       </a>
