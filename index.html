@@ -1052,8 +1052,9 @@ el.shift.oninput = ()=>{
   document.documentElement.style.setProperty('--wallpaper-shift', pct);
   const cur = loadCfg();
   localStorage.setItem(KEY, JSON.stringify({ ...cur, shift: pct }));
+  el.op.oninput = ()=>{
+  Wallpaper.set({ overlay: { opacity: Number(el.op.value) } });
 };
-
   // Save overlay → persists + live-applies via wallpaper.js
   el.save.onclick = ()=>{
     const mode = el.mode.value;
@@ -1070,7 +1071,19 @@ el.shift.oninput = ()=>{
     saveCfg(next);
     alert('Wallpaper overlay saved.');
   };
-
+el.save.onclick = ()=>{
+  const mode = el.mode.value;
+  const next = { overlay: { type: mode, opacity: Number(el.op.value) }, shift: `${el.shift.value}%` };
+  if (mode === 'solid') {
+    next.overlay.color = el.solid.value;
+  } else {
+    next.overlay.start = el.start.value;
+    next.overlay.end   = el.end.value;
+    next.overlay.angle = Number(el.angle.value);
+  }
+  Wallpaper.set(next);               // ← applies immediately + persists
+  alert('Wallpaper overlay saved.');
+};
   // Reset to defaults
   el.reset.onclick = ()=>{
     localStorage.setItem(KEY, JSON.stringify(DEF));
