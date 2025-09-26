@@ -976,6 +976,14 @@ function compress(file, maxSide=256, quality=0.8){
   });
 }
 
+function setHeaderFloat(on){
+  try{
+    const flag = !!on;
+    localStorage.setItem('ui:headerFloat', JSON.stringify(flag));
+    document.body.classList.toggle('header-float', flag);
+  }catch(e){ console.warn('setHeaderFloat failed', e); }
+}
+  
 /* --------- Global Settings (Theme + Wallpaper) ---------- */
 function initGlobalSettings(){
   try{
@@ -997,24 +1005,20 @@ function initGlobalSettings(){
     document.getElementById('btnClearWallpaper').onclick = clearWallpaper;
     
     const hf = document.getElementById('headerFloatToggle');
-    if (hf){
-      const savedHF = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
-      hf.checked = savedHF;
-      hf.onchange = ()=> setHeaderFloat(hf.checked);
-    }
+if (hf){
+  const savedHF = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
+  hf.checked = savedHF;
+  setHeaderFloat(savedHF);               // <- optional: ensures UI reflects current state right now
+  hf.onchange = ()=> setHeaderFloat(hf.checked);
+}
     
   }catch(e){ console.warn('initGlobalSettings failed', e); }
 }
+  
 function initWallpaperOverlayUI(){
   const KEY = 'ui:wallpaper';
 
-  function setHeaderFloat(on){
-  try{
-    const flag = !!on;
-    localStorage.setItem('ui:headerFloat', JSON.stringify(flag));
-    document.body.classList.toggle('header-float', flag);
-  }catch(e){ console.warn('setHeaderFloat failed', e); }
-}
+
 
   // Grab form controls
   const el = {
