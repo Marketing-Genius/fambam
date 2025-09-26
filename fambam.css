@@ -26,7 +26,7 @@ body{
 /* Wallpaper layer (so every page gets the same treatment) */
 body::before{content:""; position:fixed; inset:0; z-index:-2; background-image:var(--wallpaper, none);
   background-size:cover; background-repeat:no-repeat; background-position:center var(--wallpaper-shift,40%); transform:translateZ(0);}
-body::after{content:""; position:fixed; inset:0; z-index:-1; background:rgba(64,76,105,.9); pointer-events:none;}
+body::after{content:""; position:fixed; inset:0; z-index:-1; background:rgba(64,76,105,.55); pointer-events:none;}
 html[data-theme="light"] body::after{ background:rgba(240,236,228,.88) }
 
 /* ----- Buttons (used everywhere) ----- */
@@ -135,13 +135,14 @@ html[data-theme="light"] body::after{ background:rgba(240,236,228,.88) }
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ----- Glass effect for card surfaces ----- */
+/* ----- Glass effect for card surfaces (wins over page-level rules) ----- */
 .tile,
 .page-family .card,
 .item,
 .modal {
   background: var(--card);
-  backdrop-filter: blur(14px) saturate(1.15) contrast(1.02);
-  -webkit-backdrop-filter: blur(14px) saturate(1.15) contrast(1.02); /* iOS Safari */
-  background-clip: padding-box; /* crisp borders */
+  /* force our blur even if pages set a different blur later */
+  backdrop-filter: blur(14px) saturate(1.15) contrast(1.02) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.15) contrast(1.02) !important;
+  background-clip: padding-box;
 }
