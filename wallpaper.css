@@ -1,5 +1,6 @@
 /* wallpaper.css (only the relevant parts) */
 :root{
+  color-scheme: light dark;
   --wallpaper-image: url('');
   --wallpaper-shift: 40%;
   --wp-overlay: rgba(64,76,105,0.90);
