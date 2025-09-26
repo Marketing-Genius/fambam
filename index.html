@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="wallpaper.css">
-<script src="wallpaper.js" defer></script>
+<script src="wallpaper.js"></script>
 <link rel="stylesheet" href="fambam.css">
 <script src="menu.js" defer></script>  
 
@@ -767,6 +767,20 @@ document.querySelector('.menu-wrap')?.addEventListener('menu:select', (e) => {
 </script>
 
 <script>
+// Fallback: open Admin when the menu item is clicked directly
+document.querySelector('.menu-dd .mi[data-mi="admin"]')?.addEventListener('click', (e)=>{
+  e.preventDefault();
+  const pinIsRequired = (()=>{
+    if (Family.isPinRequired) return !!Family.isPinRequired();
+    try { const raw = localStorage.getItem('hub:family:pinRequired'); return raw === null ? true : !!JSON.parse(raw); }
+    catch { return true; }
+  })();
+  const hasPin = (localStorage.getItem('hub:family:pin') ?? 'null') !== 'null';
+  if (pinIsRequired && hasPin) requestPinUI(openAdmin); else openAdmin();
+});
+</script>
+  
+<script>
 function openPages(){
   const body = document.getElementById('pagesBody'); body.innerHTML='';
   CARDS.forEach(c=>{
@@ -1023,54 +1037,63 @@ function initWallpaperOverlayUI(){
   }
 
   // Hydrate form from saved values
-  (function hydrate(){
-    const cfg = loadCfg();
-    const ov  = cfg.overlay || DEF.overlay;
+(function hydrate(){
+  const cfg = loadCfg();
+  const ov  = cfg.overlay || DEF.overlay;
 
-    el.mode.value = ov.type || 'solid';
-    el.op.value   = (ov.opacity ?? DEF.overlay.opacity);
+  el.mode.value = ov.type || 'solid';
+  el.op.value   = (ov.opacity ?? DEF.overlay.opacity);
 
-    // Provide sensible defaults if missing
-    el.solid.value = ov.color || '#404C69E6';
-    el.start.value = ov.start || '#404C69E6';
-    el.end.value   = ov.end   || '#1E293BE6';
-    el.angle.value = (ov.angle ?? 180);
+  // helper: coerce rgba/8-digit hex → 6-digit hex for <input type="color">
+  const toHex6 = (v, fallback) => {
+    if (!v) return fallback;
+    // rgba(...) → fallback
+    if (/rgba?\(/i.test(v)) return fallback;
+    // #RRGGBBAA → #RRGGBB
+    const m = String(v).trim().match(/^#([0-9a-f]{6})([0-9a-f]{2})$/i);
+    if (m) return `#${m[1]}`;
+    // #RGB → expand to #RRGGBB
+    const s = String(v).trim();
+    const m3 = s.match(/^#([0-9a-f]{3})$/i);
+    if (m3) return '#' + m3[1].split('').map(x=>x+x).join('');
+    // already #RRGGBB?
+    if (/^#[0-9a-f]{6}$/i.test(s)) return s;
+    return fallback;
+  };
 
-const sh  = (cfg.shift || DEF.shift || '40%').toString().replace('%','');
+  // Provide sensible defaults if missing
+  el.solid.value = toHex6(ov.color, '#404C69');
+  el.start.value = toHex6(ov.start, '#404C69');
+  el.end.value   = toHex6(ov.end,   '#1E293B');
+  el.angle.value = (ov.angle ?? 180);
+
+  const sh  = (cfg.shift || DEF.shift || '40%').toString().replace('%','');
   el.shift.value = sh;
 
-    setVisibility(el.mode.value);
-  })();
+  setVisibility(el.mode.value);
+})();
 
   // Mode toggle shows/hides relevant inputs
   el.mode.onchange = ()=> setVisibility(el.mode.value);
 
-  // ✅ live preview + persist latest slider value
+// ✅ live preview + persist latest slider value
 el.shift.oninput = ()=>{
   const pct = `${el.shift.value}%`;
-  if (window.Wallpaper?.set) Wallpaper.set({ shift: pct });
   document.documentElement.style.setProperty('--wallpaper-shift', pct);
   const cur = loadCfg();
   localStorage.setItem(KEY, JSON.stringify({ ...cur, shift: pct }));
-  el.op.oninput = ()=>{
-  Wallpaper.set({ overlay: { opacity: Number(el.op.value) } });
+  if (window.Wallpaper?.set) Wallpaper.set({ shift: pct });
 };
-  // Save overlay → persists + live-applies via wallpaper.js
-  el.save.onclick = ()=>{
-    const mode = el.mode.value;
-    const next = { overlay: { type: mode, opacity: Number(el.op.value) },
-    shift: `${el.shift.value}%`
-    };
-    if (mode === 'solid') {
-      next.overlay.color = el.solid.value;        // hex8 or rgba OK
-    } else {
-      next.overlay.start = el.start.value;
-      next.overlay.end   = el.end.value;
-      next.overlay.angle = Number(el.angle.value);
-    }
-    saveCfg(next);
-    alert('Wallpaper overlay saved.');
-  };
+
+// live opacity while dragging
+el.op.oninput = ()=>{
+  const val = Number(el.op.value);
+  const cur = loadCfg();
+  localStorage.setItem(KEY, JSON.stringify({ ...cur, overlay: { ...(cur.overlay||{}), opacity: val } }));
+  if (window.Wallpaper?.set) Wallpaper.set({ overlay: { opacity: val } });
+};
+
+// Save overlay → persists + live-applies
 el.save.onclick = ()=>{
   const mode = el.mode.value;
   const next = { overlay: { type: mode, opacity: Number(el.op.value) }, shift: `${el.shift.value}%` };
@@ -1081,26 +1104,30 @@ el.save.onclick = ()=>{
     next.overlay.end   = el.end.value;
     next.overlay.angle = Number(el.angle.value);
   }
-  Wallpaper.set(next);               // ← applies immediately + persists
+  localStorage.setItem(KEY, JSON.stringify({ ...loadCfg(), ...next }));
+  if (window.Wallpaper?.set) Wallpaper.set(next);
   alert('Wallpaper overlay saved.');
 };
-  // Reset to defaults
-  el.reset.onclick = ()=>{
-    localStorage.setItem(KEY, JSON.stringify(DEF));
-    if (window.Wallpaper?.set) Wallpaper.set(DEF);
-    // Rehydrate form to defaults
-    el.mode.value = 'solid';
-    el.op.value = DEF.overlay.opacity;
-    el.solid.value = DEF.overlay.color;
-    el.start.value = '#404C69E6';
-    el.end.value   = '#1E293BE6';
-    el.angle.value = 180;
-    el.shift.value = parseInt((DEF.shift || '40%'), 10);
+
+// Reset to defaults
+el.reset.onclick = ()=>{
+  const DEF = { overlay:{ type:'solid', color:'#404C69E6', opacity:0.90 }, shift:'40%' };
+  localStorage.setItem(KEY, JSON.stringify(DEF));
+  if (window.Wallpaper?.set) Wallpaper.set(DEF);
+
+  // Rehydrate form to defaults
+  el.mode.value = 'solid';
+  el.op.value = DEF.overlay.opacity;
+  el.solid.value = '#404C69';   // 6-digit for <input type="color">
+  el.start.value = '#404C69';
+  el.end.value   = '#1E293B';
+  el.angle.value = 180;
+  el.shift.value = parseInt((DEF.shift || '40%'), 10);
   document.documentElement.style.setProperty('--wallpaper-shift', DEF.shift);
-    
-    setVisibility('solid');
-    alert('Wallpaper overlay reset.');
-  };
+
+  setVisibility('solid');
+  alert('Wallpaper overlay reset.');
+};
 }
 function setTheme(patch){
   try{
