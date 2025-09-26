@@ -106,24 +106,22 @@ body.header-float .app-header .hamburger {
   padding: 0;
   display: grid;
   place-items: center;
-  border-radius: 999px;
+  border-radius: 50%;
 
-  background: rgba(0, 0, 0, .25);        /* ~25% transparent */
-  border: 1px solid rgba(0, 0, 0, .35);
-  color: var(--accent);                  /* keeps lines crisp */
+  background: rgba(0, 0, 0, .25);   /* 25% transparent circle */
+  color: var(--accent);             /* crisp hamburger lines */
 
   backdrop-filter: blur(8px) saturate(1.1);
   -webkit-backdrop-filter: blur(8px) saturate(1.1);
-  box-shadow: 0 8px 22px rgba(0,0,0,.25);
 
   cursor: pointer;
   font: inherit;
 }
 .hamburger:hover { background: rgba(0,0,0,.32); }
-.hamburger:focus-visible { outline: 0px solid var(--accent); outline-offset: 0px; }
+.hamburger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 html[data-theme="light"] .hamburger{
-  background: rgba(0, 0, 0, .25);
-  border-color: rgba(0, 0, 0, .30);
+  background: rgba(0, 0, 0, .25);   /* same treatment for light */
 }
 .menu-dd{
   position:absolute; right:0; top:110%; min-width:220px; z-index:2001;
