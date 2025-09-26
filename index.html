@@ -1844,8 +1844,9 @@ function projectOrder(arr, from, to){
 </script>
 
 <script>
-/* ===== Export / Import ===== */
+/* ===== Export / Import (with overlay support) ===== */
 (function(){
+  // ------------ CONFIG ------------
   const ALLOW_PREFIXES = [
     'hub:',       // family admin data, slots, pin, parents/kids
     'bf:',        // breakfast
@@ -1855,37 +1856,120 @@ function projectOrder(arr, from, to){
     'photos:',    // photos page settings + list
     'profile:',   // profiles (older)
     'prof:',      // profiles (newer mini-store)
-    'ui:'         // theme etc.
+    'ui:'         // theme, overlay, etc.  << includes ui:wallpaper:overlay:v1
   ];
 
   const EXCLUDE_MEDIA_KEYS = new Set([
-    'hub:wallpaper:dataurl',
-    'photos:list'
+    'hub:wallpaper:dataurl', // raw wallpaper image
+    'photos:list'            // raw photos array
   ]);
+
+  // Canonical overlay storage key (what your wallpaper.js uses)
+  const OVERLAY_KEY = 'ui:wallpaper:overlay:v1';
+  // Any legacy keys you might have used in experiments:
+  const LEGACY_OVERLAY_KEYS = [
+    'ui:wallpaperOverlay',
+    'ui:overlay',
+    'ui:wp:overlay'
+  ];
 
   const $ = (s,e=document)=>e.querySelector(s);
 
+  // ------------ SMALL HELPERS ------------
   function shouldExportKey(k){
     return ALLOW_PREFIXES.some(p => k.startsWith(p));
   }
 
+  // Validate & clamp an overlay object into a safe shape the app expects.
+  function normalizeOverlayObj(obj){
+    const safeHex = s => (typeof s==='string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(s)) ? s : '#000000';
+    const clamp01 = n => Math.min(1, Math.max(0, Number(n)||0));
+    const deg360  = n => ((Number(n)||0) % 360 + 360) % 360;
+
+    const mode = (obj && (obj.mode==='gradient' || obj.mode==='solid')) ? obj.mode : 'solid';
+    const opacity = clamp01(obj?.opacity);
+    if (mode === 'gradient'){
+      return {
+        mode: 'gradient',
+        start: safeHex(obj?.start || '#000000'),
+        end:   safeHex(obj?.end   || '#000000'),
+        angle: deg360(obj?.angle ?? 180),
+        opacity
+      };
+    }
+    // solid
+    return {
+      mode: 'solid',
+      color: safeHex(obj?.color || '#000000'),
+      opacity
+    };
+  }
+
+  // Try to apply overlay now (nice-to-have visual feedback after import).
+  function applyOverlayNow(){
+    try{
+      const raw = localStorage.getItem(OVERLAY_KEY);
+      if (!raw) return;
+      const overlay = normalizeOverlayObj(JSON.parse(raw));
+      // If your wallpaper.js exposes an apply method, use it
+      if (window.Wallpaper && typeof Wallpaper.applyOverlay === 'function'){
+        Wallpaper.applyOverlay(overlay);
+        return;
+      }
+      // otherwise set a CSS custom property that your CSS (or wallpaper.js) can read
+      // this is a minimal fallback; the full styling remains in wallpaper.js
+      let css = '';
+      if (overlay.mode === 'solid'){
+        css = `${overlay.color}`;
+      } else {
+        css = `linear-gradient(${overlay.angle}deg, ${overlay.start}, ${overlay.end})`;
+      }
+      const alpha = overlay.opacity;
+      // We put this into an inline var; wallpaper.css can prefer this if present.
+      document.documentElement.style.setProperty('--wp-overlay-inline', css);
+      document.documentElement.style.setProperty('--wp-overlay-opacity-inline', String(alpha));
+    }catch{}
+  }
+
+  // If a backup contains a legacy overlay key, migrate it to the canonical key
+  function migrateOverlayKeysFromObject(obj){
+    if (!obj || typeof obj !== 'object') return;
+    if (obj[OVERLAY_KEY]) return; // already there
+    for (const k of LEGACY_OVERLAY_KEYS){
+      if (obj[k]){
+        obj[OVERLAY_KEY] = obj[k];
+        break;
+      }
+    }
+  }
+
+  // ------------ EXPORT ------------
   function exportHubDataCore({excludeMedia=false}={}){
     try{
       const dump = {
         __meta: {
           app: 'Fambam',
-          version: '1',
+          version: '2', // bump for overlay awareness
           exportedAt: new Date().toISOString(),
           noMedia: !!excludeMedia
         },
         data: {}
       };
+
+      // Ensure overlay is included, even if stored under a legacy key
       for (let i=0;i<localStorage.length;i++){
         const k = localStorage.key(i);
         if (!shouldExportKey(k)) continue;
         if (excludeMedia && EXCLUDE_MEDIA_KEYS.has(k)) continue;
         dump.data[k] = localStorage.getItem(k);
       }
+      // If canonical overlay missing but legacy exists, add it now
+      if (!dump.data[OVERLAY_KEY]){
+        for (const lx of LEGACY_OVERLAY_KEYS){
+          if (dump.data[lx]) { dump.data[OVERLAY_KEY] = dump.data[lx]; break; }
+        }
+      }
+
       const suffix = excludeMedia ? '-nomedia' : '';
       const name = `fambam-backup${suffix}-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
       const blob = new Blob([JSON.stringify(dump)], {type:'application/json'});
@@ -1903,7 +1987,7 @@ function projectOrder(arr, from, to){
   function exportHubData(){ exportHubDataCore({excludeMedia:false}); }
   function exportHubDataNoMedia(){ exportHubDataCore({excludeMedia:true}); }
 
-  // (unchanged) — your robust import that writes keys back
+  // ------------ IMPORT ------------
   async function importHubDataFile(file){
     if (!file) return;
 
@@ -1914,11 +1998,6 @@ function projectOrder(arr, from, to){
       r.readAsText(f);
     });
 
-    function shouldExportKey(k){
-      return ['hub:','bf:','dp:','ch:','pts:','photos:','profile:','prof:','ui:'].some(p=>k.startsWith(p));
-    }
-
-    // Recompress a dataURL (used for wallpaper)
     function recompressDataUrl(dataUrl, maxSide=1600, quality=0.7){
       return new Promise(resolve=>{
         try{
@@ -1942,6 +2021,9 @@ function projectOrder(arr, from, to){
       const parsed = JSON.parse(text||'{}');
       const data = parsed && parsed.data;
       if (!data || typeof data !== 'object') { alert('Invalid backup file.'); return; }
+
+      // Make sure overlay exists in object (migrate legacy key names if necessary)
+      migrateOverlayKeysFromObject(data);
 
       if (!confirm('Importing will replace current data on this device. Continue?')) return;
 
@@ -1968,9 +2050,21 @@ function projectOrder(arr, from, to){
       const deferred = [];
       for (const [k,v] of entries){
         if (k===BIG_WALL || k===PHOTOS) { deferred.push([k,v]); continue; }
+
+        // If we’re writing the overlay, sanitize before storage
+        if (k === OVERLAY_KEY){
+          try{
+            const clean = normalizeOverlayObj(JSON.parse(String(v||'{}')));
+            localStorage.setItem(k, JSON.stringify(clean));
+            continue;
+          }catch{
+            // fall through to raw write attempt
+          }
+        }
+
         try{
           localStorage.setItem(k, String(v));
-        }catch(err){
+        }catch{
           skipped.push(k);
         }
       }
@@ -2020,6 +2114,23 @@ function projectOrder(arr, from, to){
         }
       }
 
+      // Make sure overlay exists post-import (even if the backup had only legacy key)
+      if (!localStorage.getItem(OVERLAY_KEY)){
+        for (const lx of LEGACY_OVERLAY_KEYS){
+          const raw = localStorage.getItem(lx);
+          if (raw){
+            try{
+              const clean = normalizeOverlayObj(JSON.parse(raw));
+              localStorage.setItem(OVERLAY_KEY, JSON.stringify(clean));
+              break;
+            }catch{}
+          }
+        }
+      }
+
+      // Apply overlay immediately (nice visual confirmation), then reload.
+      applyOverlayNow();
+
       let msg = 'Import complete.';
       if (notes.length)   msg += '\n' + notes.join('\n');
       if (skipped.length) msg += '\nSkipped keys: ' + skipped.join(', ');
@@ -2031,10 +2142,10 @@ function projectOrder(arr, from, to){
     }
   }
 
-  // Wire buttons (now includes "No Media")
+  // ------------ WIRING (same buttons as before) ------------
   function wireDataButtons(){
     const btnExp  = $('#btnExportData');
-    const btnExpN = $('#btnExportNoMedia');
+    const btnExpN = $('#btnExportNoMedia'); // wire if present
     const btnImp  = $('#btnImportData');
     const fileIn  = $('#importFileInput');
 
@@ -2058,7 +2169,7 @@ function projectOrder(arr, from, to){
   }
 
   document.addEventListener('DOMContentLoaded', wireDataButtons);
-  // also try re-wiring when the modal is opened via the menu
+  // also re-try wiring when the modal is opened via the menu
   document.addEventListener('click', (e)=>{
     if (e.target && (e.target.id==='adminSave' || e.target.id==='adminClose' || e.target.id==='btnMenu')) {
       setTimeout(wireDataButtons, 0);
@@ -2066,7 +2177,6 @@ function projectOrder(arr, from, to){
   });
 })();
 </script>
-
 <!-- Boot + SW -->
 <script>
 renderGrid();
