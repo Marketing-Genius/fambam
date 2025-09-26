@@ -151,12 +151,34 @@ html[data-theme="light"] .page-chores .dot{ color:#334155; }
 /* a11y helper */
 .page-chores .sr-only{ position:absolute!important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 </style>
+
+<script>
+/* HEADER FLOAT BOOT (reads ui:headerFloat) */
+(function headerBoot(){
+  function apply(){
+    try{
+      const on = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
+      document.body && document.body.classList.toggle('header-float', on);
+    }catch(_){}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply, {once:true});
+  } else {
+    apply();
+  }
+  // live-sync if changed elsewhere (e.g., Admin on Home)
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'ui:headerFloat') apply();
+  });
+})();
+</script>
+  
 </head>
 
 <body class="page-chores">
   <div class="app">
     <!-- Shared header -->
-    <header class="panel header">
+    <header class="panel header app-header">
       <a href="./index.html" class="brand" title="Home">
         <img src="fambam.png" alt="Fambam">
       </a>
