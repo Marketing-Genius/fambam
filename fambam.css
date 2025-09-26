@@ -120,7 +120,7 @@ body.header-float .app-header .hamburger {
   font: inherit;
 }
 .hamburger:hover { background: rgba(0,0,0,.32); }
-.hamburger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hamburger:focus-visible { outline: 0px solid var(--accent); outline-offset: 0px; }
 html[data-theme="light"] .hamburger{
   background: rgba(0, 0, 0, .25);
   border-color: rgba(0, 0, 0, .30);
