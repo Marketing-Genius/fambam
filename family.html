@@ -40,11 +40,32 @@
   window.addEventListener('storage', function(e){ if(e.key==='ui:theme'){ try{ apply(JSON.parse(e.newValue||'{}')); }catch{} }});
 })();
 </script>
+
+<script>
+/* HEADER FLOAT BOOT (reads ui:headerFloat) */
+(function headerBoot(){
+  function apply(){
+    try{
+      const on = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
+      document.body && document.body.classList.toggle('header-float', on);
+    }catch(_){}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply, {once:true});
+  } else {
+    apply();
+  }
+  // live-sync if changed elsewhere (e.g., Admin on Home)
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'ui:headerFloat') apply();
+  });
+})();
+</script>
   
 </head>
 <body class="page-family">
   <div class="app">
-    <header class="panel">
+    <header class="panel header app-header">
       <a href="./index.html" class="brand" title="Home">
         <img src="fambam.png" alt="Fambam">
       </a>
