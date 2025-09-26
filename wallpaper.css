@@ -10,8 +10,8 @@ html, body { height: 100%; }
 
 body{
   margin:0;
-  background:#404c69;               /* fallback */
-  position: relative;                /* stacking context */
+  background: var(--bg-dim);   /* was #404c69 */
+  position: relative;
   -webkit-tap-highlight-color:transparent;
   touch-action:manipulation;
   overflow-x:hidden;
