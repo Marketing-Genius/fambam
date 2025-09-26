@@ -1,71 +1,85 @@
-// wallpaper.js — universal, works on every page without page-specific boot code
+// wallpaper.js — universal & live-preview ready
 (function () {
   const IMG_KEY = 'hub:wallpaper:dataurl';
   const CFG_KEY = 'ui:wallpaper';
 
-  // Helper: safe JSON parse
-  const jget = (k, d) => {
-    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; }
-  };
+  const jget = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+
+  function overlayCssFrom(cfg) {
+    const ov = (cfg && cfg.overlay) || {};
+    if (ov.type === 'gradient' && ov.start && ov.end) {
+      const ang = Number(ov.angle ?? 180);
+      return `linear-gradient(${ang}deg, ${ov.start}, ${ov.end})`;
+    }
+    // solid default (accepts hex/rgba/etc.)
+    return ov.color || 'rgba(64,76,105,0.90)';
+  }
 
   function applyAll() {
-    // 1) image
+    // --- IMAGE ---
     const dataUrl = localStorage.getItem(IMG_KEY) || '';
     if (dataUrl) {
-      // CSS var for normal flow
       document.documentElement.style.setProperty('--wallpaper-image', `url("${dataUrl}")`);
-
-      // Fallback: inject/refresh an inline style that sets the real rule,
-      // so the image shows even if vars or timing ever fail.
-      let tag = document.getElementById('__wp_inline');
-      const css = `body::before{background-image:url("${dataUrl}") !important}`;
-      if (!tag) {
-        tag = document.createElement('style');
-        tag.id = '__wp_inline';
-        tag.textContent = css;
-        // Put it *early* in <head> so it always wins
-        (document.head || document.documentElement).prepend(tag);
-      } else {
-        tag.textContent = css;
-      }
+      const tag = ensureStyle('__wp_img');
+      tag.textContent = `body::before{background-image:url("${dataUrl}") !important}`;
     } else {
-      // clear both var + inline rule if no image
       document.documentElement.style.setProperty('--wallpaper-image', `url('')`);
-      const tag = document.getElementById('__wp_inline');
-      if (tag) tag.remove();
+      removeStyle('__wp_img');
     }
 
-    // 2) overlay + shift
+    // --- OVERLAY + SHIFT ---
     const cfg = jget(CFG_KEY, {});
-    if (cfg && typeof cfg === 'object') {
-      if (cfg.shift) {
-        document.documentElement.style.setProperty('--wallpaper-shift', String(cfg.shift));
-      }
-      const ov = cfg.overlay || null;
-      if (ov) {
-        if (ov.type === 'solid' && ov.color) {
-          document.documentElement.style.setProperty('--wp-overlay', ov.color);
-        } else if (ov.type === 'gradient' && ov.start && ov.end) {
-          const ang = Number(ov.angle ?? 180);
-          document.documentElement.style.setProperty('--wp-overlay', `linear-gradient(${ang}deg, ${ov.start}, ${ov.end})`);
-        }
-        if (typeof ov.opacity === 'number') {
-          document.documentElement.style.setProperty('--wp-overlay-opacity', String(ov.opacity));
-        }
-      }
+    const cssOverlay = overlayCssFrom(cfg);
+    const opacity = (cfg.overlay && typeof cfg.overlay.opacity === 'number') ? cfg.overlay.opacity : 1;
+    const shift = (cfg.shift || '40%').toString();
+
+    document.documentElement.style.setProperty('--wp-overlay', cssOverlay);
+    document.documentElement.style.setProperty('--wp-overlay-opacity', String(opacity));
+    document.documentElement.style.setProperty('--wallpaper-shift', shift);
+
+    // Force overlay on every page (no reliance on var timing)
+    const ovTag = ensureStyle('__wp_ov');
+    ovTag.textContent = `body::after{background:${cssOverlay} !important;opacity:${opacity} !important}`;
+  }
+
+  function ensureStyle(id) {
+    let tag = document.getElementById(id);
+    if (!tag) {
+      tag = document.createElement('style');
+      tag.id = id;
+      (document.head || document.documentElement).prepend(tag);
     }
+    return tag;
+  }
+  function removeStyle(id){ const t = document.getElementById(id); if (t) t.remove(); }
+
+  // Public API for live updates from sliders
+  function mergeOverlay(cur, patchOv){
+    const ov = { ...(cur.overlay||{}) , ...(patchOv||{}) };
+    // normalize type based on keys present
+    if (ov.start && ov.end) ov.type = 'gradient';
+    if (ov.color && !ov.start && !ov.end) ov.type = 'solid';
+    return ov;
+  }
+  function saveCfg(next){
+    const cur = jget(CFG_KEY, {});
+    const merged = { ...cur, ...next, overlay: mergeOverlay(cur, next && next.overlay) };
+    localStorage.setItem(CFG_KEY, JSON.stringify(merged));
+    return merged;
   }
 
-  // Run ASAP (before CSS paints if possible)
+  window.Wallpaper = {
+    apply: applyAll,
+    get: () => jget(CFG_KEY, {}),
+    set(next){ saveCfg(next||{}); applyAll(); },
+    image(url){
+      if (url === undefined) return localStorage.getItem(IMG_KEY)||'';
+      if (!url) localStorage.removeItem(IMG_KEY); else localStorage.setItem(IMG_KEY, url);
+      applyAll();
+    }
+  };
+
+  // Initial paint + cross-tab sync
   applyAll();
-
-  // Live-sync if another tab/page updates settings
-  window.addEventListener('storage', (e) => {
-    if (e.key === IMG_KEY || e.key === CFG_KEY) applyAll();
-  });
-
-  // Safety: if DOM was not ready yet for the <style> prepend, try once more
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyAll, { once: true });
-  }
+  window.addEventListener('storage', (e)=>{ if (e.key===IMG_KEY || e.key===CFG_KEY) applyAll(); });
 })();
