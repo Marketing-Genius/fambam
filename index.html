@@ -78,34 +78,6 @@
 <style>
 /* --- layout sanity --- */
 *, *::before, *::after { box-sizing: border-box; }
-
-/* Base tokens (overridden by [data-theme]) */
-:root{
-  --panel:#111827; --card:#1f2937; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
-  --bg:#0f172a; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px;
-  --slotH: 220px;
-
-  --panelBorder:#0b1224;
-  --tileBorder: rgba(31,41,55,.95);
-  --glassHeader: rgba(17,24,39,.5);
-  --chipBg:#0b1224;
-  --chipBorder:#334155;
-  --previewBg:#081228;
-  --previewBorder:#27324a;
-}
-
-/* LIGHT THEME OVERRIDES (soft ivory palette) */
-html[data-theme="light"]{
-  --panel:#f2efe7; --card:#ffffff; --muted:#556070; --text:#0f1623; --bg:#f0ece4;
-  --shadow:0 10px 28px rgba(0,0,0,.08);
-  --panelBorder:#e6e2da; --tileBorder:#ebe7df; --glassHeader: rgba(255,255,255,.72);
-  --chipBg:#f6f3ec; --chipBorder:#e3ded4; --previewBg:#fffdf7; --previewBorder:#ebe6db;
-}
-html,body{height:100%}
-body{
-  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
-  color:var(--text); background:#404c69; overflow-x:hidden;
-}
   
 /* App */
 .app{
