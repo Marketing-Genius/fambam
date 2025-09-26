@@ -216,3 +216,33 @@ html[data-theme="light"] .hamburger{
   -webkit-backdrop-filter: blur(14px) saturate(1.15) contrast(1.02) !important;
   background-clip: padding-box;
 }
+
+/* Ultra-minimal floating hamburger — same in light/dark, no border/shadow */
+.menu-wrap .hamburger{
+  --hb-size: 54px;
+  width: var(--hb-size);
+  height: var(--hb-size);
+  padding: 0;
+  border-radius: 9999px;                   /* circle */
+  background: color-mix(in oklab, var(--panel) 25%, transparent);
+  border: none !important;                 /* iOS: kill any residual stroke */
+  box-shadow: none !important;             /* remove drop shadow */
+  filter: none !important;                 /* beats any earlier drop-shadow */
+  backdrop-filter: none !important;        /* keep it subtle */
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Also nuke focus ring variants Safari may add */
+.menu-wrap .hamburger:focus,
+.menu-wrap .hamburger:focus-visible,
+.menu-wrap .hamburger:active{
+  outline: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* If you kept the “floating header” lift, override it too */
+body.header-float .app-header .hamburger{ filter: none !important; }
