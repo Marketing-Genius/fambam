@@ -1,60 +1,46 @@
-/* --- Wallpaper: universal and theme-proof --- */
-:root {
-  /* image + positioning */
-  --wallpaper-image: url('');        /* set by JS or left empty */
+/* wallpaper.css (only the relevant parts) */
+:root{
+  --wallpaper-image: url('');
   --wallpaper-shift: 40%;
-
-  /* overlay editor (user-controlled) */
-  --wp-overlay: rgba(64,76,105,0.90); /* can be a color OR a gradient string */
-  --wp-overlay-opacity: 1;            /* extra master opacity (0..1) */
+  --wp-overlay: rgba(64,76,105,0.90);
+  --wp-overlay-opacity: 1;
 }
 
-/* Do NOT override these in light theme – the wallpaper stays identical */
 html, body { height: 100%; }
 
-body {
-  margin: 0;
-  background: #404c69;                /* fallback color */
-  position: relative;                 /* create a stacking context */
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  overflow-x: hidden;
+body{
+  margin:0;
+  background:#404c69;               /* fallback */
+  position: relative;                /* stacking context */
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  overflow-x:hidden;
 }
 
-/* Image layer (behind overlay, above body background) */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;                         /* visible but behind overlay */
-  background-image: var(--wallpaper-image);
+/* Image layer */
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  z-index:0;
+  background-image: var(--wallpaper-image, none);   /* ← default none */
   background-size: cover;
-  background-repeat: no-repeat;
+  background-repeat:no-repeat;
   background-position: center var(--wallpaper-shift);
-  transform: translateZ(0);
-  pointer-events: none;
+  will-change: background-image, background-position;
+  pointer-events:none;
 }
 
-/* Overlay layer (solid OR gradient), with master opacity */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 1;                         /* above image, below app */
+/* Overlay layer */
+body::after{
+  content:"";
+  position:fixed; inset:0;
+  z-index:1;
   background: var(--wp-overlay);
   opacity: var(--wp-overlay-opacity);
-  pointer-events: none;
+  pointer-events:none;
 }
 
-/* Ensure app content sits above the overlay */
-.app {
-  position: relative;
-  z-index: 2;
-}
+/* Make sure app is above both */
+.app { position: relative; z-index: 2; }
 
-@media print {
-  body::before,
-  body::after {
-    display: none;
-  }
-}
+@media print { body::before, body::after { display:none; } }
