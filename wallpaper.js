@@ -1,102 +1,91 @@
-/* wallpaper.js — universal wallpaper + overlay */
+<!-- wallpaper.js -->
+<script>
 (function(){
-  const KEY_CFG = 'ui:wallpaper';              // overlay + shift live here
-  const KEY_IMG = 'hub:wallpaper:dataurl';     // legacy image store
-
-  const droot = document.documentElement;
-
-  function clamp01(v){ v = Number(v); return isNaN(v) ? 1 : Math.max(0, Math.min(1, v)); }
-
-  function loadCfg(){
-    // overlay + shift
-    let cfg = {};
-    try { cfg = JSON.parse(localStorage.getItem(KEY_CFG) || '{}') || {}; } catch {}
-    // image (kept separately for backwards compatibility)
-    const img = localStorage.getItem(KEY_IMG) || '';
-    if (img && !cfg.image) cfg.image = img;
-    return cfg;
-  }
-// ---- One-time migration from legacy key ----
-try {
-  const NEW_KEY = 'ui:wallpaper';
-  const LEGACY_KEY = 'hub:wallpaper:dataurl';
-  const hasNew = !!localStorage.getItem(NEW_KEY);
-  const legacy = localStorage.getItem(LEGACY_KEY);
-  if (!hasNew && legacy) {
-    // Seed the new config from the old data URL
-    const cfg = {
-      image: legacy,
-      overlay: { type: 'solid', color: 'rgba(64,76,105,1)', opacity: 0.90 },
-      shift: '40%'
-    };
-    localStorage.setItem(NEW_KEY, JSON.stringify(cfg));
-    // Optional: keep or clear the legacy key
-    // localStorage.removeItem(LEGACY_KEY);
-  }
-} catch {}
-  
-  function apply(cfg){
-    cfg = cfg || {};
-    // image
-    droot.style.setProperty('--wallpaper-image', cfg.image ? `url('${cfg.image}')` : `url('')`);
-    // vertical shift
-    if (cfg.shift) droot.style.setProperty('--wallpaper-shift', cfg.shift || '40%');
-
-    // overlay
-    const ov = cfg.overlay || {};
-    const type = ov.type || 'solid';
-    const opacity = clamp01(ov.opacity ?? 0.90);
-
-    let overlay = 'rgba(64,76,105,0.90)';
-
-    if (type === 'solid'){
-      // Expect hex8 or rgba; if hex without alpha, opacity will come from the color
-      overlay = ov.color || overlay;
-    } else {
-      const start = ov.start || 'rgba(64,76,105,1)';
-      const end   = ov.end   || 'rgba(30,41,59,1)';
-      const angle = Number(ov.angle ?? 180);
-      overlay = `linear-gradient(${angle}deg, ${start}, ${end})`;
-    }
-
-    droot.style.setProperty('--wp-overlay', overlay);
-    // Optional: expose opacity for themes that use it in CSS
-    droot.style.setProperty('--wp-overlay-opacity', String(opacity));
-  }
-
-  function saveCfg(patch){
-    const cur = loadCfg();
-    const next = { ...cur, ...patch };
-
-    // image is stored under KEY_IMG for legacy pages
-    if ('image' in patch){
-    try {
-      if (patch.image) localStorage.setItem(KEY_IMG, patch.image);
-      else localStorage.removeItem(KEY_IMG);  // <-- clear if empty
-    } catch {}
-  }
-
-    // never persist "image" inside KEY_CFG
-    const { image, ...persist } = next;
-    try { localStorage.setItem(KEY_CFG, JSON.stringify(persist)); } catch {}
-
-    apply(next);
-  }
-
-  // Boot
-  function boot(){ apply(loadCfg()); }
-
-  // Sync across tabs & BFCache
-  window.addEventListener('storage', (e)=>{
-    if (e.key === KEY_CFG || e.key === KEY_IMG) boot();
-  });
-  document.addEventListener('DOMContentLoaded', boot, { once:true });
-  window.addEventListener('pageshow', boot);
-
-  // Public API
-  window.Wallpaper = {
-    get: loadCfg,
-    set(patch){ saveCfg(patch || {}); },
-    clearImage(){ try{ localStorage.removeItem(KEY_IMG); }catch{}; boot(); }
+  const VAR = {
+    img:   '--wallpaper-image',
+    shift: '--wallpaper-shift',
+    ov:    '--wp-overlay',
+    op:    '--wp-overlay-opacity'
   };
+  const KEY = {
+    data: 'hub:wallpaper:dataurl',
+    cfg:  'ui:wallpaper'
+  };
+
+  function pct(v){
+    if (v==null) return null;
+    const s = String(v).trim();
+    return s.endsWith('%') ? s : (isFinite(+s) ? s + '%' : null);
+  }
+
+  function applyAll() {
+    try{
+      // Image (do NOT clobber if none saved)
+      const dataUrl = localStorage.getItem(KEY.data);
+      if (dataUrl && /^data:image\//.test(dataUrl)) {
+        document.documentElement.style.setProperty(VAR.img, `url("${dataUrl}")`);
+      }
+
+      // Overlay + shift
+      const cfg = JSON.parse(localStorage.getItem(KEY.cfg) || '{}');
+      const sh = pct(cfg.shift ?? '40%');
+      if (sh) document.documentElement.style.setProperty(VAR.shift, sh);
+
+      const ov = cfg.overlay || {};
+      if (ov.type === 'solid' && ov.color){
+        document.documentElement.style.setProperty(VAR.ov, ov.color);
+      } else if (ov.type === 'gradient' && ov.start && ov.end){
+        const angle = Number(ov.angle ?? 180);
+        document.documentElement.style.setProperty(
+          VAR.ov, `linear-gradient(${angle}deg, ${ov.start}, ${ov.end})`
+        );
+      }
+      if (typeof ov.opacity === 'number'){
+        document.documentElement.style.setProperty(VAR.op, String(ov.opacity));
+      }
+    }catch(_){}
+  }
+
+  // Public API used by Settings page, safe on any page
+  window.Wallpaper = {
+    set(patch={}){
+      try{
+        // Update storage first
+        if ('image' in patch) {
+          const v = String(patch.image||'');
+          if (v) localStorage.setItem(KEY.data, v);
+          else   localStorage.removeItem(KEY.data);
+        }
+        if ('overlay' in patch || 'shift' in patch){
+          const cur = JSON.parse(localStorage.getItem(KEY.cfg) || '{}');
+          const next = { ...cur, ...('shift' in patch ? {shift: patch.shift} : {} ) };
+          if (patch.overlay) next.overlay = { ...(cur.overlay||{}), ...patch.overlay };
+          localStorage.setItem(KEY.cfg, JSON.stringify(next));
+        }
+      }catch(_){}
+      // Then apply to CSS vars immediately
+      applyAll();
+    },
+    get(){
+      try{
+        return {
+          image: localStorage.getItem(KEY.data) || '',
+          config: JSON.parse(localStorage.getItem(KEY.cfg) || '{}')
+        };
+      }catch(_){ return { image:'', config:{} }; }
+    }
+  };
+
+  // Apply on DOM ready (works across all pages)
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', applyAll, {once:true});
+  } else {
+    applyAll();
+  }
+
+  // React to changes from other tabs/pages
+  window.addEventListener('storage', (e)=>{
+    if (e.key === KEY.data || e.key === KEY.cfg) applyAll();
+  });
 })();
+</script>
