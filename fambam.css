@@ -49,7 +49,6 @@ html[data-theme="light"]{
 }
 
 /* ----- Base layout helpers ----- */
-html,body{height:100%}
 body{
   margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
   color:var(--text); background:var(--bg-dim);
