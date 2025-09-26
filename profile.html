@@ -120,10 +120,32 @@
 .page-profile .badge{display:inline-flex;gap:6px;align-items:center;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;padding:6px 10px}
 .page-profile .note{background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px}
 </style>
+
+<script>
+/* HEADER FLOAT BOOT (reads ui:headerFloat) */
+(function headerBoot(){
+  function apply(){
+    try{
+      const on = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
+      document.body && document.body.classList.toggle('header-float', on);
+    }catch(_){}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply, {once:true});
+  } else {
+    apply();
+  }
+  // live-sync if changed elsewhere (e.g., Admin on Home)
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'ui:headerFloat') apply();
+  });
+})();
+</script>
+  
 </head>
 <body class="page-profile">
 <div class="app">
-  <header class="panel">
+  <header class="panel header app-header">
     <a href="./family.html" class="brand" title="Back">
       <img id="logoImg" src="fambam.png" alt="Fambam">
     </a>
