@@ -1,91 +1,71 @@
-<!-- wallpaper.js -->
-<script>
-(function(){
-  const VAR = {
-    img:   '--wallpaper-image',
-    shift: '--wallpaper-shift',
-    ov:    '--wp-overlay',
-    op:    '--wp-overlay-opacity'
-  };
-  const KEY = {
-    data: 'hub:wallpaper:dataurl',
-    cfg:  'ui:wallpaper'
-  };
+// wallpaper.js — universal, works on every page without page-specific boot code
+(function () {
+  const IMG_KEY = 'hub:wallpaper:dataurl';
+  const CFG_KEY = 'ui:wallpaper';
 
-  function pct(v){
-    if (v==null) return null;
-    const s = String(v).trim();
-    return s.endsWith('%') ? s : (isFinite(+s) ? s + '%' : null);
-  }
+  // Helper: safe JSON parse
+  const jget = (k, d) => {
+    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; }
+  };
 
   function applyAll() {
-    try{
-      // Image (do NOT clobber if none saved)
-      const dataUrl = localStorage.getItem(KEY.data);
-      if (dataUrl && /^data:image\//.test(dataUrl)) {
-        document.documentElement.style.setProperty(VAR.img, `url("${dataUrl}")`);
-      }
+    // 1) image
+    const dataUrl = localStorage.getItem(IMG_KEY) || '';
+    if (dataUrl) {
+      // CSS var for normal flow
+      document.documentElement.style.setProperty('--wallpaper-image', `url("${dataUrl}")`);
 
-      // Overlay + shift
-      const cfg = JSON.parse(localStorage.getItem(KEY.cfg) || '{}');
-      const sh = pct(cfg.shift ?? '40%');
-      if (sh) document.documentElement.style.setProperty(VAR.shift, sh);
-
-      const ov = cfg.overlay || {};
-      if (ov.type === 'solid' && ov.color){
-        document.documentElement.style.setProperty(VAR.ov, ov.color);
-      } else if (ov.type === 'gradient' && ov.start && ov.end){
-        const angle = Number(ov.angle ?? 180);
-        document.documentElement.style.setProperty(
-          VAR.ov, `linear-gradient(${angle}deg, ${ov.start}, ${ov.end})`
-        );
+      // Fallback: inject/refresh an inline style that sets the real rule,
+      // so the image shows even if vars or timing ever fail.
+      let tag = document.getElementById('__wp_inline');
+      const css = `body::before{background-image:url("${dataUrl}") !important}`;
+      if (!tag) {
+        tag = document.createElement('style');
+        tag.id = '__wp_inline';
+        tag.textContent = css;
+        // Put it *early* in <head> so it always wins
+        (document.head || document.documentElement).prepend(tag);
+      } else {
+        tag.textContent = css;
       }
-      if (typeof ov.opacity === 'number'){
-        document.documentElement.style.setProperty(VAR.op, String(ov.opacity));
-      }
-    }catch(_){}
-  }
-
-  // Public API used by Settings page, safe on any page
-  window.Wallpaper = {
-    set(patch={}){
-      try{
-        // Update storage first
-        if ('image' in patch) {
-          const v = String(patch.image||'');
-          if (v) localStorage.setItem(KEY.data, v);
-          else   localStorage.removeItem(KEY.data);
-        }
-        if ('overlay' in patch || 'shift' in patch){
-          const cur = JSON.parse(localStorage.getItem(KEY.cfg) || '{}');
-          const next = { ...cur, ...('shift' in patch ? {shift: patch.shift} : {} ) };
-          if (patch.overlay) next.overlay = { ...(cur.overlay||{}), ...patch.overlay };
-          localStorage.setItem(KEY.cfg, JSON.stringify(next));
-        }
-      }catch(_){}
-      // Then apply to CSS vars immediately
-      applyAll();
-    },
-    get(){
-      try{
-        return {
-          image: localStorage.getItem(KEY.data) || '',
-          config: JSON.parse(localStorage.getItem(KEY.cfg) || '{}')
-        };
-      }catch(_){ return { image:'', config:{} }; }
+    } else {
+      // clear both var + inline rule if no image
+      document.documentElement.style.setProperty('--wallpaper-image', `url('')`);
+      const tag = document.getElementById('__wp_inline');
+      if (tag) tag.remove();
     }
-  };
 
-  // Apply on DOM ready (works across all pages)
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', applyAll, {once:true});
-  } else {
-    applyAll();
+    // 2) overlay + shift
+    const cfg = jget(CFG_KEY, {});
+    if (cfg && typeof cfg === 'object') {
+      if (cfg.shift) {
+        document.documentElement.style.setProperty('--wallpaper-shift', String(cfg.shift));
+      }
+      const ov = cfg.overlay || null;
+      if (ov) {
+        if (ov.type === 'solid' && ov.color) {
+          document.documentElement.style.setProperty('--wp-overlay', ov.color);
+        } else if (ov.type === 'gradient' && ov.start && ov.end) {
+          const ang = Number(ov.angle ?? 180);
+          document.documentElement.style.setProperty('--wp-overlay', `linear-gradient(${ang}deg, ${ov.start}, ${ov.end})`);
+        }
+        if (typeof ov.opacity === 'number') {
+          document.documentElement.style.setProperty('--wp-overlay-opacity', String(ov.opacity));
+        }
+      }
+    }
   }
 
-  // React to changes from other tabs/pages
-  window.addEventListener('storage', (e)=>{
-    if (e.key === KEY.data || e.key === KEY.cfg) applyAll();
+  // Run ASAP (before CSS paints if possible)
+  applyAll();
+
+  // Live-sync if another tab/page updates settings
+  window.addEventListener('storage', (e) => {
+    if (e.key === IMG_KEY || e.key === CFG_KEY) applyAll();
   });
+
+  // Safety: if DOM was not ready yet for the <style> prepend, try once more
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyAll, { once: true });
+  }
 })();
-</script>
