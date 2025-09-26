@@ -126,6 +126,28 @@ html.drag-lock, body.drag-lock{ overflow:hidden !important; overscroll-behavior:
 .page-breakfast .kid, .page-breakfast .card{ touch-action:none }
 .page-breakfast .card.drop-target{ outline:2px solid var(--accent); outline-offset:2px }
 </style>
+
+<script>
+/* HEADER FLOAT BOOT (reads ui:headerFloat) */
+(function headerBoot(){
+  function apply(){
+    try{
+      const on = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
+      document.body && document.body.classList.toggle('header-float', on);
+    }catch(_){}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply, {once:true});
+  } else {
+    apply();
+  }
+  // live-sync if changed elsewhere (e.g., Admin on Home)
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'ui:headerFloat') apply();
+  });
+})();
+</script>
+  
 </head>
 
 <body class="page-breakfast">
