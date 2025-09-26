@@ -121,12 +121,34 @@
 .page-dinner .face{ width:38px; height:38px; border-radius:50%; background:var(--chipBg); display:grid; place-items:center; font-weight:800; border:1px solid var(--chipBorder); overflow:hidden }
 .page-dinner .face img{ width:100%; height:100%; object-fit:cover }
 </style>
+
+<script>
+/* HEADER FLOAT BOOT (reads ui:headerFloat) */
+(function headerBoot(){
+  function apply(){
+    try{
+      const on = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
+      document.body && document.body.classList.toggle('header-float', on);
+    }catch(_){}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply, {once:true});
+  } else {
+    apply();
+  }
+  // live-sync if changed elsewhere (e.g., Admin on Home)
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'ui:headerFloat') apply();
+  });
+})();
+</script>
+  
 </head>
 
 <body class="page-dinner">
   <div class="app">
     <!-- Shared header -->
-    <header class="panel header">
+    <header class="panel header app-header">
       <a href="./index.html" class="brand" title="Home">
         <img src="fambam.png" alt="Fambam">
       </a>
