@@ -74,6 +74,27 @@
   }catch(_){}
 })();
 </script>
+
+<script>
+/* HEADER FLOAT BOOT (reads ui:headerFloat) */
+(function headerBoot(){
+  function apply(){
+    try{
+      const on = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
+      document.body && document.body.classList.toggle('header-float', on);
+    }catch(_){}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply, {once:true});
+  } else {
+    apply();
+  }
+  // live-sync if changed from Global Settings
+  window.addEventListener('storage', (e)=>{
+    if (e.key === 'ui:headerFloat') apply();
+  });
+})();
+</script>
   
 <style>
 /* --- layout sanity --- */
@@ -402,6 +423,17 @@ html[data-theme="light"] #editBar{ background:rgba(255,255,255,.7); }
               </div>
             </div>
           </div>
+
+          <div class="item">
+  <div class="grow">
+    <div style="font-weight:800; margin-bottom:6px">Header</div>
+    <label class="toggle">
+      <input id="headerFloatToggle" type="checkbox">
+      Floating header (no bar)
+    </label>
+    <div class="row" style="opacity:.75">Logo + menu float on the wallpaper; panel chrome is removed.</div>
+  </div>
+</div>
 
 <!-- Wallpaper Overlay controls -->
 <div class="item">
@@ -963,10 +995,26 @@ function initGlobalSettings(){
 
     document.getElementById('btnPickWallpaper').onclick = pickWallpaper;
     document.getElementById('btnClearWallpaper').onclick = clearWallpaper;
+    
+    const hf = document.getElementById('headerFloatToggle');
+    if (hf){
+      const savedHF = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
+      hf.checked = savedHF;
+      hf.onchange = ()=> setHeaderFloat(hf.checked);
+    }
+    
   }catch(e){ console.warn('initGlobalSettings failed', e); }
 }
 function initWallpaperOverlayUI(){
   const KEY = 'ui:wallpaper';
+
+  function setHeaderFloat(on){
+  try{
+    const flag = !!on;
+    localStorage.setItem('ui:headerFloat', JSON.stringify(flag));
+    document.body.classList.toggle('header-float', flag);
+  }catch(e){ console.warn('setHeaderFloat failed', e); }
+}
 
   // Grab form controls
   const el = {
