@@ -11,72 +11,38 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
-<!-- Shared wallpaper + app styles -->
 <link rel="stylesheet" href="wallpaper.css">
 <link rel="stylesheet" href="fambam.css">
 <script src="wallpaper.js" defer></script>
 
-<!-- THEME BOOT (Dark/Light + Accent + Auto Logo Swap, DOM-ready safe) -->
+<!-- THEME BOOT (same as other pages) -->
 <script>
 (function () {
-  var DARK_SRC  = 'fambam.png';
-  var LIGHT_SRC = 'fambam2.png';
-  var currentTheme = { mode:'dark', accent:'#22d3ee' };
-
-  function applyThemeTokens(t){
-    var mode = (t && t.mode === 'light') ? 'light' : 'dark';
-    var accent = (t && t.accent) || '#22d3ee';
-    currentTheme = { mode:mode, accent:accent };
-
-    document.documentElement.setAttribute('data-theme', mode);
-    document.documentElement.style.setProperty('--accent', accent);
-
-    var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', mode === 'light' ? '#f2efe7' : '#0f172a');
+  var DARK_SRC='fambam.png', LIGHT_SRC='fambam2.png', cur={mode:'dark',accent:'#22d3ee'};
+  function apply(t){
+    var m=(t&&t.mode==='light')?'light':'dark', a=(t&&t.accent)||'#22d3ee'; cur={mode:m,accent:a};
+    document.documentElement.setAttribute('data-theme', m);
+    document.documentElement.style.setProperty('--accent', a);
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', m==='light'?'#f2efe7':'#0f172a');
   }
-
-  function findLogo(){
-    return (
-      document.getElementById('logoImg') ||
-      document.querySelector('.brand img') ||
-      document.querySelector('header img[alt="Fambam"]') ||
-      null
-    );
-  }
-
   function swapLogo(){
-    var logo = findLogo();
-    if (!logo) return;
-
-    var curAttr = logo.getAttribute('src') || '';
-    var base = curAttr.replace(/[^/]*$/, '');
-    var file = (currentTheme.mode === 'light') ? LIGHT_SRC : DARK_SRC;
-    logo.setAttribute('src', base + file);
-
-    var a = logo.closest('a');
-    if (a && !a.getAttribute('href')) a.setAttribute('href', './index.html');
+    var img=document.getElementById('logoImg')||document.querySelector('.brand img'); if(!img) return;
+    var file=(cur.mode==='light')?LIGHT_SRC:DARK_SRC; img.setAttribute('src', file);
+    var a=img.closest('a'); if(a && !a.getAttribute('href')) a.setAttribute('href','./index.html');
   }
+  try{ apply(JSON.parse(localStorage.getItem('ui:theme')||'null')||{mode:'dark',accent:'#22d3ee'});}catch{apply({mode:'dark',accent:'#22d3ee'});}
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', swapLogo, {once:true}); else swapLogo();
+  addEventListener('storage', e=>{ if(e.key==='ui:theme'){ try{apply(JSON.parse(e.newValue||'{}'));}catch{} swapLogo(); }});
+})();
+</script>
 
-  try {
-    var raw = localStorage.getItem('ui:theme');
-    applyThemeTokens(raw ? JSON.parse(raw) : {mode:'dark',accent:'#22d3ee'});
-  } catch(_) { applyThemeTokens({mode:'dark',accent:'#22d3ee'}); }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', swapLogo, {once:true});
-  } else {
-    swapLogo();
-  }
-
-  window.addEventListener('storage', function(e){
-    if (e.key !== 'ui:theme') return;
-    try { applyThemeTokens(JSON.parse(e.newValue||'{}')); } catch(_){}
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', swapLogo, {once:true});
-    } else {
-      swapLogo();
-    }
-  });
+<!-- Header Float boot -->
+<script>
+(function(){
+  function apply(){ try{document.body.classList.toggle('header-float', !!JSON.parse(localStorage.getItem('ui:headerFloat')||'false'));}catch{} }
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', apply, {once:true}); else apply();
+  addEventListener('storage', e=>{ if(e.key==='ui:headerFloat') apply(); });
 })();
 </script>
 
@@ -84,23 +50,15 @@
 /* ---------- Profile (scoped) ---------- */
 .page-profile .app{
   max-width:980px;margin:0 auto;padding:20px;
-  display:grid;gap:18px;grid-template-rows:auto auto 1fr auto;
+  display:grid;gap:18px;grid-template-rows:auto auto auto 1fr auto;
 }
-
-/* Panels pick up base styles from fambam.css; add a soft blur like your original */
 .page-profile .panel{backdrop-filter: blur(8px)}
-
-/* Header */
 .page-profile header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.page-profile .brand{display:flex;align-items:center;gap:10px}
 .page-profile .brand img{height:38px;display:block}
-.page-profile .title{font-weight:800}
-
-/* Hero */
 .page-profile .hero{display:flex;gap:14px;align-items:center}
 .page-profile .face{
   width:96px;height:96px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
-  background:var(--chipBg, #0b1224);border:3px solid var(--chipBorder, #334155);
+  background:var(--chipBg);border:3px solid var(--chipBorder);
   font-size:40px;font-weight:800;flex:0 0 auto
 }
 .page-profile .face img{width:100%;height:100%;object-fit:cover}
@@ -110,7 +68,6 @@
 .page-profile .input{background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;color:var(--text);padding:8px 10px;font:inherit}
 .page-profile .btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;color:var(--text);padding:8px 10px;font:inherit;cursor:pointer}
 
-/* Stats grid */
 .page-profile .section{display:grid;gap:10px}
 .page-profile .grid{display:grid;gap:12px}
 @media(min-width:860px){.page-profile .stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -120,29 +77,8 @@
 .page-profile .badge{display:inline-flex;gap:6px;align-items:center;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;padding:6px 10px}
 .page-profile .note{background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px}
 </style>
-
-<script>
-/* HEADER FLOAT BOOT (reads ui:headerFloat) */
-(function headerBoot(){
-  function apply(){
-    try{
-      const on = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
-      document.body && document.body.classList.toggle('header-float', on);
-    }catch(_){}
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', apply, {once:true});
-  } else {
-    apply();
-  }
-  // live-sync if changed elsewhere (e.g., Admin on Home)
-  window.addEventListener('storage', (e)=>{
-    if (e.key === 'ui:headerFloat') apply();
-  });
-})();
-</script>
-  
 </head>
+
 <body class="page-profile">
 <div class="app">
   <header class="panel header app-header">
@@ -152,6 +88,7 @@
     <div class="title" id="title">Profile</div>
   </header>
 
+  <!-- Hero + quick prefs -->
   <section class="panel">
     <div class="hero">
       <div id="avatar" class="face"><span>?</span></div>
@@ -169,24 +106,57 @@
     </div>
   </section>
 
+  <!-- Birthday + Goal (new) -->
+  <section class="panel" id="profileSection">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="face" id="pfFace" style="width:72px;height:72px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--chipBg);border:2px solid var(--chipBorder);font-weight:800;font-size:28px"></span>
+      <div>
+        <div style="font-weight:800;font-size:1.4rem" id="pfName">Profile</div>
+        <div class="small" id="pfRole">—</div>
+        <div class="small" id="pfAge">Age —</div>
+      </div>
+      <div style="margin-left:auto">
+        <button class="btn" id="btnNotesMentions">Notes mentioning this person</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;display:grid;gap:10px">
+      <label class="small">Birthday
+        <input id="pfBirthday" type="date" style="display:block;margin-top:6px;width:240px" />
+      </label>
+
+      <div class="section" style="background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px">
+        <div style="font-weight:700;margin-bottom:8px">Reward Goal</div>
+        <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:end;max-width:520px">
+          <label class="small">Item name
+            <input id="goalLabel" type="text" placeholder="Robux" style="display:block;margin-top:6px">
+          </label>
+          <label class="small">Cost (pts)
+            <input id="goalCost" type="number" min="1" step="1" placeholder="800" style="display:block;margin-top:6px">
+          </label>
+        </div>
+        <div style="margin-top:10px">
+          <div class="small" id="ptsSummary">Points —</div>
+          <div style="height:14px;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;overflow:hidden;margin-top:6px">
+            <div id="goalBar" style="height:100%;width:0%;background:var(--accent)"></div>
+          </div>
+          <div class="small" id="goalPct" style="margin-top:6px;opacity:.8">0%</div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="saveGoal">Save Goal</button>
+          <button class="btn" id="clearGoal">Clear Goal</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats / badges / notes (kept) -->
   <section class="panel section">
     <div class="grid stats">
-      <div class="stat">
-        <div class="hd">Points</div>
-        <div id="points">—</div>
-      </div>
-      <div class="stat">
-        <div class="hd">This Week’s Chore</div>
-        <div id="chores">—</div>
-      </div>
-      <div class="stat">
-        <div class="hd">Tonight’s Dinner</div>
-        <div id="dinner">—</div>
-      </div>
-      <div class="stat">
-        <div class="hd">Breakfast Today</div>
-        <div id="breakfast">—</div>
-      </div>
+      <div class="stat"><div class="hd">Points</div><div id="points">—</div></div>
+      <div class="stat"><div class="hd">This Week’s Chore</div><div id="chores">—</div></div>
+      <div class="stat"><div class="hd">Tonight’s Dinner</div><div id="dinner">—</div></div>
+      <div class="stat"><div class="hd">Breakfast Today</div><div id="breakfast">—</div></div>
       <div class="stat">
         <div class="hd">Badges</div>
         <div id="badges" class="badges"></div>
@@ -210,10 +180,24 @@
   <footer style="text-align:center;opacity:.7">Works offline. Data stays on this device (local only).</footer>
 </div>
 
+<!-- Mentions Modal -->
+<div class="modal-backdrop" id="mentionsModal" aria-hidden="true" role="dialog" aria-labelledby="mentionsTitle">
+  <div class="modal">
+    <header>
+      <div id="mentionsTitle" style="font-weight:800">Mentions</div>
+      <button id="mentionsClose" class="btn">✖</button>
+    </header>
+    <div class="body" id="mentionsBody"></div>
+    <div class="footer">
+      <button id="mentionsDone" class="btn">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- Family store -->
 <script src="family.js?v=3.3.6"></script>
 <script>
-/* ---------- utils & stores ---------- */
+/* --------- utils & stores --------- */
 if(!window.Family){
   (function(){
     const K={kids:'hub:family:kids',parents:'hub:family:parents'};
@@ -228,104 +212,120 @@ const Prof = {
   pushBadge(id, badge){ const cur=this.load(id); const a=[...(cur.badges||[])]; a.unshift(badge); this.save(id,{badges:a}); },
   pushNote(id, note){ const cur=this.load(id); const a=[...(cur.notes||[])]; a.unshift(note); this.save(id,{notes:a}); }
 };
-
 const $=(s,e=document)=>e.querySelector(s);
 function initials(n){const p=(n||'').trim();return p? p[0].toUpperCase():'?';}
-function todayISO(){const d=new Date();const y=d.getFullYear(),m=(d.getMonth()+1+'').padStart(2,'0'),dd=(d.getDate()+'').padStart(2,'0');return `${y}-${m}-${dd}`;}
+function todayISO(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function startOfWeekMonday(d=new Date()){const dt=new Date(d.getFullYear(), d.getMonth(), d.getDate()); const day=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-day); return dt;}
-function thisMondayISO(){const m=startOfWeekMonday(new Date()); const y=m.getFullYear(),mm=(m.getMonth()+1+'').padStart(2,'0'),dd=(m.getDate()+'').padStart(2,'0'); return `${y}-${mm}-${dd}`;}
-function todayDowShort(){ return new Date().toLocaleDateString(undefined,{weekday:'short'}); }
-function firstSymbol(s){ if(!s) return ''; const t=(s+'').trim(); const ch=[...t][0]; return ch; }
+function thisMondayISO(){const m=startOfWeekMonday(new Date());return `${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,'0')}-${String(m.getDate()).padStart(2,'0')}`;}
+function firstSymbol(s){ if(!s) return ''; const t=(s+'').trim(); return [...t][0]; }
+function calcAgeFromISO(iso){
+  if(!iso) return null; let y,m,d;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(iso)){ [y,m,d]=iso.split('-').map(Number); }
+  else { const p=iso.split(/[\/\-\.]/).map(Number); if(p.length===3){ m=p[0]; d=p[1]; y=p[2]; } }
+  if(!(y&&m&&d)) return null;
+  const t=new Date(), b=new Date(y,m-1,d);
+  let a=t.getFullYear()-y; if((t.getMonth()<b.getMonth())||(t.getMonth()==b.getMonth() && t.getDate()<b.getDate())) a--;
+  return (a>=0&&a<140)?a:null;
+}
 
-/* ---------- load person ---------- */
+/* --------- load person by HASH --------- */
 const id = decodeURIComponent((location.hash||'').slice(1));
 const parents = (Family.getParents?.()||[]);
 const kids = (Family.getKids?.()||[]);
-const person = [...parents, ...kids].find(p=>p.id===id) || {name:'Member'};
-const kind = kids.some(k=>k.id===id) ? 'kid' : 'parent';
-const prof = Prof.load(id);
+const person = [...parents, ...kids].find(p=>String(p.id)===id) || null;
+const kind = kids.some(k=>String(k.id)===id) ? 'kid' : 'parent';
+const prof = Prof.load(id||'');
 
-/* ---------- hero ---------- */
-document.title = `Fambam · ${person.name||'Profile'}`;
-$('#title').textContent = person.name ? `${person.name}` : 'Profile';
-$('#pname').textContent = person.name || 'Member';
-$('#meta').textContent = kind==='kid' ? 'Kid' : 'Parent';
-const accent = prof.accent || '#22d3ee';
-$('#accent').value = accent;
+/* --------- render --------- */
+function render(){
+  if(!person){ document.title='Fambam · Profile'; $('#title').textContent='Profile'; return; }
+  document.title = `Fambam · ${person.name||'Profile'}`;
+  $('#title').textContent = person.name||'Profile';
+  $('#pname').textContent = person.name||'Member';
+  $('#meta').textContent  = (kind==='kid')?'Kid':'Parent';
 
-const av = $('#avatar');
-av.style.borderColor = accent || '#334155';
-av.innerHTML = person.photo ? `<img src="${person.photo}" alt="">` : `<span>${initials(person.name)}</span>`;
+  const accent = prof.accent || '#22d3ee';
+  const av = $('#avatar'); av.style.borderColor = accent; av.innerHTML = person.photo ? `<img src="${person.photo}" alt="">` : `<span>${initials(person.name)}</span>`;
+  $('#accent').value = accent;
+  $('#favFood').value   = prof.favorites?.food || '';
+  $('#favAnimal').value = prof.favorites?.animal || '';
+  $('#favColor').value  = prof.favorites?.color || '';
 
-/* favorites */
-$('#favFood').value   = prof.favorites?.food || '';
-$('#favAnimal').value = prof.favorites?.animal || '';
-$('#favColor').value  = prof.favorites?.color || '';
-$('#saveFav').onclick = ()=>{
-  const newAccent = $('#accent').value || '#22d3ee';
-  Prof.save(id, {
-    accent: newAccent,
-    favorites:{
-      food: $('#favFood').value.trim(),
-      animal: $('#favAnimal').value.trim(),
-      color: $('#favColor').value.trim()
-    }
-  });
-  // live update ring color
-  $('#avatar').style.borderColor = newAccent;
-  alert('Saved!');
-};
+  // Secondary card (birthday/age/role/avatar)
+  $('#pfName').textContent = person.name||'Profile';
+  $('#pfRole').textContent = (kind==='kid')?'Kid':'Parent';
+  const pfFace = $('#pfFace'); pfFace.style.borderColor = accent; pfFace.innerHTML = person.photo ? `<img src="${person.photo}" alt="">` : initials(person.name);
 
-/* ---------- Stats: Points / Chores / Dinner / Breakfast ---------- */
-// Points (all-time)
-(function(){
-  try{
-    const balances = JSON.parse(localStorage.getItem('pts:balances')||'{}');
-    const pts = balances[id];
-    $('#points').textContent = (typeof pts==='number') ? `${pts} pts` : '—';
-  }catch{ $('#points').textContent='—'; }
-})();
+  // Birthday (stored back onto Family person)
+  const bdEl = $('#pfBirthday');
+  if(person.birthday){
+    if(/^\d{4}-\d{2}-\d{2}$/.test(person.birthday)) bdEl.value = person.birthday;
+    else { const p=person.birthday.split(/[\/\-\.]/); if(p.length===3) bdEl.value=`${p[2]}-${String(p[0]).padStart(2,'0')}-${String(p[1]).padStart(2,'0')}`; }
+  }
+  const age=calcAgeFromISO(bdEl.value||person.birthday||''); $('#pfAge').textContent = (age!=null)?`Age ${age}`:'Age —';
 
-// Chores (this week)
-(function(){
+  // Points / goal
+  const balances = JSON.parse(localStorage.getItem('pts:balances')||'{}');
+  const pts = Number(balances[id]||0);
+  const goal = JSON.parse(localStorage.getItem(`pf:goal:${id}`)||'null');
+  const gLbl = $('#goalLabel'), gCost=$('#goalCost');
+  if(goal){ gLbl.value=goal.label||''; gCost.value=goal.cost||''; }
+  const cost = Math.max(1, Number(gCost.value||0)||1);
+  const pct  = Math.max(0, Math.min(100, Math.round((pts/cost)*100)));
+  $('#goalBar').style.width = `${pct}%`;
+  $('#goalPct').textContent = `${pct}%${goal?.label?` towards ${goal.label}`:''}`;
+  $('#ptsSummary').textContent = `${pts} / ${cost} pts`;
+
+  // Stats
+  $('#points').textContent = Number.isFinite(pts) ? `${pts} pts` : '—';
+  // Chores
   try{
     const mISO=thisMondayISO();
     const assigns = JSON.parse(localStorage.getItem('ch:assign:'+mISO)||'{}');
     const choreList = JSON.parse(localStorage.getItem('ch:chores:list')||'[]');
-    const choresById = Object.fromEntries(choreList.map(c=>[c.id, c.label]));
-    const labels = Object.entries(assigns).filter(([,kidId])=>kidId===id).map(([cid])=>choresById[cid]).filter(Boolean);
+    const byId = Object.fromEntries(choreList.map(c=>[c.id, c.label]));
+    const labels = Object.entries(assigns).filter(([,kidId])=>kidId===id).map(([cid])=>byId[cid]).filter(Boolean);
     const icons = labels.map(firstSymbol).filter(Boolean);
     $('#chores').textContent = icons.length ? icons.join(' ') : '—';
   }catch{ $('#chores').textContent='—'; }
-})();
-
-// Dinner (tonight)
-(function(){
+  // Dinner tonight
   try{
     const mISO=thisMondayISO();
     const plan = JSON.parse(localStorage.getItem('dp:plan:'+mISO)||'null') || null;
-    const dow=todayDowShort();
-    const data=plan?.days?.[dow]||null;
-    if(!data){ $('#dinner').textContent='—'; return; }
-    const row = (kind==='kid') ? data.kids : data.parents;
-    const icons = [firstSymbol(row?.main), firstSymbol(row?.side), firstSymbol(data.dessert)].filter(Boolean);
+    const days=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    const today=days[(new Date().getDay()+6)%7];
+    const data=plan?.days?.[today]||null;
+    const row = (kind==='kid') ? data?.kids : data?.parents;
+    const icons = [firstSymbol(row?.main), firstSymbol(row?.side), firstSymbol(data?.dessert)].filter(Boolean);
     $('#dinner').textContent = icons.length ? icons.join(' ') : '—';
   }catch{ $('#dinner').textContent='—'; }
-})();
-
-// Breakfast (today)
-(function(){
+  // Breakfast today
   try{
-    const key='bf:day:'+todayISO();
-    const day = JSON.parse(localStorage.getItem(key)||'{}');
-    const choiceIdx = day[id];
+    const day = JSON.parse(localStorage.getItem('bf:day:'+todayISO())||'{}');
+    const idx = day[id];
     const menu = JSON.parse(localStorage.getItem('bf:menu')||'[]');
-    const emoji = (menu?.[choiceIdx]?.emoji)||'';
-    $('#breakfast').textContent = emoji || '—';
+    $('#breakfast').textContent = (menu?.[idx]?.emoji)||'—';
   }catch{ $('#breakfast').textContent='—'; }
-})();
 
-/* ---------- Badges & Notes ---------- */
+  // Badges / Notes
+  renderBadges(); renderNotes();
+
+  // Wires
+  bdEl.onchange = ()=>{
+    const val=bdEl.value||'';
+    const up = {...person, birthday: val};
+    if (kind==='parent' && window.Family?.upsertParent) window.Family.upsertParent(up);
+    if (kind==='kid'    && window.Family?.upsertKid)    window.Family.upsertKid(up);
+    const a=calcAgeFromISO(val); $('#pfAge').textContent=(a!=null)?`Age ${a}`:'Age —';
+  };
+  $('#saveGoal').onclick = ()=>{
+    const label=(gLbl.value||'').trim(); const cost=Math.max(1, Number(gCost.value||0)||1);
+    localStorage.setItem(`pf:goal:${id}`, JSON.stringify({label, cost}));
+    render();
+  };
+  $('#clearGoal').onclick = ()=>{ localStorage.removeItem(`pf:goal:${id}`); render(); };
+}
+
 function renderBadges(){
   const wrap = document.getElementById('badges'); wrap.innerHTML='';
   (prof.badges||[]).forEach(b=>{
@@ -342,27 +342,69 @@ function renderNotes(){
     wrap.appendChild(div);
   });
 }
-renderBadges(); renderNotes();
 
+/* favorites save */
+document.getElementById('saveFav').onclick = ()=>{
+  const newAccent = document.getElementById('accent').value || '#22d3ee';
+  Prof.save(id, {
+    accent: newAccent,
+    favorites:{
+      food: (document.getElementById('favFood').value||'').trim(),
+      animal: (document.getElementById('favAnimal').value||'').trim(),
+      color: (document.getElementById('favColor').value||'').trim()
+    }
+  });
+  document.getElementById('avatar').style.borderColor = newAccent;
+  document.getElementById('pfFace').style.borderColor = newAccent;
+  alert('Saved!');
+};
+
+/* badges/notes add */
 document.getElementById('addBadge').onclick=()=>{
   const emoji = (document.getElementById('badgeEmoji').value||'').trim() || '🏅';
   const label = (document.getElementById('badgeLbl').value||'').trim() || 'Badge';
-  const item = {id:Math.random().toString(36).slice(2,10), emoji, label, date: new Date().toISOString()};
-  Prof.pushBadge(id, item);
-  Object.assign(prof, Prof.load(id));
-  document.getElementById('badgeEmoji').value=''; document.getElementById('badgeLbl').value='';
-  renderBadges();
+  Prof.pushBadge(id, {id:Math.random().toString(36).slice(2,10), emoji, label, date:new Date().toISOString()});
+  Object.assign(prof, Prof.load(id)); document.getElementById('badgeEmoji').value=''; document.getElementById('badgeLbl').value=''; renderBadges();
 };
 document.getElementById('addNote').onclick=()=>{
-  const text = (document.getElementById('noteText').value||'').trim(); if(!text) return;
-  const item = {id:Math.random().toString(36).slice(2,10), text, date:new Date().toISOString()};
-  Prof.pushNote(id, item);
-  Object.assign(prof, Prof.load(id));
-  document.getElementById('noteText').value='';
-  renderNotes();
+  const text=(document.getElementById('noteText').value||'').trim(); if(!text) return;
+  Prof.pushNote(id, {id:Math.random().toString(36).slice(2,10), text, date:new Date().toISOString()});
+  Object.assign(prof, Prof.load(id)); document.getElementById('noteText').value=''; renderNotes();
 };
 
-if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+/* Mentions modal (from Dinner notes) */
+function loadJSON(k,f){ try{ const v=JSON.parse(localStorage.getItem(k)); return v??f; }catch{ return f; } }
+function openMentions(){
+  const name=(person?.name||'').trim(); const wrap=document.getElementById('mentionsBody'); wrap.innerHTML='';
+  if(!name){ wrap.innerHTML='<div style="opacity:.7">No name on this profile.</div>'; showMentions(); return; }
+  const rx=new RegExp(`\\b${name.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\$&')}\\b`,'i');
+  const notes=loadJSON('dp:food:notes',{}); // {label:{global:"..."}}
+  const hits=Object.entries(notes).map(([label,o])=>({label, text:String(o?.global||'')})).filter(x=>x.text && rx.test(x.text));
+  if(!hits.length){ wrap.innerHTML='<div style="opacity:.7">No mentions found in dinner notes.</div>'; }
+  else{
+    hits.forEach(h=>{
+      const row=document.createElement('div'); row.className='item';
+      row.innerHTML=`<div><b>${h.label}</b><div class="small" style="margin-top:4px;white-space:pre-wrap">${h.text}</div></div>`;
+      wrap.appendChild(row);
+    });
+  }
+  showMentions();
+}
+function showMentions(){ const m=document.getElementById('mentionsModal'); m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
+function hideMentions(){ const m=document.getElementById('mentionsModal'); m.style.display='none'; m.setAttribute('aria-hidden','true'); }
+document.getElementById('btnNotesMentions').onclick=openMentions;
+document.getElementById('mentionsClose').onclick=hideMentions;
+document.getElementById('mentionsDone').onclick=hideMentions;
+
+/* boot & live updates */
+document.addEventListener('DOMContentLoaded', render);
+addEventListener('storage', e=>{
+  if(!e.key) return;
+  if(e.key===`pf:goal:${id}` || e.key===`pts:balances` || /^hub:family:/.test(e.key)) render();
+});
+
+/* SW */
+if('serviceWorker' in navigator){ addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
 </script>
 </body>
 </html>
