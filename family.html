@@ -163,12 +163,13 @@ function cardHTML(person, roleLabel){
       : `<span aria-hidden="true">${initials(person.name)}</span>`;
 
   return `
-    <a class="card" href="${pid?`./profile.html#${encodeURIComponent(pid)}`:'#'}" ${pid?'':'aria-disabled="true"} >
-      <div class="face" style="${accent?`border-color:${accent}`:''}">${face}</div>
-      <div class="name">${person.name||'Member'}</div>
-      <div class="badge">${badge}</div>
-    </a>
-  `;
+  <a class="card"
+     href="${pid ? ('./profile.html#' + encodeURIComponent(pid)) : '#'}"${pid ? '' : ' aria-disabled="true"'}>
+    <div class="face" style="${accent ? `border-color:${accent}` : ''}">${face}</div>
+    <div class="name">${person.name || 'Member'}</div>
+    <div class="badge">${badge}</div>
+  </a>
+`;
 }
 
 function renderFamilyTree(){
