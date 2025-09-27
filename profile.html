@@ -16,42 +16,102 @@
 <link rel="stylesheet" href="fambam.css">
 <script src="wallpaper.js" defer></script>
 
-<!-- THEME + HEADER FLOAT BOOT (kept) -->
+<!-- THEME BOOT -->
 <script>
 (function () {
   var DARK_SRC='fambam.png', LIGHT_SRC='fambam2.png';
-  var theme={mode:'dark',accent:'#22d3ee'};
-  function apply(t){
-    var mode=(t&&t.mode==='light')?'light':'dark', accent=(t&&t.accent)||'#22d3ee';
-    theme={mode,accent};
-    document.documentElement.setAttribute('data-theme',mode);
-    document.documentElement.style.setProperty('--accent',accent);
+  var current={mode:'dark',accent:'#22d3ee'};
+
+  function applyTheme(t){
+    var mode=(t&&t.mode==='light')?'light':'dark';
+    var accent=(t&&t.accent)||'#22d3ee';
+    current={mode,accent};
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.style.setProperty('--accent', accent);
     var meta=document.querySelector('meta[name="theme-color"]');
-    if(meta) meta.setAttribute('content', mode==='light'?'#f2efe7':'#0f172a');
+    if(meta) meta.setAttribute('content', mode==='light' ? '#f2efe7' : '#0f172a');
   }
-  function swap(){
-    var img=document.getElementById('logoImg')||document.querySelector('.brand img')||document.querySelector('img[alt="Fambam"]');
-    if(!img) return; var base=img.getAttribute('src')||'';
-    base=base.replace(/[^/]*$/,''); img.src=base+(theme.mode==='light'?LIGHT_SRC:DARK_SRC);
-    var a=img.closest('a'); if(a && !a.getAttribute('href')) a.href='./index.html';
+  function swapLogo(){
+    var logo=document.getElementById('logoImg')||document.querySelector('.brand img');
+    if(!logo) return;
+    var base=(logo.getAttribute('src')||'').replace(/[^/]+$/,'');
+    logo.src=base + (current.mode==='light'?LIGHT_SRC:DARK_SRC);
+    var a=logo.closest('a'); if(a && !a.getAttribute('href')) a.href='./index.html';
   }
-  try{apply(JSON.parse(localStorage.getItem('ui:theme')||'null')||theme);}catch{apply(theme);}
-  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',swap,{once:true});} else {swap();}
-  addEventListener('storage',e=>{ if(e.key==='ui:theme'){ try{apply(JSON.parse(e.newValue||'{}'));}catch{} swap(); } });
+  try{applyTheme(JSON.parse(localStorage.getItem('ui:theme')||'null')||current);}catch{applyTheme(current);}
+  if (document.readyState==='loading'){document.addEventListener('DOMContentLoaded',swapLogo,{once:true});} else {swapLogo();}
+  addEventListener('storage',e=>{
+    if(e.key!=='ui:theme') return;
+    try{applyTheme(JSON.parse(e.newValue||'{}'))}catch{}
+    swapLogo();
+  });
 })();
+</script>
+
+<!-- HEADER FLOAT BOOT -->
+<script>
 (function(){
-  function apply(){ try{document.body.classList.toggle('header-float', !!JSON.parse(localStorage.getItem('ui:headerFloat')||'false'));}catch{} }
-  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',apply,{once:true});} else {apply();}
+  function apply(){
+    try{
+      const on = JSON.parse(localStorage.getItem('ui:headerFloat')||'false')?true:false;
+      document.body && document.body.classList.toggle('header-float', on);
+    }catch(_){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();
   addEventListener('storage',e=>{ if(e.key==='ui:headerFloat') apply(); });
 })();
 </script>
 
 <style>
-/* small, page-scoped helpers */
-.page-profile .app{ max-width:980px; margin:0 auto; padding:20px; display:grid; gap:18px; grid-template-rows:auto auto 1fr auto; }
-.page-profile .panel{ backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-.page-profile .face{ width:72px;height:72px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--chipBg);border:2px solid var(--chipBorder);font-weight:800;font-size:28px; }
-.page-profile .small{ color:var(--muted); }
+/* ---------- Profile (scoped) ---------- */
+.page-profile .app{
+  max-width:980px; margin:0 auto; padding:20px;
+  display:grid; gap:18px; grid-template-rows:auto auto 1fr auto;
+}
+
+/* Glassy cards */
+.page-profile .panel{
+  background:var(--card);
+  border:1px solid var(--panelBorder);
+  box-shadow:var(--shadow);
+  border-radius:18px; padding:14px;
+  backdrop-filter: blur(12px) saturate(1.12);
+  -webkit-backdrop-filter: blur(12px) saturate(1.12);
+}
+
+/* Header row inside the main panel */
+.pf-hero{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+.pf-face{
+  width:72px; height:72px; border-radius:50%; overflow:hidden;
+  display:grid; place-items:center; background:var(--chipBg);
+  border:2px solid var(--chipBorder); font-weight:800; font-size:28px
+}
+.pf-face img{ width:100%; height:100%; object-fit:cover }
+.pf-name{ font-weight:800; font-size:1.4rem }
+.pf-sub{ color:var(--muted) }
+.pf-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:8px }
+.pf-input{ background:var(--card); border:1px solid var(--panelBorder); border-radius:12px; color:var(--text); padding:8px 10px; font:inherit }
+
+.btn{ background:var(--chipBg); border:1px solid var(--chipBorder); border-radius:12px; color:var(--text); padding:8px 10px; font:inherit; cursor:pointer }
+
+/* Reward progress */
+.pf-progress{ height:14px; background:var(--chipBg); border:1px solid var(--chipBorder); border-radius:999px; overflow:hidden }
+.pf-progress > div{ height:100%; width:0%; background:var(--accent) }
+
+/* Badges / Notes */
+.badges{ display:flex; gap:8px; flex-wrap:wrap }
+.badge{ display:inline-flex; gap:6px; align-items:center; background:var(--chipBg); border:1px solid var(--chipBorder); border-radius:999px; padding:6px 10px }
+.note{ background:var(--card); border:1px solid var(--panelBorder); border-radius:12px; padding:10px }
+.grid{ display:grid; gap:12px }
+
+/* Modal (reuses global modal styles from your app) */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.modal{width:min(900px,100%);max-height:90vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--panelBorder);border-radius:16px;box-shadow:var(--shadow)}
+.modal header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--tileBorder);position:sticky;top:0;background:inherit}
+.modal .body{padding:12px 14px;display:grid;gap:12px;overflow:auto;max-height:70vh}
+.modal .footer{padding:12px 14px;border-top:1px solid var(--tileBorder);display:flex;justify-content:flex-end;gap:10px}
+.item{background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:8px}
+.small{font-size:.9rem;color:var(--muted)}
 </style>
 </head>
 
@@ -64,45 +124,73 @@
     <div class="title" id="title">Profile</div>
   </header>
 
-  <!-- Unified glass profile panel -->
-  <section class="panel" id="profileSection">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <span class="face" id="pfFace"></span>
+  <!-- MAIN PROFILE CARD (glass) -->
+  <section class="panel" id="profileCard">
+    <div class="pf-hero">
+      <span id="pfFace" class="pf-face"><span>?</span></span>
       <div>
-        <div style="font-weight:800;font-size:1.4rem" id="pfName">Profile</div>
-        <div class="small" id="pfRole">—</div>
-        <div class="small" id="pfAge">Age —</div>
+        <div class="pf-name" id="pfName">Member</div>
+        <div class="pf-sub"><span id="pfRole">—</span> · <span id="pfAge">Age —</span></div>
+        <div class="pf-row">
+          <label>Accent <input type="color" id="favAccent" class="pf-input" value="#22d3ee"></label>
+          <label>Favorite food <input id="favFood" class="pf-input" placeholder="🍕 or text"></label>
+          <label>Favorite animal <input id="favAnimal" class="pf-input" placeholder="🐶 or text"></label>
+          <label>Favorite color <input id="favColor" class="pf-input" placeholder="💜 or text"></label>
+          <button id="saveFav" class="btn">Save</button>
+        </div>
       </div>
       <div style="margin-left:auto">
-        <button class="btn" id="btnNotesMentions">Notes mentioning this person</button>
+        <button id="btnNotesMentions" class="btn">Notes mentioning this person</button>
       </div>
     </div>
 
-    <div style="margin-top:12px;display:grid;gap:10px">
+    <div class="grid" style="margin-top:12px">
       <label class="small">Birthday
-        <input id="pfBirthday" type="date" style="display:block;margin-top:6px;width:240px" />
+        <input id="pfBirthday" type="date" class="pf-input" style="display:block;margin-top:6px;width:240px"/>
       </label>
+    </div>
 
-      <div id="rewardSection" class="section" style="background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:10px">
-        <div style="font-weight:700;margin-bottom:8px">Reward Goal</div>
-        <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:end;max-width:520px">
-          <label class="small">Item name
-            <input id="goalLabel" type="text" placeholder="Robux" style="display:block;margin-top:6px">
-          </label>
-          <label class="small">Cost (pts)
-            <input id="goalCost" type="number" min="1" step="1" placeholder="800" style="display:block;margin-top:6px">
-          </label>
+    <!-- Reward Goal (kids only; hidden for parents by JS) -->
+    <div id="rewardSection" class="panel" style="margin-top:12px">
+      <div style="font-weight:800;margin-bottom:8px">Reward Goal</div>
+      <div style="display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:end;max-width:560px">
+        <label class="small">Item name
+          <input id="goalLabel" type="text" placeholder="Robux" class="pf-input" style="display:block;margin-top:6px">
+        </label>
+        <label class="small">Cost (pts)
+          <input id="goalCost" type="number" min="1" step="1" placeholder="800" class="pf-input" style="display:block;margin-top:6px">
+        </label>
+      </div>
+      <div style="margin-top:10px">
+        <div class="small" id="ptsSummary">Points —</div>
+        <div class="pf-progress" style="margin-top:6px"><div id="goalBar"></div></div>
+        <div class="small" id="goalPct" style="margin-top:6px;opacity:.8">0%</div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button id="saveGoal" class="btn">Save Goal</button>
+        <button id="clearGoal" class="btn">Clear Goal</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- BADGES & NOTES (separate glass panel) -->
+  <section class="panel">
+    <div class="grid">
+      <div>
+        <div style="font-weight:800;margin-bottom:6px">Badges</div>
+        <div id="badges" class="badges"></div>
+        <div class="pf-row">
+          <input id="badgeEmoji" class="pf-input" placeholder="🏅" style="width:88px">
+          <input id="badgeLbl" class="pf-input" placeholder="Label" style="min-width:200px">
+          <button id="addBadge" class="btn">Add</button>
         </div>
-        <div style="margin-top:10px">
-          <div class="small" id="ptsSummary">Points —</div>
-          <div style="height:14px;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;overflow:hidden;margin-top:6px">
-            <div id="goalBar" style="height:100%;width:0%;background:var(--accent)"></div>
-          </div>
-          <div class="small" id="goalPct" style="margin-top:6px;opacity:.8">0%</div>
-        </div>
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" id="saveGoal">Save Goal</button>
-          <button class="btn" id="clearGoal">Clear Goal</button>
+      </div>
+      <div>
+        <div style="font-weight:800;margin-bottom:6px">Notes</div>
+        <div id="notes" class="grid"></div>
+        <div class="pf-row">
+          <input id="noteText" class="pf-input" placeholder="Add note" style="min-width:240px">
+          <button id="addNote" class="btn">Add</button>
         </div>
       </div>
     </div>
@@ -111,7 +199,7 @@
   <footer style="text-align:center;opacity:.7">Works offline. Data stays on this device (local only).</footer>
 </div>
 
-<!-- Mentions modal -->
+<!-- Mentions Modal -->
 <div class="modal-backdrop" id="mentionsModal" aria-hidden="true" role="dialog" aria-labelledby="mentionsTitle">
   <div class="modal">
     <header>
@@ -127,14 +215,8 @@
 
 <!-- Family store -->
 <script src="family.js?v=3.3.6"></script>
-
 <script>
-/* ---------- utils & stores ---------- */
-const $=(s,e=document)=>e.querySelector(s);
-const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
-const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-
-/* Fallback Family if file missing */
+/* ---------- STORES & HELPERS ---------- */
 if(!window.Family){
   (function(){
     const K={kids:'hub:family:kids',parents:'hub:family:parents'};
@@ -143,109 +225,213 @@ if(!window.Family){
     function up(key,item){const a=L(key,[]);const i=a.findIndex(x=>String(x.id)===String(item.id)); if(i>=0)a[i]={...a[i],...item}; else a.push(item); S(key,a);}
     window.Family={
       getKids(){return L(K.kids,[])}, getParents(){return L(K.parents,[])},
-      upsertKid(k){ up(K.kids,k); }, upsertParent(p){ up(K.parents,p); }
+      upsertKid:k=>up(K.kids,k), upsertParent:p=>up(K.parents,p)
     };
   })();
 }
 
-/* Profile blob helpers */
-const Prof={ key:id=>`prof:${id}`,
+const $=(s,e=document)=>e.querySelector(s);
+const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f;}catch{return f}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+
+const Prof = {
+  key:id=>`prof:${id}`,
   load(id){ try{return JSON.parse(localStorage.getItem(this.key(id)))||{}}catch{return{}} },
-  save(id,patch){ const cur=this.load(id); save(this.key(id), {...cur, ...patch}); }
+  save(id,patch){ const cur=this.load(id); save(this.key(id), {...cur,...patch}); }
 };
 
-/* Resolve id + person */
-const id = decodeURIComponent((location.hash||'').slice(1));
-function resolvePerson(){
-  const P=(Family.getParents?.()||[]), K=(Family.getKids?.()||[]);
-  const person = [...P,...K].find(p=>String(p.id)===id) || null;
-  return { person, isParent: P.some(p=>String(p.id)===id) };
-}
-let { person, isParent } = resolvePerson();
-
-/* Date helpers */
+function initials(n){const p=(n||'').trim();return p?p[0].toUpperCase():'?';}
 function toInputDate(src){
   if(!src) return '';
   if(/^\d{4}-\d{2}-\d{2}$/.test(src)) return src;
-  const m = src.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/); if(!m) return '';
-  const y = m[3].length===2 ? (+m[3]>50?`19${m[3]}`:`20${m[3]}`) : m[3];
-  return `${y}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
+  const m = src.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+  if(!m) return '';
+  const yyyy = m[3].length===2 ? (+m[3]>50?`19${m[3]}`:`20${m[3]}`) : m[3];
+  return `${yyyy}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
 }
 function calcAge(iso){
-  if(!iso) return null; const [y,m,d]=iso.split('-').map(Number); if(!(y&&m&&d)) return null;
+  if(!iso) return null;
+  const [y,m,d]=iso.split('-').map(Number);
   const now=new Date(), b=new Date(y,m-1,d); if(isNaN(b)) return null;
-  let a=now.getFullYear()-y; if(now.getMonth()<m-1 || (now.getMonth()==m-1 && now.getDate()<d)) a--; return (a>=0&&a<140)?a:null;
+  let a=now.getFullYear()-y;
+  if(now.getMonth()<m-1 || (now.getMonth()==m-1 && now.getDate()<d)) a--;
+  return (a>=0&&a<140)?a:null;
+}
+function getPointsTotal(id){
+  // prefer shared balance map if present
+  try{
+    const balances = JSON.parse(localStorage.getItem('pts:balances')||'{}');
+    if (typeof balances[id] === 'number') return balances[id];
+  }catch{}
+  const raw = localStorage.getItem(`points:total:${id}`); // legacy
+  return raw? Number(raw) : 0;
+}
+function goalKey(id){ return `pf:goal:${id}`; }
+
+/* ---------- LOAD PERSON ---------- */
+const id = decodeURIComponent((location.hash||'').slice(1));
+function resolvePerson(){
+  const Ps=Family.getParents?.()||[], Ks=Family.getKids?.()||[];
+  return { person:[...Ps,...Ks].find(p=>String(p.id)===id)||null, isParent:!!Ps.find(p=>String(p.id)===id) };
+}
+let { person, isParent } = resolvePerson();
+
+/* ---------- RENDER ---------- */
+function setFace(el, p, accent){
+  el.style.borderColor = accent || getComputedStyle(el).getPropertyValue('--chipBorder');
+  el.innerHTML = p?.photo ? `<img src="${p.photo}" alt="">` : (p?.name||'?').trim().charAt(0).toUpperCase();
+}
+function renderProfile(){
+  if(!person){ $('#profileCard').innerHTML='<div>Profile not found.</div>'; return; }
+
+  const prof = Prof.load(id);
+  const accent = prof.accent || '#22d3ee';
+
+  document.title = `Fambam · ${person.name||'Profile'}`;
+  $('#title').textContent = person.name || 'Profile';
+  $('#pfName').textContent = person.name || 'Member';
+  $('#pfRole').textContent = isParent ? 'Parent' : 'Kid';
+  $('#favAccent').value = accent;
+
+  setFace($('#pfFace'), person, accent);
+
+  // favorites
+  $('#favFood').value   = prof.favorites?.food   || '';
+  $('#favAnimal').value = prof.favorites?.animal || '';
+  $('#favColor').value  = prof.favorites?.color  || '';
+
+  // birthday + age
+  const bdEl = $('#pfBirthday');
+  const bSrc = person.birthday || prof.birthday || '';
+  bdEl.value = toInputDate(bSrc);
+  const a = calcAge(bdEl.value);
+  $('#pfAge').textContent = (a!=null) ? `Age ${a}` : 'Age —';
+
+  // reward (kids only)
+  $('#rewardSection').style.display = isParent ? 'none' : '';
+  const goal = load(goalKey(id), null);
+  if(goal){ $('#goalLabel').value = goal.label||''; $('#goalCost').value = goal.cost||''; }
+  updateProgress();
+
+  // wires
+  $('#saveFav').onclick = ()=>{
+    const newAccent = $('#favAccent').value || '#22d3ee';
+    Prof.save(id, {
+      accent: newAccent,
+      favorites:{
+        food:   ($('#favFood').value||'').trim(),
+        animal: ($('#favAnimal').value||'').trim(),
+        color:  ($('#favColor').value||'').trim()
+      }
+    });
+    setFace($('#pfFace'), person, newAccent);
+    alert('Saved!');
+  };
+
+  bdEl.onchange = ()=>{
+    const iso = bdEl.value || '';
+    if(isParent) Family.upsertParent({...person, birthday: iso});
+    else         Family.upsertKid   ({...person, birthday: iso});
+    Prof.save(id, { birthday: iso });
+
+    ({person,isParent}=resolvePerson()); // refresh
+    const age = calcAge(iso);
+    $('#pfAge').textContent = (age!=null)?`Age ${age}`:'Age —';
+
+    // notify other pages (e.g., family page badge)
+    dispatchEvent(new StorageEvent('storage', {key:`prof:${id}`, newValue: localStorage.getItem(`prof:${id}`)}));
+  };
+
+  $('#saveGoal').onclick = ()=>{
+    const label=($('#goalLabel').value||'').trim();
+    const cost = Math.max(1, Number($('#goalCost').value||0)||1);
+    save(goalKey(id), {label, cost});
+    updateProgress();
+  };
+  $('#clearGoal').onclick = ()=>{ localStorage.removeItem(goalKey(id)); $('#goalLabel').value=''; $('#goalCost').value=''; updateProgress(); };
+
+  function updateProgress(){
+    const pts = getPointsTotal(id);
+    const cost = Math.max(1, Number($('#goalCost').value||load(goalKey(id),{cost:1}).cost||1));
+    const pct = Math.max(0, Math.min(100, Math.round((pts/cost)*100)));
+    $('#goalBar').style.width = pct+'%';
+    $('#goalPct').textContent = `${pct}%${($('#goalLabel').value||'').trim()?` towards ${$('#goalLabel').value.trim()}`:''}`;
+    $('#ptsSummary').textContent = `${pts} / ${cost} pts`;
+  }
+
+  renderBadges(); renderNotes();
 }
 
-/* Mentions from Dinner notes */
+/* ---------- BADGES & NOTES ---------- */
+function renderBadges(){
+  const prof = Prof.load(id);
+  const wrap = $('#badges'); wrap.innerHTML='';
+  (prof.badges||[]).forEach(b=>{
+    const chip=document.createElement('div'); chip.className='badge';
+    chip.textContent = `${b.emoji||'🏅'} ${b.label||''}`;
+    wrap.appendChild(chip);
+  });
+}
+function renderNotes(){
+  const prof = Prof.load(id);
+  const wrap=$('#notes'); wrap.innerHTML='';
+  (prof.notes||[]).forEach(n=>{
+    const div=document.createElement('div'); div.className='note';
+    div.textContent = n.text;
+    wrap.appendChild(div);
+  });
+}
+$('#addBadge').onclick=()=>{
+  const emoji = ($('#badgeEmoji').value||'').trim() || '🏅';
+  const label = ($('#badgeLbl').value||'').trim() || 'Badge';
+  const item = {id:Math.random().toString(36).slice(2,10), emoji, label, date:new Date().toISOString()};
+  const cur = Prof.load(id); const a=[...(cur.badges||[])]; a.unshift(item); Prof.save(id,{badges:a});
+  $('#badgeEmoji').value=''; $('#badgeLbl').value='';
+  renderBadges();
+};
+$('#addNote').onclick=()=>{
+  const text = ($('#noteText').value||'').trim(); if(!text) return;
+  const item = {id:Math.random().toString(36).slice(2,10), text, date:new Date().toISOString()};
+  const cur = Prof.load(id); const a=[...(cur.notes||[])]; a.unshift(item); Prof.save(id,{notes:a});
+  $('#noteText').value='';
+  renderNotes();
+};
+
+/* ---------- Mentions modal (from Dinner notes) ---------- */
 function getDinnerNotes(){ return load('dp:food:notes', {}); }
 function openMentions(){
-  const name=(person?.name||'').trim(); const wrap=$('#mentionsBody'); wrap.innerHTML='';
-  if(!name){ wrap.innerHTML='<div style="opacity:.7">No name on this profile.</div>'; showMentions(); return; }
-  const rx=new RegExp(`\\b${name.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\$&')}\\b`,'i');
-  const hits=Object.entries(getDinnerNotes()).map(([label,obj])=>({label,text:String(obj?.global||'')})).filter(x=>x.text&&rx.test(x.text));
-  wrap.innerHTML = hits.length
-    ? hits.map(h=>`<div class="item"><div><b>${h.label}</b><div class="small" style="margin-top:4px;white-space:pre-wrap">${h.text}</div></div></div>`).join('')
-    : '<div style="opacity:.7">No mentions found in dinner notes.</div>';
+  const name = (person?.name||'').trim();
+  const wrap = $('#mentionsBody'); wrap.innerHTML='';
+  if(!name){ wrap.innerHTML='<div class="small" style="opacity:.7">No name on this profile.</div>'; showMentions(); return; }
+  const rx = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\$&')}\\b`, 'i');
+  const hits = Object.entries(getDinnerNotes())
+    .map(([label,obj])=>({label, text:String(obj?.global||'')}))
+    .filter(x=>x.text && rx.test(x.text));
+  if(!hits.length){
+    wrap.innerHTML = '<div class="small" style="opacity:.7">No mentions found in dinner notes.</div>';
+  }else{
+    hits.forEach(h=>{
+      const row=document.createElement('div'); row.className='item';
+      row.innerHTML = `<div><b>${h.label}</b><div class="small" style="margin-top:4px;white-space:pre-wrap">${h.text}</div></div>`;
+      wrap.appendChild(row);
+    });
+  }
   showMentions();
 }
 function showMentions(){ const m=$('#mentionsModal'); m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
 function hideMentions(){ const m=$('#mentionsModal'); m.style.display='none'; m.setAttribute('aria-hidden','true'); }
-addEventListener('DOMContentLoaded',()=>{ $('#btnNotesMentions').onclick=openMentions; $('#mentionsClose').onclick=hideMentions; $('#mentionsDone').onclick=hideMentions; });
+$('#btnNotesMentions').onclick=openMentions;
+$('#mentionsClose').onclick=hideMentions;
+$('#mentionsDone').onclick=hideMentions;
 
-/* ---------- Render ---------- */
-function renderProfile(){
-  if(!person){ $('#profileSection').innerHTML='<div>Profile not found.</div>'; return; }
-  document.title=`Fambam · ${person.name||'Profile'}`;
-  $('#title').textContent=person.name||'Profile';
-  $('#pfName').textContent=person.name||'Profile';
-  $('#pfRole').textContent=isParent?'Parent':'Kid';
-  $('#pfFace').innerHTML = person.photo ? `<img src="${person.photo}" alt="">` : (person.name||'?').trim().charAt(0).toUpperCase();
-
-  const bd = person.birthday || Prof.load(id).birthday || '';
-  const bdEl = $('#pfBirthday'); bdEl.value = toInputDate(bd);
-  const age = calcAge(bdEl.value); $('#pfAge').textContent = (age!=null)?`Age ${age}`:'Age —';
-
-  // parents do not need goal tracking
-  $('#rewardSection').style.display = isParent ? 'none' : '';
-
-  if(!isParent){
-    const pts = Number(localStorage.getItem(`points:total:${id}`)||0);
-    const goal = load(`pf:goal:${id}`, null) || {};
-    $('#goalLabel').value = goal.label||'';
-    $('#goalCost').value  = goal.cost ||'';
-    const cost=Math.max(1, Number($('#goalCost').value||0)||1);
-    const pct=Math.max(0, Math.min(100, Math.round(pts*100/cost)));
-    $('#goalBar').style.width=pct+'%';
-    $('#goalPct').textContent = `${pct}% ${goal.label?`towards ${goal.label}`:''}`;
-    $('#ptsSummary').textContent = `${pts} / ${cost} pts`;
-
-    $('#saveGoal').onclick=()=>{ const label=($('#goalLabel').value||'').trim(); const cost=Math.max(1, Number($('#goalCost').value||0)||1); save(`pf:goal:${id}`,{label,cost}); renderProfile(); };
-    $('#clearGoal').onclick=()=>{ localStorage.removeItem(`pf:goal:${id}`); renderProfile(); };
-  }
-
-  // persist birthday to Family + prof
-  $('#pfBirthday').onchange=()=>{
-    const iso = $('#pfBirthday').value||'';
-    if(isParent) Family.upsertParent({...person, birthday: iso}); else Family.upsertKid({...person, birthday: iso});
-    Prof.save(id, {birthday: iso});
-    // refresh local person + age
-    ({person, isParent} = resolvePerson());
-    const a=calcAge(iso); $('#pfAge').textContent=(a!=null)?`Age ${a}`:'Age —';
-    // ping other tabs/pages (Family) to rerender
-    dispatchEvent(new StorageEvent('storage', {key:`prof:${id}`, newValue: JSON.stringify(Prof.load(id))}));
-  };
-}
-
+/* ---------- Boot ---------- */
 document.addEventListener('DOMContentLoaded', renderProfile);
-addEventListener('storage',e=>{
+addEventListener('storage', e=>{
   if(!e.key) return;
-  if(e.key.startsWith('hub:family:') || e.key===`pf:goal:${id}` || e.key===`points:total:${id}` || e.key===Prof.key(id)){
-    ({person,isParent}=resolvePerson());
-    renderProfile();
-  }
+  if(e.key===goalKey(id) || e.key===`points:total:${id}` || e.key===`prof:${id}` || /^hub:family:/.test(e.key)) renderProfile();
 });
 
+/* SW */
 if('serviceWorker' in navigator){ addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
 </script>
 </body>
