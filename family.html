@@ -16,6 +16,29 @@
 <script src="wallpaper.js"></script>   <!-- no defer -->
 <link rel="stylesheet" href="fambam.css">
 
+<!-- Tiny page-scoped styles for the tree layout -->
+<style>
+  .family-tree .row{display:flex;justify-content:center;gap:14px;flex-wrap:wrap}
+  .family-tree .tree-connect{height:16px}
+  .family-tree .card{
+    display:flex;align-items:center;gap:10px;
+    background:var(--card);border:1px solid var(--panelBorder);
+    border-radius:16px;padding:12px;color:var(--text);text-decoration:none
+  }
+  .family-tree .face{
+    width:64px;height:64px;border-radius:50%;overflow:hidden;
+    display:grid;place-items:center;background:var(--chipBg);
+    border:2px solid var(--chipBorder);font-weight:800;font-size:24px
+  }
+  .family-tree .face img{width:100%;height:100%;object-fit:cover}
+  .family-tree .name{font-weight:800}
+  .family-tree .badge{
+    margin-left:auto;background:var(--previewBg);
+    border:1px solid var(--previewBorder);border-radius:999px;
+    padding:4px 8px;font-size:.85rem;color:var(--muted)
+  }
+</style>
+
 <!-- Theme boot (kept) -->
 <script>
 (function () {
@@ -61,8 +84,8 @@
   });
 })();
 </script>
-  
 </head>
+
 <body class="page-family">
   <div class="app">
     <header class="panel header app-header">
@@ -72,16 +95,23 @@
       <div class="title">Family</div>
     </header>
 
-    <section id="grid" class="grid"></section>
+    <!-- Family tree (parents row, connector, kids row) -->
+    <section class="panel family-tree">
+      <div style="font-weight:800; text-align:center">Family</div>
+      <div id="treeParents" class="row"></div>
+      <div class="tree-connect" aria-hidden="true"></div>
+      <div id="treeKids" class="row"></div>
+    </section>
 
     <footer>
       Works offline. Data stays on this device (local only).
-      <div class="version">Family v1.1 — theme-ready</div>
+      <div class="version">Family v1.2 — tree layout</div>
     </footer>
   </div>
 
 <script src="family.js?v=3.3.6"></script>
 <script>
+/* Fallback Family store if family.js isn't present */
 if(!window.Family){
   (function(){
     const K={kids:'hub:family:kids',parents:'hub:family:parents'};
@@ -90,48 +120,65 @@ if(!window.Family){
   })();
 }
 
+/* Helpers */
 const $=(s,e=document)=>e.querySelector(s);
 const Prof={ key:(id)=>`prof:${id}`, load(id){ try{return JSON.parse(localStorage.getItem(this.key(id)))||{}}catch{return{}} } };
 function initials(n){const p=(n||'').trim();return p? p[0].toUpperCase():'?';}
 
-function render(){
-  const grid = $('#grid'); grid.innerHTML='';
-  const parents = (Family.getParents?.()||[]).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  const kids = (Family.getKids?.()||[]).filter(k=>k.enabled!==false).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  const people = [
-    ...parents.map(p=>({...p, kind:'parent'})),
-    ...kids.map(k=>({...k, kind:'kid'}))
-  ];
-
-  if (!people.length){
-    grid.innerHTML = `<div class="panel" style="grid-column:1/-1; text-align:center; opacity:.8">
-      No family members yet. Open <b>Admin Settings → Parents/Kids</b> to add some.
-    </div>`;
-    return;
-  }
-
-  people.forEach(p=>{
-    const prof = Prof.load(p.id||'');
-    const accent = prof.accent || '';
-    const pid = p.id || '';
-    const a = document.createElement('a');
-    a.href = pid ? `./profile.html#${encodeURIComponent(pid)}` : 'javascript:void(0)';
-    a.className='card';
-    a.innerHTML = `
-      <div class="face" style="${accent ? `border-color:${accent}` : ''}">
-        ${p.photo
-          ? `<img src="${p.photo}" alt="${(p.name||'Member').replace(/"/g,'&quot;')}">`
-          : `<span aria-hidden="true">${initials(p.name)}</span>`}
-      </div>
-      <div class="name">${p.name||'Member'}</div>
-      <div class="badge" aria-label="${p.kind==='kid'?'Kid':'Parent'}">${p.kind==='kid'?'Kid':'Parent'}</div>
-    `;
-    a.setAttribute('aria-disabled', pid ? 'false' : 'true');
-    grid.appendChild(a);
-  });
+/* Birthday → Age (supports 12/17/1984, 1-2 digit month/day; 2-digit year becomes 19yy/20yy) */
+function ageFromProfile(person){
+  const b=(Prof.load(person.id||'').birthday||'').trim();
+  if(!b) return null;
+  const m=b.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+  if(!m) return null;
+  let [ , mm, dd, yy ]=m; mm=+mm; dd=+dd; yy=String(yy).length===2 ? +(yy>50?`19${yy}`:`20${yy}`) : +yy;
+  const d=new Date(yy,mm-1,dd); if(isNaN(d)) return null;
+  const now=new Date();
+  let age=now.getFullYear()-yy;
+  const hadBday=(now.getMonth()>mm-1)||(now.getMonth()==mm-1&&now.getDate()>=dd);
+  if(!hadBday) age--;
+  return (age>=0 && age<130)?age:null;
 }
 
-render();
+function cardHTML(person, roleLabel){
+  const prof  = Prof.load(person.id||'');
+  const accent = prof.accent || '';
+  const pid   = person.id || '';
+  const age   = ageFromProfile(person);
+  const badge = roleLabel + (age!=null ? ` • ${age}` : '');
+  const face  = person.photo
+    ? `<img src="${person.photo}" alt="${(person.name||'Member').replace(/"/g,'&quot;')}">`
+    : `<span aria-hidden="true">${initials(person.name)}</span>`;
+  return `
+    <a class="card" href="${pid?`./profile.html#${encodeURIComponent(pid)}`:'#'}" ${pid?'':'aria-disabled="true"'} >
+      <div class="face" style="${accent?`border-color:${accent}`:''}">${face}</div>
+      <div class="name">${person.name||'Member'}</div>
+      <div class="badge">${badge}</div>
+    </a>
+  `;
+}
+
+function renderFamilyTree(){
+  const parents = (Family.getParents?.()||[]);
+  const kids    = (Family.getKids?.()||[]).filter(k=>k.enabled!==false);
+
+  const pWrap = document.getElementById('treeParents');
+  const kWrap = document.getElementById('treeKids');
+  if(!pWrap || !kWrap) return;
+
+  pWrap.innerHTML = parents.length
+    ? parents.map(p=>cardHTML(p,'Parent')).join('')
+    : `<div class="small" style="opacity:.7">No parents yet.</div>`;
+
+  kWrap.innerHTML = kids.length
+    ? kids.map(k=>cardHTML(k,'Kid')).join('')
+    : `<div class="small" style="opacity:.7">No kids yet. Add them in Admin.</div>`;
+}
+
+document.addEventListener('DOMContentLoaded', renderFamilyTree);
+window.addEventListener('storage', (e)=>{
+  if(/hub:family:(parents|kids)/.test(e.key||'')) renderFamilyTree();
+});
 
 /* SW */
 if('serviceWorker' in navigator){
