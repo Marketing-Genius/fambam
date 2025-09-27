@@ -19,6 +19,8 @@
 <!-- Tiny page-scoped styles for the tree layout -->
 <style>
   .family-tree .row{display:flex;justify-content:center;gap:14px;flex-wrap:wrap}
+  .family-tree{ padding: 10px 0; }
+  .family-tree .row + .row{ margin-top: 12px; } /* extra air between parents & kids rows */
   .family-tree .tree-connect{height:16px}
   .family-tree .card{
     display:flex;align-items:center;gap:10px;
@@ -96,7 +98,7 @@
     </header>
 
     <!-- Family tree (parents row, connector, kids row) -->
-    <section class="panel family-tree">
+    <section class="family-tree">
       <div style="font-weight:800; text-align:center">Family</div>
       <div id="treeParents" class="row"></div>
       <div class="tree-connect" aria-hidden="true"></div>
@@ -125,32 +127,43 @@ const $=(s,e=document)=>e.querySelector(s);
 const Prof={ key:(id)=>`prof:${id}`, load(id){ try{return JSON.parse(localStorage.getItem(this.key(id)))||{}}catch{return{}} } };
 function initials(n){const p=(n||'').trim();return p? p[0].toUpperCase():'?';}
 
-/* Birthday → Age (supports 12/17/1984, 1-2 digit month/day; 2-digit year becomes 19yy/20yy) */
-function ageFromProfile(person){
-  const b=(Prof.load(person.id||'').birthday||'').trim();
-  if(!b) return null;
-  const m=b.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
-  if(!m) return null;
-  let [ , mm, dd, yy ]=m; mm=+mm; dd=+dd; yy=String(yy).length===2 ? +(yy>50?`19${yy}`:`20${yy}`) : +yy;
-  const d=new Date(yy,mm-1,dd); if(isNaN(d)) return null;
-  const now=new Date();
-  let age=now.getFullYear()-yy;
-  const hadBday=(now.getMonth()>mm-1)||(now.getMonth()==mm-1&&now.getDate()>=dd);
-  if(!hadBday) age--;
-  return (age>=0 && age<130)?age:null;
+function ageFor(person){
+  // Prefer birthday stored on the Family record; fall back to profile blob
+  const src = (person?.birthday || Prof.load(person?.id||'').birthday || '').trim();
+  if (!src) return null;
+
+  let y, m, d;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(src)) {
+    [y,m,d] = src.split('-').map(Number);
+  } else {
+    const m1 = src.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+    if (!m1) return null;
+    m = +m1[1]; d = +m1[2];
+    const yy = m1[3];
+    y = (yy.length === 2) ? +(yy > '50' ? `19${yy}` : `20${yy}`) : +yy;
+  }
+
+  const now = new Date();
+  const b = new Date(y, m-1, d);
+  if (isNaN(b)) return null;
+
+  let age = now.getFullYear() - y;
+  if (now.getMonth() < b.getMonth() || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) age--;
+  return (age >= 0 && age < 140) ? age : null;
 }
 
 function cardHTML(person, roleLabel){
-  const prof  = Prof.load(person.id||'');
+  const prof   = Prof.load(person.id||'');
   const accent = prof.accent || '';
-  const pid   = person.id || '';
-  const age   = ageFromProfile(person);
-  const badge = roleLabel + (age!=null ? ` • ${age}` : '');
-  const face  = person.photo
-    ? `<img src="${person.photo}" alt="${(person.name||'Member').replace(/"/g,'&quot;')}">`
-    : `<span aria-hidden="true">${initials(person.name)}</span>`;
+  const pid    = person.id || '';
+  const age    = ageFor(person);
+  const badge  = roleLabel + (age != null ? ` • ${age}` : '');
+  const face   = person.photo
+      ? `<img src="${person.photo}" alt="${(person.name||'Member').replace(/"/g,'&quot;')}">`
+      : `<span aria-hidden="true">${initials(person.name)}</span>`;
+
   return `
-    <a class="card" href="${pid?`./profile.html#${encodeURIComponent(pid)}`:'#'}" ${pid?'':'aria-disabled="true"'} >
+    <a class="card" href="${pid?`./profile.html#${encodeURIComponent(pid)}`:'#'}" ${pid?'':'aria-disabled="true"} >
       <div class="face" style="${accent?`border-color:${accent}`:''}">${face}</div>
       <div class="name">${person.name||'Member'}</div>
       <div class="badge">${badge}</div>
@@ -176,8 +189,11 @@ function renderFamilyTree(){
 }
 
 document.addEventListener('DOMContentLoaded', renderFamilyTree);
+
 window.addEventListener('storage', (e)=>{
-  if(/hub:family:(parents|kids)/.test(e.key||'')) renderFamilyTree();
+  if (/^hub:family:(parents|kids)$/.test(e.key||'') || /^prof:/.test(e.key||'')) {
+    renderFamilyTree();
+  }
 });
 
 /* SW */
