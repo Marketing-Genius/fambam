@@ -218,3 +218,34 @@ body.header-float .app-header{
 /* If you kept the floating-header image lift, avoid applying it to the hamburger */
 body.header-float .app-header .brand img { filter: drop-shadow(0 2px 6px rgba(0,0,0,.35)); }
 body.header-float .app-header .hamburger { filter: none !important; }
+
+/* --- Family tree layout --- */
+.family-tree{ display:grid; gap:18px; justify-items:center }
+.family-tree .row{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center }
+.family-tree .badge{ margin-left:0 } /* center-friendly */
+
+.family-card{
+  display:flex; align-items:center; gap:10px;
+  background:var(--card);
+  border:1px solid var(--panelBorder);
+  border-radius:16px; padding:12px;
+  text-decoration:none; color:var(--text);
+  min-width:220px;
+}
+.family-card .face{
+  width:64px; height:64px; border-radius:50%; overflow:hidden;
+  display:grid; place-items:center; background:var(--chipBg); border:2px solid var(--chipBorder);
+  font-weight:800; font-size:24px;
+}
+.family-card .face img{ width:100%; height:100%; object-fit:cover }
+.family-card .meta{ display:grid }
+.family-card .name{ font-weight:800 }
+.family-card .role{ font-size:.85rem; color:var(--muted) }
+.family-card .age{ font-size:.85rem; color:var(--muted) }
+
+/* optional connectors (subtle) */
+.tree-connect{ position:relative; width:100% }
+.tree-connect::before{
+  content:""; position:absolute; left:50%; transform:translateX(-50%);
+  top:-8px; width:2px; height:16px; background:var(--panelBorder); opacity:.4;
+}
