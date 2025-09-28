@@ -9,43 +9,69 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 
-<!-- Shared styles / wallpaper / theme boot already in your repo -->
 <link rel="stylesheet" href="wallpaper.css">
 <link rel="stylesheet" href="fambam.css">
 <script src="wallpaper.js" defer></script>
 
 <style>
-/* Page-scoped only (leans on fambam.css for most) */
+/* Page-scoped helpers (the rest comes from fambam.css) */
 .page-budget .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:16px;grid-template-rows:auto auto 1fr auto}
-.page-budget .grid{display:grid;gap:14px;grid-template-columns:360px 1fr}
-@media(max-width:960px){.page-budget .grid{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--panelBorder);border-radius:16px;padding:12px}
 .hd{font-weight:800}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.input,select{background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;color:var(--text);padding:8px 10px;font:inherit}
 .table{width:100%;border-collapse:separate;border-spacing:0 8px}
 .table tr{background:var(--card);border:1px solid var(--panelBorder)}
 .table td,.table th{padding:10px}
-.badge{display:inline-flex;gap:6px;align-items:center;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;padding:4px 8px;color:var(--muted);font-size:.85rem}
-.actions{display:flex;gap:6px}
+.badge{display:inline-flex;gap:6px;align-items:center;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:.9rem}
 .btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:12px;padding:8px 10px;color:var(--text);cursor:pointer}
+.input,select{background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;color:var(--text);padding:8px 10px;font:inherit}
 
-/* Settings modal uses your global .modal styles */
-.modal .row{margin-bottom:8px}
+/* Filter chips */
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Ensure modal backdrops behave (centered, full screen, glass) */
+.modal-backdrop{
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  background:color-mix(in oklab, var(--panel) 35%, transparent);
+  backdrop-filter: blur(10px) saturate(1.05);
+  -webkit-backdrop-filter: blur(10px) saturate(1.05);
+  z-index:3000;
+}
+.modal{width:min(880px, 92vw); background:var(--card); border:1px solid var(--panelBorder); border-radius:16px; padding:12px}
+.modal header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.modal .body{display:grid;gap:10px}
 .list-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--card);border:1px solid var(--panelBorder);border-radius:12px;padding:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 </style>
+
+<!-- HEADER FLOAT BOOT: respect Admin toggle -->
+<script>
+(function headerBoot(){
+  function apply(){
+    try{
+      const on = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
+      document.body && document.body.classList.toggle('header-float', on);
+    }catch(_){}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply, {once:true});
+  } else { apply(); }
+  window.addEventListener('storage', (e)=>{ if (e.key === 'ui:headerFloat') apply(); });
+})();
+</script>
 </head>
 
 <body class="page-budget">
 <div class="app">
-  <!-- Header uses shared hamburger from fambam.css -->
+  <!-- Header uses your shared hamburger styles -->
   <header class="panel header app-header">
     <a href="./index.html" class="brand" title="Home">
       <img id="logoImg" src="fambam.png" alt="Fambam">
     </a>
     <div class="title">
       <div class="big">Budget</div>
-      <div class="small">Track shared expenses and splits</div>
+      <div class="small">Shared expenses & splits</div>
     </div>
     <div class="menu-wrap">
       <button id="btnHamburger" class="hamburger" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown">☰</button>
@@ -58,55 +84,35 @@
     </div>
   </header>
 
-  <!-- Month bar -->
+  <!-- Month + who-owes + filter chips -->
   <section class="panel row" id="monthBar">
     <button class="btn" id="mPrev">◀</button>
     <div class="badge">Month: <b id="mLabel" style="margin-left:6px"></b></div>
     <button class="btn" id="mNext">▶</button>
+
     <div style="flex:1"></div>
-    <div class="badge">You owe <b id="whoOwes" style="margin-left:6px">—</b></div>
+
+    <div class="chips" id="viewChips">
+      <button class="chip" id="viewAll" aria-pressed="true">All</button>
+      <button class="chip" id="viewA" aria-pressed="false">Parent A</button>
+      <button class="chip" id="viewB" aria-pressed="false">Parent B</button>
+    </div>
+
+    <div class="badge" style="margin-left:auto">You owe <b id="whoOwes" style="margin-left:6px">—</b></div>
   </section>
 
-  <section class="grid">
-    <!-- Left: add expense -->
-    <div class="card">
-      <div class="hd">Add expense</div>
-      <div class="row" style="margin-top:8px">
-        <input id="exLabel" class="input" placeholder="Label (e.g., Groceries)"/>
-        <input id="exAmt" class="input" type="number" min="0" step="0.01" placeholder="Amount"/>
-        <input id="exDate" class="input" type="date"/>
-      </div>
-      <div class="row">
-        <select id="exPayer" class="input"></select>
-        <select id="exSplitMode" class="input">
-          <option value="percent">Split by %</option>
-          <option value="fixed">Split by $</option>
-          <option value="default">Default payer pays</option>
-        </select>
-      </div>
-      <div id="splitRow" class="row">
-        <label class="small">Parent A % <input id="pAVal" type="number" min="0" max="100" step="1" class="input" style="width:110px"></label>
-        <label class="small">Parent B % <input id="pBVal" type="number" min="0" max="100" step="1" class="input" style="width:110px"></label>
-      </div>
-      <div class="row">
-        <button id="exSave" class="btn">Save</button>
-        <button id="exClear" class="btn">Clear</button>
-      </div>
-    </div>
-
-    <!-- Right: table -->
-    <div class="card">
-      <div class="hd">This month’s expenses</div>
-      <table class="table" id="tbl">
-        <thead>
-          <tr style="background:transparent">
-            <th>Date</th><th>Label</th><th style="text-align:right">Amount</th>
-            <th>Payer</th><th>Split</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
+  <!-- Ledger only -->
+  <section class="card">
+    <div class="hd">This month’s expenses</div>
+    <table class="table">
+      <thead>
+        <tr style="background:transparent">
+          <th>Date</th><th>Label</th><th style="text-align:right">Amount</th>
+          <th>Payer</th><th>Split</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
   </section>
 
   <footer class="small" style="text-align:center;opacity:.75">
@@ -114,14 +120,14 @@
   </footer>
 </div>
 
-<!-- Settings Modal (parents from Family + default payer + recurring bills CRUD) -->
-<div class="modal-backdrop" id="setModal" aria-hidden="true" role="dialog" aria-labelledby="setTitle" style="display:none">
+<!-- SETTINGS MODAL -->
+<div class="modal-backdrop" id="setModal" aria-hidden="true" role="dialog" aria-labelledby="setTitle">
   <div class="modal">
     <header>
       <div id="setTitle" style="font-weight:800">Settings</div>
       <button id="setClose" class="btn">✖</button>
     </header>
-    <div class="body" style="display:grid;gap:12px">
+    <div class="body">
       <div class="hd">Parents</div>
       <div class="row">
         <select id="parentA" class="input"></select>
@@ -148,7 +154,7 @@
         <input id="rbB" class="input" type="number" step="1" placeholder="B%" style="width:90px">
         <button id="rbAdd" class="btn">Add</button>
       </div>
-      <div id="rbList" class="list"></div>
+      <div id="rbList"></div>
     </div>
     <div class="footer">
       <button id="setSave" class="btn">Done</button>
@@ -156,10 +162,42 @@
   </div>
 </div>
 
-<!-- Family store + Budget logic -->
+<!-- ADD EXPENSE MODAL -->
+<div class="modal-backdrop" id="expModal" aria-hidden="true" role="dialog" aria-labelledby="expTitle">
+  <div class="modal">
+    <header>
+      <div id="expTitle" style="font-weight:800">New expense</div>
+      <button id="expClose" class="btn">✖</button>
+    </header>
+    <div class="body">
+      <div class="row">
+        <input id="exLabel" class="input" placeholder="Label (e.g., Groceries)"/>
+        <input id="exAmt" class="input" type="number" min="0" step="0.01" placeholder="Amount"/>
+        <input id="exDate" class="input" type="date"/>
+      </div>
+      <div class="row">
+        <select id="exPayer" class="input"></select>
+        <select id="exSplitMode" class="input">
+          <option value="percent">Split by %</option>
+          <option value="fixed">Split by $</option>
+          <option value="default">Default payer pays</option>
+        </select>
+      </div>
+      <div id="splitRow" class="row">
+        <label class="small">Parent A <input id="pAVal" type="number" min="0" max="1000" step="1" class="input" style="width:110px"></label>
+        <label class="small">Parent B <input id="pBVal" type="number" min="0" max="1000" step="1" class="input" style="width:110px"></label>
+      </div>
+    </div>
+    <div class="footer row">
+      <button id="exSave" class="btn">Save</button>
+      <button id="exClear" class="btn">Clear</button>
+    </div>
+  </div>
+</div>
+
 <script src="family.js?v=3.3.6"></script>
 <script>
-/* --------- Fallback Family shim (if family.js missing) --------- */
+/* ---------- Fallback Family shim ---------- */
 if(!window.Family){
   (function(){
     const K={kids:'hub:family:kids',parents:'hub:family:parents'};
@@ -168,28 +206,27 @@ if(!window.Family){
   })();
 }
 
-/* --------- Storage keys --------- */
+/* ---------- Storage keys ---------- */
 const LS = {
-  month: (isoYM)=> `bdg:month:${isoYM}`,             // array of expense items
-  settings: 'bdg:settings',                          // {parentAId,parentBId,defaultPayerId}
-  recurrings: 'bdg:recurrings'                       // [{id,label,amount,freq,payerId,mode,aVal,bVal}]
+  month: isoYM => `bdg:month:${isoYM}`,
+  settings: 'bdg:settings',
+  recurrings: 'bdg:recurrings'
 };
 
-/* --------- Helpers --------- */
+/* ---------- Helpers ---------- */
 const $=(s,e=document)=>e.querySelector(s);
-const $$=(s,e=document)=>[...e.querySelectorAll(s)];
 const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f}catch{return f}};
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const uid=()=>Math.random().toString(36).slice(2,10);
-
 function ym(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
-function firstOfMonth(d){return new Date(d.getFullYear(), d.getMonth(), 1);}
-function labelFor(id){ const p = [...(Family.getParents?.()||[])].find(x=>x.id===id); return p?.name || '—'; }
+function labelFor(id){ const p=(Family.getParents?.()||[]).find(x=>x.id===id); return p?.name||'—'; }
+function show(el){ el.style.display='flex'; el.setAttribute('aria-hidden','false'); }
+function hide(el){ el.style.display='none'; el.setAttribute('aria-hidden','true'); }
 
-/* --------- State --------- */
-let state = { month: firstOfMonth(new Date()) };
+/* ---------- State ---------- */
+let state = { month: new Date(new Date().getFullYear(), new Date().getMonth(), 1), view:'all' };
 
-/* --------- Hamburger wires (using your shared classes) --------- */
+/* ---------- Hamburger ---------- */
 (function hamburger(){
   const btn=$('#btnHamburger'), dd=$('#menuDropdown');
   const open=()=>{dd.classList.add('open');btn.setAttribute('aria-expanded','true');dd.setAttribute('aria-hidden','false');};
@@ -199,232 +236,192 @@ let state = { month: firstOfMonth(new Date()) };
   dd.addEventListener('click', e=>{
     const act=e.target.closest('.mi')?.dataset.action; if(!act) return; close();
     if(act==='settings') openSettings();
-    else if(act==='newExpense') focusNewExpense();
-    else if(act==='importRecurrings') applyRecurrings();
-    else if(act==='export') exportCSV();
+    if(act==='newExpense') openExpense();
+    if(act==='importRecurrings') applyRecurrings();
+    if(act==='export') exportCSV();
   });
 })();
 
-/* --------- Settings (parents + default payer + recurrings) --------- */
-function openSettings(){
-  const parents = (Family.getParents?.()||[]);
-  const set = load(LS.settings, {});
-  const [aSel,bSel,dSel,payerSel] = ['parentA','parentB','defaultPayer','rbPayer'].map(id=>document.getElementById(id));
-
-  [aSel,bSel,dSel,payerSel].forEach(sel=>{
-    sel.innerHTML = parents.map(p=>`<option value="${p.id}">${p.name||'Parent'}</option>`).join('');
-  });
-
-  aSel.value = set.parentAId || parents[0]?.id || '';
-  bSel.value = set.parentBId || parents[1]?.id || parents[0]?.id || '';
-  dSel.value = set.defaultPayerId || aSel.value;
-  payerSel.value = dSel.value;
-
-  buildRecurringList();
-  show($('#setModal'));
-}
-function buildRecurringList(){
-  const list = load(LS.recurrings, []);
-  const wrap = $('#rbList'); wrap.innerHTML='';
-  if(!list.length){ wrap.innerHTML='<div class="small" style="opacity:.7">No recurring bills.</div>'; return; }
-  list.forEach(item=>{
-    const row=document.createElement('div'); row.className='list-item';
-    const split = item.mode==='percent' ? `${item.aVal||0}% / ${item.bVal||0}%`
-                : item.mode==='fixed'   ? `$${item.aVal||0} / $${item.bVal||0}`
-                : 'Default payer';
-    row.innerHTML = `
-      <div>
-        <div><b>${item.label}</b> — $${Number(item.amount).toFixed(2)} • ${item.freq}
-          • payer: ${labelFor(item.payerId)} • ${split}
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn" data-edit>Edit</button>
-        <button class="btn" data-del>Delete</button>
-      </div>
-    `;
-    row.querySelector('[data-del]').onclick=()=>{
-      const arr=load(LS.recurrings,[]).filter(x=>x.id!==item.id); save(LS.recurrings,arr); buildRecurringList();
-    };
-    row.querySelector('[data-edit]').onclick=()=>{
-      // load into inputs for quick edit
-      $('#rbLabel').value=item.label; $('#rbAmt').value=item.amount; $('#rbFreq').value=item.freq;
-      $('#rbPayer').value=item.payerId; $('#rbSplit').value=item.mode;
-      $('#rbA').value=item.aVal||''; $('#rbB').value=item.bVal||'';
-      $('#rbAdd').dataset.editing=item.id;
-    };
-    wrap.appendChild(row);
-  });
-}
-$('#rbAdd').onclick=()=>{
-  const data={
-    id: $('#rbAdd').dataset.editing || uid(),
-    label: $('#rbLabel').value.trim(),
-    amount: Number($('#rbAmt').value||0),
-    freq: $('#rbFreq').value,
-    payerId: $('#rbPayer').value,
-    mode: $('#rbSplit').value,
-    aVal: Number($('#rbA').value||0), bVal: Number($('#rbB').value||0)
-  };
-  if(!data.label || !data.amount){ alert('Enter label and amount'); return; }
-  const list=load(LS.recurrings,[]);
-  const idx=list.findIndex(x=>x.id===data.id);
-  if(idx>=0) list[idx]=data; else list.push(data);
-  save(LS.recurrings,list);
-  $('#rbAdd').dataset.editing='';
-  $('#rbLabel').value=$('#rbAmt').value=$('#rbA').value=$('#rbB').value='';
-  buildRecurringList();
-};
-$('#setSave').onclick=()=>{
-  const cfg={
-    parentAId: $('#parentA').value,
-    parentBId: $('#parentB').value,
-    defaultPayerId: $('#defaultPayer').value
-  };
-  save(LS.settings, cfg); hide($('#setModal')); render();
-};
-$('#setClose').onclick=()=>hide($('#setModal'));
-function show(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
-function hide(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
-
-/* --------- Month nav --------- */
+/* ---------- Month nav ---------- */
 function renderMonthBar(){
   $('#mLabel').textContent = state.month.toLocaleDateString(undefined,{year:'numeric',month:'long'});
 }
 $('#mPrev').onclick=()=>{ state.month.setMonth(state.month.getMonth()-1); render(); };
 $('#mNext').onclick=()=>{ state.month.setMonth(state.month.getMonth()+1); render(); };
 
-/* --------- Expense CRUD --------- */
-function focusNewExpense(){ $('#exLabel').focus(); }
-function monthKey(){ return LS.month( ym(state.month) ); }
-function currentExpenses(){ return load(monthKey(), []); }
-function saveExpenses(arr){ save(monthKey(), arr); }
-
-function renderFormChoices(){
-  const parents=(Family.getParents?.()||[]);
-  const set=load(LS.settings,{});
-  // payer choices & default split labels
-  $('#exPayer').innerHTML = parents.map(p=>`<option value="${p.id}">${p.name||'Parent'}</option>`).join('');
-  $('#exPayer').value = set.defaultPayerId || parents[0]?.id || '';
-  // percent defaults (50/50)
-  $('#pAVal').value = 50; $('#pBVal').value = 50;
-  // date default
-  const d=new Date(); const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  $('#exDate').value = iso;
+/* ---------- Filters (All / A / B) ---------- */
+function setChip(view){
+  state.view=view;
+  ['viewAll','viewA','viewB'].forEach(id=>{ $('#'+id).setAttribute('aria-pressed', (id==='viewAll'&&view==='all')||(id==='viewA'&&view==='a')||(id==='viewB'&&view==='b') ); });
+  renderTable();
 }
-$('#exSplitMode').onchange = ()=>{
-  const v=$('#exSplitMode').value;
-  $('#splitRow').style.display = (v==='percent' || v==='fixed') ? 'flex' : 'none';
-};
-$('#exSave').onclick=()=>{
-  const item={
-    id:uid(),
-    label:($('#exLabel').value||'').trim(),
-    amount:Number($('#exAmt').value||0),
-    date:$('#exDate').value,
-    payerId:$('#exPayer').value,
-    splitMode:$('#exSplitMode').value,
-    aVal:Number($('#pAVal').value||0),
-    bVal:Number($('#pBVal').value||0)
-  };
-  if(!item.label || !item.amount){ alert('Enter label and amount'); return; }
-  const arr=currentExpenses(); arr.push(item); saveExpenses(arr); $('#exLabel').value=''; $('#exAmt').value=''; render();
-};
-$('#exClear').onclick=()=>{ ['exLabel','exAmt'].forEach(id=>document.getElementById(id).value=''); };
+$('#viewAll').onclick=()=>setChip('all');
+$('#viewA').onclick=()=>setChip('a');
+$('#viewB').onclick=()=>setChip('b');
 
-/* --------- Recurrings → apply to current month --------- */
-function applyRecurrings(){
-  const set=load(LS.settings,{});
-  const rec=load(LS.recurrings,[]);
-  if(!rec.length){ alert('No recurring bills in Settings.'); return; }
-  const arr=currentExpenses();
-  rec.forEach(r=>{
-    const payer = r.mode==='default' ? (set.defaultPayerId||r.payerId) : r.payerId;
-    arr.push({
-      id: uid(),
-      label: r.label,
-      amount: Number(r.amount||0),
-      date: `${state.month.getFullYear()}-${String(state.month.getMonth()+1).padStart(2,'0')}-01`,
-      payerId: payer,
-      splitMode: r.mode,
-      aVal: Number(r.aVal||0),
-      bVal: Number(r.bVal||0)
-    });
+/* ---------- Settings modal ---------- */
+function openSettings(){
+  const parents = (Family.getParents?.()||[]);
+  const set = load(LS.settings, {});
+  const selects = ['parentA','parentB','defaultPayer','rbPayer'].map(id=>document.getElementById(id));
+  selects.forEach(sel=>{
+    sel.innerHTML = parents.map(p=>`<option value="${p.id}">${p.name||'Parent'}</option>`).join('');
   });
-  saveExpenses(arr); render();
+  $('#parentA').value = set.parentAId || parents[0]?.id || '';
+  $('#parentB').value = set.parentBId || parents[1]?.id || parents[0]?.id || '';
+  $('#defaultPayer').value = set.defaultPayerId || $('#parentA').value;
+  $('#rbPayer').value = $('#defaultPayer').value;
+  buildRecurringList();
+  show($('#setModal'));
+}
+$('#setClose').onclick=()=>hide($('#setModal'));
+$('#setSave').onclick=()=>{ save(LS.settings,{parentAId:$('#parentA').value,parentBId:$('#parentB').value,defaultPayerId:$('#defaultPayer').value}); hide($('#setModal')); render(); };
+
+function buildRecurringList(){
+  const list=load(LS.recurrings,[]);
+  const wrap=$('#rbList'); wrap.innerHTML='';
+  if(!list.length){ wrap.innerHTML='<div class="small" style="opacity:.7">No recurring bills.</div>'; return; }
+  list.forEach(item=>{
+    const row=document.createElement('div'); row.className='list-item';
+    const split = item.mode==='percent'?`${item.aVal||0}% / ${item.bVal||0}%`: item.mode==='fixed'?`$${item.aVal||0} / $${item.bVal||0}` : 'Default payer';
+    row.innerHTML=`<div><b>${item.label}</b> — $${Number(item.amount).toFixed(2)} • ${item.freq} • payer: ${labelFor(item.payerId)} • ${split}</div>
+                   <div class="row"><button class="btn" data-edit>Edit</button><button class="btn" data-del>Delete</button></div>`;
+    row.querySelector('[data-del]').onclick=()=>{ const arr=load(LS.recurrings,[]).filter(x=>x.id!==item.id); save(LS.recurrings,arr); buildRecurringList(); };
+    row.querySelector('[data-edit]').onclick=()=>{
+      $('#rbLabel').value=item.label; $('#rbAmt').value=item.amount; $('#rbFreq').value=item.freq;
+      $('#rbPayer').value=item.payerId; $('#rbSplit').value=item.mode; $('#rbA').value=item.aVal||''; $('#rbB').value=item.bVal||''; $('#rbAdd').dataset.editing=item.id;
+    };
+    wrap.appendChild(row);
+  });
+}
+$('#rbAdd').onclick=()=>{
+  const data={ id: $('#rbAdd').dataset.editing||uid(), label: $('#rbLabel').value.trim(), amount:Number($('#rbAmt').value||0),
+    freq:$('#rbFreq').value, payerId:$('#rbPayer').value, mode:$('#rbSplit').value,
+    aVal:Number($('#rbA').value||0), bVal:Number($('#rbB').value||0) };
+  if(!data.label||!data.amount){ alert('Enter label and amount'); return; }
+  const list=load(LS.recurrings,[]); const i=list.findIndex(x=>x.id===data.id); if(i>=0) list[i]=data; else list.push(data);
+  save(LS.recurrings,list); $('#rbAdd').dataset.editing=''; ['rbLabel','rbAmt','rbA','rbB'].forEach(id=>$('#'+id).value=''); buildRecurringList();
+};
+
+/* ---------- Add expense modal ---------- */
+function openExpense(){
+  const parents=(Family.getParents?.()||[]);
+  $('#exPayer').innerHTML = parents.map(p=>`<option value="${p.id}">${p.name||'Parent'}</option>`).join('');
+  const set=load(LS.settings,{});
+  $('#exPayer').value = set.defaultPayerId || parents[0]?.id || '';
+  // defaults
+  const d=new Date(); $('#exDate').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  $('#exSplitMode').value='percent'; $('#splitRow').style.display='flex'; $('#pAVal').value=50; $('#pBVal').value=50;
+  show($('#expModal')); $('#exLabel').focus();
+}
+$('#expClose').onclick=()=>hide($('#expModal'));
+$('#exSplitMode').onchange=()=>{ const v=$('#exSplitMode').value; $('#splitRow').style.display=(v==='percent'||v==='fixed')?'flex':'none'; };
+$('#exSave').onclick=()=>{
+  const item={ id:uid(), label:($('#exLabel').value||'').trim(), amount:Number($('#exAmt').value||0), date:$('#exDate').value,
+               payerId:$('#exPayer').value, splitMode:$('#exSplitMode').value,
+               aVal:Number($('#pAVal').value||0), bVal:Number($('#pBVal').value||0) };
+  if(!item.label||!item.amount){ alert('Enter label and amount'); return; }
+  const key=LS.month( ym(state.month) ); const arr=load(key,[]); arr.push(item); save(key,arr);
+  hide($('#expModal')); render();
+};
+$('#exClear').onclick=()=>{ ['exLabel','exAmt'].forEach(id=>$('#'+id).value=''); };
+
+/* ---------- Recurrings apply ---------- */
+function applyRecurrings(){
+  const set=load(LS.settings,{}); const rec=load(LS.recurrings,[]); if(!rec.length){ alert('No recurring bills in Settings.'); return; }
+  const key=LS.month(ym(state.month)); const arr=load(key,[]);
+  rec.forEach(r=>{
+    const payer = r.mode==='default' ? (set.defaultPayerId || r.payerId) : r.payerId;
+    arr.push({ id:uid(), label:r.label, amount:Number(r.amount||0),
+               date:`${state.month.getFullYear()}-${String(state.month.getMonth()+1).padStart(2,'0')}-01`,
+               payerId:payer, splitMode:r.mode, aVal:Number(r.aVal||0), bVal:Number(r.bVal||0) });
+  });
+  save(key,arr); render();
 }
 
-/* --------- Table + balances --------- */
+/* ---------- Ledger + balance (with filter) ---------- */
+function currentExpenses(){ return load(LS.month(ym(state.month)), []); }
 function renderTable(){
-  const set=load(LS.settings,{});
-  const parents=(Family.getParents?.()||[]);
-  const a=set.parentAId || parents[0]?.id || '';
-  const b=set.parentBId || parents[1]?.id || parents[0]?.id || '';
   const tbody=$('#tbody'); tbody.innerHTML='';
+  const set=load(LS.settings,{}); const parents=(Family.getParents?.()||[]);
+  const a=set.parentAId || parents[0]?.id || ''; const b=set.parentBId || parents[1]?.id || parents[0]?.id || '';
+  const view=state.view;
 
-  let owed = {[a]:0,[b]:0};
+  let netA=0, netB=0;
 
   currentExpenses().forEach(item=>{
+    // filter: show All, or only rows where selected parent pays or owes a share
+    const involves = pid=>{
+      if(item.splitMode==='default') return item.payerId===pid;
+      // in percent/fixed, both are involved if share > 0
+      if(pid===a) return (item.splitMode==='percent'? item.aVal>0 : item.aVal>0) || item.payerId===a;
+      if(pid===b) return (item.splitMode==='percent'? item.bVal>0 : item.bVal>0) || item.payerId===b;
+      return true;
+    };
+    if(view==='a' && !involves(a)) return;
+    if(view==='b' && !involves(b)) return;
+
     // compute shares
     let shareA=0, shareB=0;
-    if(item.splitMode==='percent'){
-      shareA=item.amount*(item.aVal/100); shareB=item.amount*(item.bVal/100);
-    }else if(item.splitMode==='fixed'){
-      shareA=item.aVal; shareB=item.bVal;
-    }else{ // default payer pays
-      shareA = (item.payerId===a)? item.amount : 0;
-      shareB = (item.payerId===b)? item.amount : 0;
-    }
-    // who paid vs who owes
-    owed[a] += shareA - (item.payerId===a?item.amount:0);
-    owed[b] += shareB - (item.payerId===b?item.amount:0);
+    if(item.splitMode==='percent'){ shareA=item.amount*(item.aVal/100); shareB=item.amount*(item.bVal/100); }
+    else if(item.splitMode==='fixed'){ shareA=item.aVal; shareB=item.bVal; }
+    else { shareA=(item.payerId===a)? item.amount : 0; shareB=(item.payerId===b)? item.amount : 0; }
+
+    netA += shareA - (item.payerId===a?item.amount:0);
+    netB += shareB - (item.payerId===b?item.amount:0);
 
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td>${item.date||'—'}</td>
       <td>${item.label}</td>
-      <td style="text-align:right">$${item.amount.toFixed(2)}</td>
+      <td style="text-align:right">$${Number(item.amount).toFixed(2)}</td>
       <td>${labelFor(item.payerId)}</td>
       <td>${item.splitMode==='percent' ? `${item.aVal||0}% / ${item.bVal||0}%`
-          : item.splitMode==='fixed' ? `$${item.aVal||0} / $${item.bVal||0}`
-          : 'Default payer'}</td>
-      <td class="actions"><button class="btn" data-del="${item.id}">Delete</button></td>
+           : item.splitMode==='fixed' ? `$${item.aVal||0} / $${item.bVal||0}`
+           : 'Default payer'}</td>
+      <td><button class="btn" data-del="${item.id}">Delete</button></td>
     `;
     tr.querySelector('[data-del]').onclick=()=>{
-      const arr=currentExpenses().filter(x=>x.id!==item.id); saveExpenses(arr); render();
+      const key=LS.month(ym(state.month));
+      const arr=currentExpenses().filter(x=>x.id!==item.id); save(key,arr); render();
     };
     tbody.appendChild(tr);
   });
 
-  // summary: positive means they owe, negative means they are owed
-  const netA = owed[a], netB = owed[b];
-  let who = '—';
+  // Compute “You owe …” string per current view
+  let who='—';
   if(a && b){
-    if(netA>0) who = `${labelFor(a)} owes $${netA.toFixed(2)} to ${labelFor(b)}`;
-    else if(netB>0) who = `${labelFor(b)} owes $${netB.toFixed(2)} to ${labelFor(a)}`;
-    else who = 'All square';
+    const v = (state.view==='b') ? netB : (state.view==='a') ? netA : (netA>0?netA:netB);
+    if(state.view==='a'){
+      if(netA>0) who=`${labelFor(a)} owes $${netA.toFixed(2)} to ${labelFor(b)}`; else if(netB>0) who=`${labelFor(b)} owes $${netB.toFixed(2)} to ${labelFor(a)}`; else who='All square';
+    }else if(state.view==='b'){
+      if(netB>0) who=`${labelFor(b)} owes $${netB.toFixed(2)} to ${labelFor(a)}`; else if(netA>0) who=`${labelFor(a)} owes $${netA.toFixed(2)} to ${labelFor(b)}`; else who='All square';
+    }else{
+      if(netA>0) who=`${labelFor(a)} owes $${netA.toFixed(2)} to ${labelFor(b)}`;
+      else if(netB>0) who=`${labelFor(b)} owes $${netB.toFixed(2)} to ${labelFor(a)}`;
+      else who='All square';
+    }
   }
   $('#whoOwes').textContent = who;
+
+  // label chips with actual names
+  $('#viewA').textContent = labelFor(a) || 'Parent A';
+  $('#viewB').textContent = labelFor(b) || 'Parent B';
 }
 
-/* --------- Export --------- */
 function exportCSV(){
   const rows=[['date','label','amount','payer','splitMode','aVal','bVal']];
   currentExpenses().forEach(i=>rows.push([i.date,i.label,i.amount,labelFor(i.payerId),i.splitMode,i.aVal,i.bVal]));
-  const csv = rows.map(r=>r.map(x=>String(x).replace(/"/g,'""')).map(x=>`"${x}"`).join(',')).join('\n');
+  const csv=rows.map(r=>r.map(x=>String(x).replace(/"/g,'""')).map(x=>`"${x}"`).join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a');
   a.href=URL.createObjectURL(blob); a.download=`Fambam-Budget-${ym(state.month)}.csv`; a.click(); URL.revokeObjectURL(a.href);
 }
 
-/* --------- Render --------- */
-function render(){
-  renderMonthBar();
-  renderFormChoices();
-  renderTable();
-}
+/* ---------- Render ---------- */
+function render(){ renderMonthBar(); renderTable(); }
 render();
 
-/* Live updates if Family changes */
+/* Live updates from other tabs */
 addEventListener('storage', e=>{
   if(/^hub:family:/.test(e.key||'') || e.key===LS.settings || e.key===LS.recurrings || (e.key||'').startsWith('bdg:month:')){
     render();
