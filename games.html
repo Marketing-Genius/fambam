@@ -32,7 +32,7 @@
   display:grid; place-items:center;
   line-height:1;
   /* scale nicely on iPad/desktop */
-  font-size:clamp(56px, 12vw, 112px);
+  font-size:clamp(56px, 12vw, 80px);
   /* no inner box — let the emoji breathe */
   background:transparent;
   border:0;
@@ -180,9 +180,11 @@ const LS = { scores:g=>`gm:scores:${g}` };
    - If /games/tic-tac-toe.html exists, set src to '/games/tic-tac-toe.html'.
    - If it doesn’t (or while testing), leave it as 'inline:tictactoe' so it always works. */
 const GAMES = [
-  { id:'tictactoe', name:'Tic-Tac-Toe', icon:'❌⭕', minPlayers:2, maxPlayers:2,
-    src:'games/tic-tac-toe.html' },   // ← relative path (no leading slash)
-  { id:'flappy', name:'Flappy (demo)', icon:'🐦', minPlayers:1, maxPlayers:1, src:'inline:flappy' }
+  { id:'tictactoe', name:'Tic-Tac-Toe', icon:'❌⭕',
+    minPlayers:2, maxPlayers:2, src:'games/tic-tac-toe.html' },
+
+  { id:'flappy', name:'Flappy (demo)', icon:'🐦',
+    minPlayers:1, maxPlayers:1, src:'games/flappy.html' }
 ];
 
 const state = { gameId:null, players:[] };
