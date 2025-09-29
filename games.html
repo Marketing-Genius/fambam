@@ -188,9 +188,13 @@ const Family = (function(){
 
 /* Game registry (add real game files later under /games/<id>.html) */
 const GAMES = [
-  {id:'tictactoe', name:'Tic-Tac-Toe', icon:'❌⭕', minPlayers:2, maxPlayers:2, src:'inline:tictactoe'},
-  {id:'flappy',    name:'Flappy (demo)', icon:'🐦',   minPlayers:1, maxPlayers:1, src:'inline:flappy'},
-  // Example real file: {id:'runner', name:'Runner', icon:'🏃', minPlayers:1,maxPlayers:1, src:'/games/runner.html'}
+  { id:'tictactoe',
+    name:'Tic-Tac-Toe',
+    icon:'❌⭕',
+    minPlayers:2, maxPlayers:2,
+    src:'/games/tic-tac-toe.html'   // ← use the separate page
+  },
+  { id:'flappy', name:'Flappy (demo)', icon:'🐦', minPlayers:1, maxPlayers:1, src:'inline:flappy' }
 ];
 
 /* ------------------ UI boot ------------------ */
