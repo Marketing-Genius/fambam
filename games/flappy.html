@@ -45,7 +45,7 @@ html,body{height:100%;margin:0;background:#081228;color:var(--text);font-family:
 
 /* Fullscreen stage */
 .stage{position:fixed;inset:0}
-#c{width:100%;height:100%;display:block;background:#081228}
+#c{width:100%;height:100%;display:block;background:#081228; touch-action:none}
 
 /* Centered overlays */
 .center{position:fixed;inset:0;display:grid;place-items:center;z-index:30}
@@ -56,7 +56,7 @@ html,body{height:100%;margin:0;background:#081228;color:var(--text);font-family:
   border:1px solid var(--panelBorder);border-radius:18px;padding:18px 18px 16px;
   -webkit-backdrop-filter:blur(18px) saturate(1.1); backdrop-filter:blur(18px) saturate(1.1)}
 .card header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.hint{position:fixed;left:0;right:0;bottom:20%;text-align:center;z-index:5;font-weight:700;opacity:.9}
+.hint{position:fixed;left:0;right:0;bottom:20%;text-align:center;z-index:5;font-weight:700;opacity:.9;pointer-events:none}
 
 /* Grids */
 .grid{display:grid;gap:14px}
@@ -173,25 +173,27 @@ document.getElementById('startBtn').onclick=()=>{
   const typed=(document.getElementById('nameInput').value||'').trim();
   if(!player.name && !typed){ alert('Pick a player or type a name.'); return; }
   if(typed){ player={id:uid(), name:typed}; }
-  document.getElementById('picker').classList.add('hidden');
+  document.getElementById('picker').classList.add('hidden');canvas.style.pointerEvents = 'auto';
   document.getElementById('who').textContent=player.name;
   startGame();
 };
 document.getElementById('btnChange').onclick=()=>{
   document.getElementById('over').classList.add('hidden');
   document.getElementById('picker').classList.remove('hidden');
+  canvas.style.pointerEvents = 'none';
 };
 document.getElementById('btnExit').onclick=()=>location.href='../games.html';
 document.getElementById('btnAgain').onclick=()=>{ document.getElementById('over').classList.add('hidden'); startGame(); };
 
 /* ---------- Canvas & Game ---------- */
-const canvas=document.getElementById('c'); const ctx=canvas.getContext('2d');
+const canvas=document.getElementById('c'); canvas.style.pointerEvents = 'none'; const ctx=canvas.getContext('2d');
 let W=0,H=0,DPR=1;
 function resize(){ DPR=Math.min(devicePixelRatio||1,2); W=canvas.clientWidth; H=canvas.clientHeight;
   canvas.width=Math.floor(W*DPR); canvas.height=Math.floor(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0); }
 addEventListener('resize', resize, {passive:true});
-addEventListener('touchmove',e=>e.preventDefault(),{passive:false}); // stop background scroll
-addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+// stop scroll/gesture only while interacting with the game
+canvas.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+canvas.addEventListener('gesturestart', e=>e.preventDefault(), {passive:false});
 
 let running=false, started=false, last=0, score=0, bird, pipes=[], spawnT=0;
 function reset(){
@@ -258,12 +260,17 @@ function draw(){
   if(!started){ ctx.font='600 16px system-ui,sans-serif'; ctx.fillStyle='rgba(229,231,235,.85)'; ctx.fillText('Tap to start', W/2, H/2 - 24); }
 }
 
-/* Input */
+// Input – scope to canvas so UI buttons keep working
 function onTap(e){ e && e.preventDefault(); if(!running) return; flap(); }
-addEventListener('mousedown', onTap);
-addEventListener('touchstart', onTap, {passive:false});
-addEventListener('keydown', e=>{ if(e.code==='Space'||e.code==='ArrowUp') onTap(e); });
 
+// attach after canvas exists:
+canvas.addEventListener('mousedown', onTap);
+canvas.addEventListener('touchstart', onTap, {passive:false});
+
+// keyboard is still global
+addEventListener('keydown', e=>{
+  if(e.code==='Space'||e.code==='ArrowUp') onTap(e);
+});
 /* Over */
 function over(){
   running=false;
