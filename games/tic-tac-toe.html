@@ -1,296 +1,172 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Fambam · Tic-Tac-Toe</title>
-
-<meta name="theme-color" content="#0f172a">
-<link rel="apple-touch-icon" href="../icon-192.png">
-<link rel="manifest" href="../manifest.webmanifest">
-
-<link rel="stylesheet" href="../wallpaper.css">
-<link rel="stylesheet" href="../fambam.css">
-<script src="../wallpaper.js" defer></script>
-
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tic-Tac-Toe</title>
 <style>
-/* --- page-scoped tweaks --- */
-.page-ttt .app{max-width:980px;margin:0 auto;padding:20px;display:grid;gap:18px}
-.page-ttt .header .title{font-weight:800}
+  :root{
+    --bg:#0b1224; --panel:#0e162c; --border:#27324a; --text:#e5e7eb; --muted:#93a2b1; --accent:#22d3ee;
+  }
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+       display:grid;grid-template-rows:auto 1fr}
+  header{display:flex;align-items:center;gap:10px; padding:10px}
+  header .title{font-weight:800}
+  header .right{margin-left:auto}
+  .pill{padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:transparent;color:var(--text);cursor:pointer}
 
-.ttt-wrap{display:grid;gap:14px}
-.ttt-setup,.ttt-score,.ttt-board-wrap{background:var(--card);border:1px solid var(--panelBorder);border-radius:16px;padding:12px}
+  .wrap{margin:0 auto; width:min(92vmin,520px); display:grid; gap:12px; padding:10px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .cell{
+    aspect-ratio:1/1; font-size:42px; font-weight:800; cursor:pointer;
+    background:var(--panel); color:var(--text); border:2px solid var(--border); border-radius:16px;
+  }
+  .bar{display:flex;justify-content:space-between;align-items:center;gap:10px}
 
-.pills{display:flex;gap:8px;flex-wrap:wrap}
-.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--chipBorder);background:var(--chipBg);border-radius:999px;cursor:pointer}
-.pill[aria-pressed="true"]{outline:2px solid var(--accent); outline-offset:2px}
+  /* Winner modal */
+  .backdrop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:20}
+  .modal{width:min(560px,92vw);background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px;position:relative;z-index:30}
+  .modal h2{margin:0 0 8px;font-size:1.2rem}
+  .modal .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .btn{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer}
+  .btn.primary{background:var(--accent);border:none;color:#001018;font-weight:800}
 
-.ttt-board{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:minmax(92px,1fr);gap:8px}
-.ttt-cell{display:grid;place-items:center;border:1px solid var(--previewBorder);border-radius:12px;background:var(--panel);font-weight:900;font-size:42px;cursor:pointer;user-select:none}
-.ttt-cell[disabled]{opacity:.45;cursor:not-allowed}
-
-.ttt-legend{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.badge{display:inline-flex;gap:6px;align-items:center;background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:999px;padding:4px 8px}
-
-.table{width:100%;border-collapse:separate;border-spacing:0 8px}
-.table th{font-weight:700;text-align:left;font-size:.95rem;opacity:.9}
-.table td{padding:8px 10px;background:var(--panel);border:1px solid var(--panelBorder)}
-.table tr{border-radius:12px}
-.table td:first-child{border-top-left-radius:10px;border-bottom-left-radius:10px}
-.table td:last-child{border-top-right-radius:10px;border-bottom-right-radius:10px}
-
-.modal-backdrop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:3000}
-.modal{background:var(--card);border:1px solid var(--panelBorder);border-radius:16px;padding:14px;min-width:min(520px,92vw)}
-.modal header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.modal .body{display:grid;gap:10px}
-.modal .footer{display:flex;gap:8px;justify-content:flex-end}
+  /* confetti canvas sits under modal */
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:25}
 </style>
 
-<script>
-/* -------- Theme + header-float boot (same pattern as other pages) -------- */
-(function(){
-  function applyTheme(){
-    try{
-      const t = JSON.parse(localStorage.getItem('ui:theme')||'null') || {mode:'dark',accent:'#22d3ee'};
-      document.documentElement.setAttribute('data-theme', t.mode==='light'?'light':'dark');
-      document.documentElement.style.setProperty('--accent', t.accent||'#22d3ee');
-      const meta=document.querySelector('meta[name="theme-color"]');
-      if(meta) meta.setAttribute('content', t.mode==='light' ? '#f2efe7' : '#0f172a');
-    }catch{}
-  }
-  function applyHeaderFloat(){
-    try{
-      const on = !!JSON.parse(localStorage.getItem('ui:headerFloat')||'false');
-      document.body.classList.toggle('header-float', on);
-    }catch{}
-  }
-  applyTheme();
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', applyHeaderFloat, {once:true});
-  }else applyHeaderFloat();
-  window.addEventListener('storage', (e)=>{
-    if(e.key==='ui:theme') applyTheme();
-    if(e.key==='ui:headerFloat') applyHeaderFloat();
-  });
-})();
-</script>
-</head>
+<body>
+  <header>
+    <div class="title">Tic-Tac-Toe</div>
+    <div class="right"><button id="restart" class="pill">Restart</button></div>
+  </header>
 
-<body class="page-ttt">
-  <div class="app">
-
-    <!-- Header -->
-    <header class="panel header app-header">
-      <a href="../index.html" class="brand" title="Home">
-        <img src="../fambam.png" alt="Fambam">
-      </a>
-      <div class="title">Tic-Tac-Toe</div>
-
-      <!-- Hamburger uses fambam.css styles -->
-      <div class="menu-wrap">
-        <button class="hamburger" id="menuBtn" aria-label="Menu">
-          <span aria-hidden="true">≡</span>
-        </button>
-        <div class="menu-dd" id="menuDd" role="menu" style="right:0">
-          <button class="mi" id="miBack" role="menuitem">← Back to Games</button>
-          <button class="mi" id="miExport" role="menuitem">Export scores</button>
-          <button class="mi" id="miReset" role="menuitem">Reset scores</button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Setup -->
-    <section class="ttt-setup">
-      <div class="small" style="font-weight:800;margin-bottom:6px">Choose players</div>
-      <div class="pills" id="playersPills"></div>
-      <div class="ttt-legend" style="margin-top:10px">
-        <span class="badge">Player 1 → X</span>
-        <span class="badge">Player 2 → O</span>
-        <button class="btn" id="btnSwap">Swap sides</button>
-        <button class="btn btn-primary" id="btnStart">Start</button>
-      </div>
-    </section>
-
-    <!-- Board -->
-    <section class="ttt-board-wrap">
-      <div class="small" style="font-weight:800;margin-bottom:6px">Board</div>
-      <div id="board" class="ttt-board" aria-label="Tic Tac Toe board"></div>
-      <div class="ttt-legend" style="margin-top:10px">
-        <div id="turnLabel" class="badge">—</div>
-        <button class="btn" id="btnNew">New game</button>
-      </div>
-    </section>
-
-    <!-- Match history / scores -->
-    <section class="ttt-score">
-      <div class="small" style="font-weight:800;margin-bottom:6px">Recent results</div>
-      <table class="table" id="scoresTbl">
-        <thead><tr><th>When</th><th>Winner</th><th>Loser</th><th>Moves</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <footer style="text-align:center;opacity:.7">Works offline. Data stays on this device (local only).</footer>
+  <div class="wrap">
+    <div class="bar"><div id="pNames">Waiting for players…</div><div id="status" style="color:var(--muted)"></div></div>
+    <div class="grid" id="board"></div>
   </div>
 
-  <!-- Winner modal -->
-  <div class="modal-backdrop" id="winModal" aria-hidden="true" role="dialog" aria-labelledby="winTitle">
-    <div class="modal">
-      <header><div id="winTitle" style="font-weight:800">Game over</div>
-        <button class="btn" id="winClose">✖</button></header>
-      <div class="body" id="winBody"></div>
-      <div class="footer">
-        <button class="btn" id="winOk">OK</button>
+  <canvas id="confetti"></canvas>
+  <div class="backdrop" id="winBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="winTitle">
+      <h2 id="winTitle">Winner!</h2>
+      <div id="winSub" style="color:var(--muted)"></div>
+      <div class="btns">
+        <button class="btn primary" id="btnRematch">Rematch</button>
+        <button class="btn" id="btnChange">Change players</button>
+        <button class="btn" id="btnExit">Exit game</button>
       </div>
     </div>
   </div>
 
 <script>
-/* --------------------- Simple stores --------------------- */
-const Store = {
-  load(k, f){ try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? f; }catch{ return f } },
-  save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
-};
-const Family = {
-  kids(){ return Store.load('hub:family:kids', []).filter(k=>k.enabled!==false); }
-};
+/* ----- messaging helpers ----- */
+const post = (m)=>parent.postMessage(m,'*');
 
-// scores under one namespace:
-const GAME_ID = 'tic-tac-toe';
-const SCORES_KEY = `games:scores:${GAME_ID}`; // [{ts, p1, p2, winner, moves}]
+/* ----- game state ----- */
+const board = document.getElementById('board');
+const namesEl = document.getElementById('pNames');
+const statusEl = document.getElementById('status');
+const restartBtn = document.getElementById('restart');
 
-/* --------------------- UI helpers --------------------- */
-const $ = (s, e=document)=>e.querySelector(s);
-function pill(el, pressed){ el.setAttribute('aria-pressed', pressed?'true':'false'); }
-function showModal(id, on){ const m=$(id); if(!m) return; m.style.display = on?'flex':'none'; m.setAttribute('aria-hidden', on?'false':'true'); }
-function fmtDate(ts){ const d=new Date(ts); return d.toLocaleString(); }
+let players = [];            // [{id,name},{id,name}]
+let cells = Array(9).fill(null);
+let turn = 0;
+let finished = false;
 
-/* --------------------- Players pick --------------------- */
-let P1=null, P2=null, turn='X', board;
-
-function renderPlayers(){
-  const wrap = $('#playersPills'); wrap.innerHTML='';
-  const kids = Family.kids();
-  if(!kids.length){ wrap.innerHTML = '<span class="small" style="opacity:.75">No kids found. Add them in Family.</span>'; return; }
-  kids.forEach(k=>{
-    const b=document.createElement('button');
-    b.className='pill';
-    b.textContent = k.name||'Kid';
-    b.onclick=()=>{
-      // pick P1 then P2 (can deselect)
-      if(P1 && P1.id===k.id){ P1=null; pill(b,false); return; }
-      if(P2 && P2.id===k.id){ P2=null; pill(b,false); return; }
-      if(!P1){ P1=k; pill(b,true); }
-      else if(!P2){ P2=k; pill(b,true); }
-      else { /* both filled: replace P2 */ P2=k; [...wrap.querySelectorAll('.pill')].forEach(x=>pill(x,false)); renderPlayers(); }
-      updateTurnLabel();
-    };
-    // pre-press if current
-    if(P1?.id===k.id || P2?.id===k.id) pill(b,true);
-    wrap.appendChild(b);
-  });
+/* build board UI */
+for(let i=0;i<9;i++){
+  const b=document.createElement('button');
+  b.className='cell';
+  b.onclick=()=>play(i);
+  board.appendChild(b);
 }
 
-function swapSides(){ [P1,P2]=[P2,P1]; updateTurnLabel(); renderPlayers(); }
+function paintNames(){
+  if(players.length<2){ namesEl.textContent='Waiting for players…'; return; }
+  const display = players.map((p,idx)=> (idx===turn%2?'👉 ':'') + p.name + (idx===0?' (X)':' (O)')).join(' vs ');
+  namesEl.textContent = display;
+  statusEl.textContent = finished ? '' : ( (turn%2===0?players[0].name:players[1].name) + ' to move');
+}
+function play(i){
+  if(finished || cells[i]) return;
+  const mark = (turn%2===0)?'X':'O';
+  cells[i]=mark; board.children[i].textContent=mark;
+  if(checkWin(mark)){ endGame(players[turn%2], false); return; }
+  if(cells.every(Boolean)){ endGame(null, true); return; }
+  turn++; paintNames();
+}
+function checkWin(m){
+  const W=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  return W.some(([a,b,c])=>cells[a]===m && cells[b]===m && cells[c]===m);
+}
 
-/* --------------------- Board logic --------------------- */
-function resetBoard(){
-  board = Array(9).fill('');
-  const grid = $('#board'); grid.innerHTML='';
-  for(let i=0;i<9;i++){
-    const btn=document.createElement('button');
-    btn.className='ttt-cell';
-    btn.onclick=()=>play(i, btn);
-    grid.appendChild(btn);
+/* restart */
+restartBtn.onclick = ()=> rematch();
+function rematch(){
+  finished=false; cells=Array(9).fill(null); turn=0;
+  [...board.children].forEach(b=>b.textContent='');
+  hideWin(); paintNames();
+}
+
+/* ---- winner modal + confetti ---- */
+const backdrop = document.getElementById('winBackdrop');
+const winTitle = document.getElementById('winTitle');
+const winSub   = document.getElementById('winSub');
+document.getElementById('btnRematch').onclick = rematch;
+document.getElementById('btnChange').onclick = ()=> post({type:'fambam:end', reason:'change-players'});
+document.getElementById('btnExit').onclick   = ()=> post({type:'fambam:end', reason:'exit'});
+
+function showWin(title, sub){ winTitle.textContent=title; winSub.textContent=sub||''; backdrop.style.display='flex'; backdrop.setAttribute('aria-hidden','false'); confettiBurst(); }
+function hideWin(){ backdrop.style.display='none'; backdrop.setAttribute('aria-hidden','true'); }
+
+function endGame(winner, draw){
+  finished=true;
+  // score payload: 3 for win, 1/1 for draw
+  const scores = draw
+    ? players.map(p=>({id:p.id,name:p.name,points:1}))
+    : [{id:winner.id,name:winner.name,points:3},{id:players.find(p=>p!==winner).id,name:players.find(p=>p!==winner).name,points:0}];
+  post({type:'fambam:score', gameId:'tictactoe', scores});
+  if(draw){ showWin('Draw!','That was close — try again.'); }
+  else    { showWin(`${winner.name} wins!`,'Well played!'); }
+}
+
+/* simple confetti (lightweight) */
+function confettiBurst(){
+  const c=document.getElementById('confetti'), ctx=c.getContext('2d');
+  const DPR=window.devicePixelRatio||1; c.width=innerWidth*DPR; c.height=innerHeight*DPR; ctx.scale(DPR,DPR);
+  const N=140, parts=[];
+  for(let i=0;i<N;i++){
+    parts.push({
+      x: Math.random()*innerWidth, y: -20-Math.random()*innerHeight*0.3,
+      vx: -2+Math.random()*4, vy: 2+Math.random()*3,
+      size: 6+Math.random()*6, rot: Math.random()*Math.PI, vr: (-0.2+Math.random()*0.4),
+      col: `hsl(${Math.floor(Math.random()*360)},85%,60%)`, life: 0
+    });
   }
-  turn='X';
-  updateTurnLabel();
-}
-
-function play(i, btn){
-  if(!P1||!P2) return alert('Pick two players first.');
-  if(board[i]) return;
-  board[i]=turn; btn.textContent=turn;
-  const w = winner(board);
-  if(w || board.every(Boolean)){
-    endGame(w);
-  }else{
-    turn = (turn==='X'?'O':'X');
-    updateTurnLabel();
+  let t0=null;
+  function step(ts){
+    if(!t0) t0=ts; const dt=(ts-t0)/1000; t0=ts; ctx.clearRect(0,0,innerWidth,innerHeight);
+    let alive=false;
+    for(const p of parts){
+      p.vy+= 8*dt; p.x+=p.vx*60*dt; p.y+=p.vy*60*dt; p.rot+=p.vr; p.life+=dt;
+      if(p.y<innerHeight+40){ alive=true; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+        ctx.fillStyle=p.col; ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size); ctx.restore(); }
+    }
+    if(alive) requestAnimationFrame(step); else ctx.clearRect(0,0,innerWidth,innerHeight);
   }
+  requestAnimationFrame(step);
 }
 
-function winner(b){
-  const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-  for(const [a,c,d] of L){ if(b[a] && b[a]===b[c] && b[a]===b[d]) return b[a]; }
-  return null;
-}
-
-function endGame(w){
-  // figure winner/loser by symbol
-  let winName='Draw', loser='—';
-  if(w==='X' || w==='O'){
-    const winP = (w==='X')?P1:P2, loseP=(w==='X')?P2:P1;
-    winName = winP?.name||'—'; loser=loseP?.name||'—';
-    // persist score row
-    const rows = Store.load(SCORES_KEY, []);
-    rows.unshift({ts:Date.now(), p1:P1?.id||'', p2:P2?.id||'', winner:winP?.id||'', loser:loseP?.id||'', moves:board.join('')});
-    Store.save(SCORES_KEY, rows.slice(0,1000));
-    paintScores();
+/* messaging */
+window.addEventListener('message', (e)=>{
+  const msg=e.data||{};
+  if(msg.type==='fambam:players'){
+    players = (msg.players||[]).slice(0,2);
+    paintNames();
   }
-  $('#winBody').innerHTML = `<div><b>${winName}</b> ${w? 'wins!':'— it’s a draw.'}</div>`;
-  showModal('#winModal', true);
-}
-
-/* --------------------- Paint / wiring --------------------- */
-function updateTurnLabel(){
-  const p1 = P1?.name||'—', p2=P2?.name||'—';
-  $('#turnLabel').textContent = `Turn: ${turn==='X'? (p1+' (X)') : (p2+' (O)')}`;
-}
-function paintScores(){
-  const tb = $('#scoresTbl tbody'); tb.innerHTML='';
-  const rows = Store.load(SCORES_KEY, []);
-  rows.forEach(r=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML = `<td>${fmtDate(r.ts)}</td><td>${nameById(r.winner)||'—'}</td><td>${nameById(r.loser)||'—'}</td><td>${r.moves.replaceAll('',' ').trim()}</td>`;
-    tb.appendChild(tr);
-  });
-}
-function nameById(id){
-  if(!id) return '';
-  const all = Family.kids();
-  return (all.find(x=>String(x.id)===String(id))||{}).name||'';
-}
-
-/* --------------------- Menu --------------------- */
-function wireMenu(){
-  const btn=$('#menuBtn'), dd=$('#menuDd');
-  btn.onclick=()=>{ dd.style.display = (dd.style.display==='block'?'none':'block'); };
-  document.addEventListener('click',(e)=>{ if(!dd.contains(e.target) && e.target!==btn) dd.style.display='none'; });
-  $('#miBack').onclick=()=>location.href = '../games.html';
-  $('#miExport').onclick=()=>{
-    const data = Store.load(SCORES_KEY, []);
-    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download=`ttt-scores-${new Date().toISOString().slice(0,10)}.json`; a.click();
-    URL.revokeObjectURL(url);
-  };
-  $('#miReset').onclick=()=>{ if(confirm('Reset all Tic-Tac-Toe scores?')){ localStorage.removeItem(SCORES_KEY); paintScores(); } };
-}
-
-/* --------------------- Boot --------------------- */
-document.addEventListener('DOMContentLoaded', ()=>{
-  renderPlayers();
-  wireMenu();
-  resetBoard();
-  paintScores();
-
-  $('#btnSwap').onclick=swapSides;
-  $('#btnStart').onclick=()=>resetBoard();
-  $('#btnNew').onclick=()=>resetBoard();
-  $('#winClose').onclick=()=>showModal('#winModal',false);
-  $('#winOk').onclick=()=>showModal('#winModal',false);
 });
+post({type:'fambam:ready', gameId:'tictactoe'});
 </script>
 </body>
 </html>
