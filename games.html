@@ -14,7 +14,6 @@
 <script src="wallpaper.js" defer></script>
 
 <style>
-/* layout */
 .page-games .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px}
 .header .title{font-weight:800}
 .panel.soft{background:var(--card);border:1px solid var(--panelBorder);border-radius:16px;padding:12px}
@@ -23,48 +22,26 @@
 .games-grid{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(min-width:860px){.games-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .game-tile{
-  display:grid; place-items:center; gap:8px;
-  aspect-ratio:1/1; cursor:pointer; text-decoration:none; color:inherit;
-  background:var(--card); border:1px solid var(--panelBorder); border-radius:16px;
+  display:grid; place-items:center; gap:10px; text-decoration:none; color:inherit;
+  aspect-ratio:1/1; background:var(--card); border:1px solid var(--panelBorder); border-radius:16px;
 }
-/* BIG emoji icon inside each square tile */
-.game-tile .icon{
-  display:grid; place-items:center;
-  line-height:1;
-  /* scale nicely on iPad/desktop */
-  font-size:clamp(56px, 12vw, 80px);
-  /* no inner box — let the emoji breathe */
-  background:transparent;
-  border:0;
-}
+.game-tile .icon{line-height:1;font-size:clamp(56px,12vw,112px)}
+.game-tile .name{font-weight:800}
 
-/* leaderboards */
+/* leaderboard */
 .table{width:100%;border-collapse:separate;border-spacing:0 6px}
 .table th{font-weight:700;text-align:left;opacity:.85;padding:4px 8px}
 .table td{background:var(--card);border:1px solid var(--panelBorder);padding:10px;border-radius:10px}
 .table td:not(:first-child){border-left:0}
-
-/* buttons */
+.pill{padding:6px 10px;border:1px solid var(--chipBorder);border-radius:999px;background:var(--chipBg);cursor:pointer}
+.pill[aria-pressed="true"]{background:var(--accent);color:#001018;border-color:transparent;font-weight:800}
 .btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:10px;padding:8px 10px;color:var(--text);cursor:pointer}
-.btn.primary{background:var(--accent);border:none;color:#001018;font-weight:800}
-.small{font-size:.9rem;color:var(--muted)}
 .right{margin-left:auto}
-
-/* modals */
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:3000}
-.modal{background:var(--panel);border:1px solid var(--panelBorder);box-shadow:var(--shadow);border-radius:16px;padding:12px;width:min(640px,90vw)}
-.modal header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.modal .body{display:grid;gap:10px}
-
-/* fullscreen game modal */
-.modal.game{width:100%;height:100%;border-radius:0;border:none;background:transparent;padding:0}
-.modal.game header{display:flex;justify-content:space-between;align-items:center;padding:10px}
-.modal.game iframe{flex:1;border:0;width:100%}
-
+.small{font-size:.9rem;color:var(--muted)}
 </style>
 
 <script>
-/* theme + header float */
+/* theme + header float (respects Admin setting) */
 (function(){
   function applyTheme(t){const m=(t&&t.mode==='light')?'light':'dark', a=(t&&t.accent)||'#22d3ee';
     document.documentElement.setAttribute('data-theme',m);
@@ -102,23 +79,29 @@
       </div>
     </header>
 
-    <!-- Grid of game choices only -->
+    <!-- Grid of game choices (navigate to page) -->
     <section class="panel soft">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-        <div style="font-weight:800">Pick a game</div>
+      <div style="font-weight:800;margin-bottom:8px">Pick a game</div>
+      <div class="games-grid">
+        <a class="game-tile" href="games/tic-tac-toe.html">
+          <div class="icon">❌⭕</div><div class="name">Tic-Tac-Toe</div>
+        </a>
+        <a class="game-tile" href="games/flappy.html">
+          <div class="icon">🐦</div><div class="name">Flappy (demo)</div>
+        </a>
       </div>
-      <div id="gamesGrid" class="games-grid"></div>
     </section>
 
-    <!-- Leaderboard -->
+    <!-- Leaderboard (reads localStorage from game pages) -->
     <section class="panel soft">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
         <div style="font-weight:800">Leaderboards</div>
-        <div class="pill-wrap">
-          <button class="pill" id="tabAll" aria-pressed="true">All-time</button>
-          <button class="pill" id="tabPer" aria-pressed="false">Per-game</button>
-        </div>
-        <select id="lbGameSel" class="btn right" style="display:none"></select>
+        <div class="pill" id="tabAll" aria-pressed="true">All-time</div>
+        <div class="pill" id="tabPer" aria-pressed="false">Per-game</div>
+        <select id="lbGameSel" class="btn right" style="display:none">
+          <option value="tictactoe">Tic-Tac-Toe</option>
+          <option value="flappy">Flappy (demo)</option>
+        </select>
       </div>
       <table class="table">
         <thead><tr><th>Player</th><th>Game</th><th>Score</th><th>When</th></tr></thead>
@@ -129,250 +112,67 @@
     <footer class="small" style="text-align:center;opacity:.75">Works offline. Data stays on this device (local only).</footer>
   </div>
 
-  <!-- “Who’s playing?” picker -->
-  <div class="modal-backdrop" id="playersModal" aria-hidden="true">
-    <div class="modal" role="dialog" aria-labelledby="pickTitle">
-      <header>
-        <div id="pickTitle" style="font-weight:800">Who’s playing?</div>
-        <button class="btn" id="playersClose">Cancel</button>
-      </header>
-      <div class="body">
-        <div id="playerPills" class="pill-wrap"></div>
-        <div class="small" id="playerHint"></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn primary" id="playersGo">Start</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Fullscreen game -->
-  <div class="modal-backdrop" id="playModal" aria-hidden="true">
-    <div class="modal game" role="dialog" aria-labelledby="playTitle" style="display:flex;flex-direction:column">
-      <header>
-        <div id="playTitle" style="font-weight:800">Playing…</div>
-        <button class="btn" id="btnExit">Exit</button>
-      </header>
-      <iframe id="gameFrame" allow="autoplay; fullscreen" allowfullscreen></iframe>
-    </div>
-  </div>
-
 <script>
-/* utils */
-const $=(s,e=document)=>e.querySelector(s);
-const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f}catch{return f}};
-const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-const uid = ()=>Math.random().toString(36).slice(2,10);
-const show = (el, on)=>{el.style.display = on ? 'flex' : 'none'; el.setAttribute('aria-hidden', String(!on));};
-
-/* Family store (kids only) */
-const Family = (function(){
-  if (window.Family) return window.Family;
-  const K={kids:'hub:family:kids',parents:'hub:family:parents'};
-  const ld=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}};
-  return { getKids(){return ld(K.kids,[])}, getParents(){return ld(K.parents,[])} };
-})();
-
-/* registry + storage */
+/* ------- Scores (shared format) -------- */
 const LS = { scores:g=>`gm:scores:${g}` };
-
-/* IMPORTANT:
-   - If /games/tic-tac-toe.html exists, set src to '/games/tic-tac-toe.html'.
-   - If it doesn’t (or while testing), leave it as 'inline:tictactoe' so it always works. */
-const GAMES = [
-  { id:'tictactoe', name:'Tic-Tac-Toe', icon:'❌⭕', minPlayers:2, maxPlayers:2, src:'games/tic-tac-toe.html' },
-  { id:'flappy',    name:'Flappy (demo)', icon:'🐦',   minPlayers:1, maxPlayers:1, src:'games/flappy.html' }
-];
-
-const state = { gameId:null, players:[] };
-
-/* grid */
-function paintGrid(){
-  const g=$('#gamesGrid'); g.innerHTML='';
-  GAMES.forEach(game=>{
-    const b=document.createElement('button'); b.className='game-tile'; b.type='button';
-    b.innerHTML=`<div class="icon">${game.icon}</div><div class="name">${game.name}</div>`;
-    b.onclick=()=>openPlayers(game.id);
-    g.appendChild(b);
-  });
-  // leaderboard game filter
-  const sel=$('#lbGameSel'); sel.innerHTML='';
-  GAMES.forEach(x=>sel.add(new Option(x.name,x.id)));
-}
-
-/* players modal */
-function openPlayers(gameId){
-  state.gameId = gameId;
-  state.players = [];
-
-  const game = GAMES.find(g=>g.id===gameId);
-  $('#pickTitle').textContent =
-    `Who’s playing? (${game.minPlayers===game.maxPlayers?game.minPlayers:`${game.minPlayers}-${game.maxPlayers}`} player${game.maxPlayers>1?'s':''})`;
-
-  function paintPills(){
-  const wrap = $('#playerPills'); wrap.innerHTML = '';
-  const game = GAMES.find(g=>g.id===state.gameId);
-  Family.getKids().filter(k=>k.enabled!==false).forEach(k=>{
-    const btn = document.createElement('button');
-    btn.className='pill'; btn.type='button'; btn.textContent=k.name;
-    btn.setAttribute('aria-pressed', String(state.players.includes(k.id)));
-    btn.onclick=()=>{
-      const i=state.players.indexOf(k.id);
-      if(i>-1) state.players.splice(i,1);
-      else if(state.players.length<game.maxPlayers) state.players.push(k.id);
-      paintPills();
-    };
-    wrap.appendChild(btn);
-  });
-}
-
-  paintPills();
-  $('#playerHint').textContent = 'Tap names to select players.';
-  show($('#playersModal'), true);
-}
-$('#playersClose').onclick=()=>show($('#playersModal'), false);
-$('#playersGo').onclick=()=>{
-  const game=GAMES.find(g=>g.id===state.gameId);
-  if(state.players.length<game.minPlayers){ alert(`Select at least ${game.minPlayers} player(s).`); return; }
-  show($('#playersModal'), false);
-  openPlay();
+const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f}catch{return f}};
+const GAMES = {
+  tictactoe: {name:'Tic-Tac-Toe'},
+  flappy:    {name:'Flappy (demo)'}
 };
 
-/* play modal */
-function openPlay(){
-  const game = GAMES.find(g=>g.id===state.gameId); if(!game) return;
-  const players = selectedPlayers();
-  if(players.length < game.minPlayers || players.length > game.maxPlayers){
-    alert(`Select ${game.minPlayers===game.maxPlayers?game.minPlayers:`${game.minPlayers}-${game.maxPlayers}`} player(s).`);
-    return;
-  }
-  $('#playTitle').textContent = game.name;
-  const frame = $('#gameFrame');
-  frame.src = 'about:blank';  // iOS reload guard
-  frame.removeAttribute('srcdoc');
-  frame.src = game.src;
-
-  document.documentElement.style.overflow = 'hidden';
-  document.body.style.overflow = 'hidden';
-  show($('#playModal'), true);
-}
-
-function closePlay(){
-  $('#gameFrame').src='about:blank';
-  show($('#playModal'), false);
-  document.documentElement.style.overflow = '';
-  document.body.style.overflow = '';
-}
-
-/* messaging */
-window.addEventListener('message',(e)=>{
-  const msg=e.data||{};
-  if(msg.type==='fambam:ready'){
-    $('#gameFrame').contentWindow?.postMessage({type:'fambam:players', players:selectedPlayers()}, '*');
-  }else if(msg.type==='fambam:score'){
-    const arr=load(LS.scores(msg.gameId),[]);
-    arr.unshift({id:uid(),ts:Date.now(),players:msg.players||selectedPlayers(),
-      scores:(msg.scores||[]).map(s=>({id:s.id,name:s.name,points:Number(s.points||0)})),
-      meta:msg.meta||{}});
-    save(LS.scores(msg.gameId),arr);
-    paintLeaderboard();
-  }else if(msg.type==='fambam:end'){ closePlay(); }
-});
-
-/* leaderboard */
 function allScores(){
-  const rows=[]; GAMES.forEach(g=> (load(LS.scores(g.id),[])||[]).forEach(r=>rows.push({...r,gameId:g.id})));
+  const rows=[];
+  Object.keys(GAMES).forEach(id=>{
+    (load(LS.scores(id),[])||[]).forEach(r=>rows.push({...r,gameId:id}));
+  });
   return rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
 }
 function paintLeaderboard(){
-  const per = $('#tabPer').getAttribute('aria-pressed')==='true';
-  const gameId = $('#lbGameSel').value;
-  const rows = per ? allScores().filter(r=>r.gameId===gameId) : allScores();
-  const tbody=$('#lbBody'); tbody.innerHTML='';
-  rows.forEach(r=>{
+  const per = document.getElementById('tabPer').getAttribute('aria-pressed')==='true';
+  const sel = document.getElementById('lbGameSel').value;
+  const data = per ? allScores().filter(r=>r.gameId===sel) : allScores();
+  const tb=document.getElementById('lbBody'); tb.innerHTML='';
+  data.forEach(r=>{
     const best=[...(r.scores||[])].sort((a,b)=>b.points-a.points)[0];
     const who = best?best.name:(r.players||[]).map(p=>p.name).join(', ');
-    const gName=(GAMES.find(g=>g.id===r.gameId)?.name)||r.gameId;
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${who||'—'}</td><td>${gName}</td><td>${best?best.points:'—'}</td><td class="small">${new Date(r.ts||Date.now()).toLocaleString()}</td>`;
-    tbody.appendChild(tr);
+    tr.innerHTML = `<td>${who||'—'}</td><td>${GAMES[r.gameId].name}</td><td>${best?best.points:'—'}</td><td class="small">${new Date(r.ts).toLocaleString()}</td>`;
+    tb.appendChild(tr);
   });
 }
-
-/* tabs */
-$('#tabAll').onclick=()=>{ $('#tabAll').setAttribute('aria-pressed','true'); $('#tabPer').setAttribute('aria-pressed','false'); $('#lbGameSel').style.display='none'; paintLeaderboard(); };
-$('#tabPer').onclick=()=>{ $('#tabAll').setAttribute('aria-pressed','false'); $('#tabPer').setAttribute('aria-pressed','true'); $('#lbGameSel').style.display='inline-block'; $('#lbGameSel').value=GAMES[0].id; paintLeaderboard(); };
-$('#lbGameSel').onchange=paintLeaderboard;
+document.getElementById('tabAll').onclick=()=>{tab(true)};
+document.getElementById('tabPer').onclick=()=>{tab(false)};
+function tab(all){
+  document.getElementById('tabAll').setAttribute('aria-pressed', String(all));
+  document.getElementById('tabPer').setAttribute('aria-pressed', String(!all));
+  document.getElementById('lbGameSel').style.display = all ? 'none':'inline-block';
+  paintLeaderboard();
+}
+document.getElementById('lbGameSel').onchange=paintLeaderboard;
 
 /* menu */
 (function(){
-  const btn=$('#menuBtn'), dd=$('#mainMenu');
+  const btn=document.getElementById('menuBtn'), dd=document.getElementById('mainMenu');
   btn.onclick=()=> dd.style.display = (dd.style.display==='block'?'none':'block');
   document.addEventListener('click',(e)=>{ if(!dd.contains(e.target) && e.target!==btn){ dd.style.display='none'; }});
-  $('#miExport').onclick=exportCSV;
-  $('#miReset').onclick=()=>{ if(confirm('Reset all game scores?')){ GAMES.forEach(g=>localStorage.removeItem(LS.scores(g.id))); paintLeaderboard(); } };
+  document.getElementById('miExport').onclick=exportCSV;
+  document.getElementById('miReset').onclick=()=>{ if(confirm('Reset all game scores?')){ Object.keys(GAMES).forEach(id=>localStorage.removeItem(LS.scores(id))); paintLeaderboard(); } };
 })();
 function exportCSV(){
   const rows=[['game','timestamp','player_id','player_name','points']];
-  allScores().forEach(r=> (r.scores||[]).forEach(s=> rows.push([
-    (GAMES.find(g=>g.id===r.gameId)?.name)||r.gameId, new Date(r.ts).toISOString(), s.id, s.name, s.points
-  ])));
-  const csv=rows.map(r=>r.map(String).map(x=>x.includes(',')?`"${x.replace(/"/g,'""')}"`:x).join(',')).join('\n');
+  allScores().forEach(r=>{
+    (r.scores||[]).forEach(s=>{
+      rows.push([GAMES[r.gameId].name, new Date(r.ts).toISOString(), s.id, s.name, s.points]);
+    });
+  });
+  const csv = rows.map(r=>r.map(String).map(x=>x.includes(',')?`"${x.replace(/"/g,'""')}"`:x).join(',')).join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='fambam-games-scores.csv'; a.click();
   URL.revokeObjectURL(a.href);
 }
 
 /* boot */
-document.addEventListener('DOMContentLoaded',()=>{ paintGrid(); paintLeaderboard(); });
-
-/* ---------- inline demo games (reliable on iPad/GH Pages) ---------- */
-const DEMO_TTT = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tic-Tac-Toe</title>
-<style>
-  html,body{height:100%;margin:0}
-  body{display:grid;place-items:center;background:#0b1224;color:#e5e7eb;font-family:system-ui}
-  .wrap{width:min(90vmin,520px)}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  .cell{aspect-ratio:1/1;font-size:42px;background:#111827;border:2px solid #27324a;border-radius:14px;color:#e5e7eb}
-  .bar{display:flex;justify-content:space-between;margin:8px 0}
-  .pill{padding:6px 10px;border:1px solid #27324a;border-radius:999px;background:#0b1224;color:#e5e7eb}
-</style>
-<div class="wrap">
-  <div class="bar"><div id="pNames">Loading players…</div><button id="restart" class="pill">Restart</button></div>
-  <div class="grid" id="board"></div>
-  <div id="msg"></div>
-</div>
-<script>
-  const post=(m)=>parent.postMessage(m,'*');
-  const board=document.getElementById('board'), msg=document.getElementById('msg'), names=document.getElementById('pNames');
-  let players=[], turn=0, cells=Array(9).fill(null), done=false;
-  for(let i=0;i<9;i++){const b=document.createElement('button'); b.className='cell'; b.onclick=()=>play(i); board.appendChild(b);}
-  function play(i){ if(done||cells[i]) return; cells[i]=(turn%2===0?'X':'O'); board.children[i].textContent=cells[i];
-    if(win(cells[i])) return end(players[turn%2].name+' wins!', turn%2);
-    if(cells.every(Boolean)) return end('Draw!', null, true);
-    turn++; paint(); }
-  function win(m){return[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]].some(([a,b,c])=>cells[a]===m&&cells[b]===m&&cells[c]===m)}
-  function end(text,w,draw){done=true; msg.textContent=text;
-    const scores = draw? players.map(p=>({id:p.id,name:p.name,points:1})) : [{id:players[w].id,name:players[w].name,points:3},{id:players[1-w].id,name:players[1-w].name,points:0}];
-    post({type:'fambam:score', gameId:'tictactoe', scores}); setTimeout(()=>post({type:'fambam:end'}),800); }
-  function paint(){ names.textContent = players.map((p,i)=>(i===turn%2?'👉 ':'')+p.name+(i===0?' (X)':' (O)')).join(' vs ') }
-  document.getElementById('restart').onclick=()=>{cells=Array(9).fill(null);[...board.children].forEach(b=>b.textContent='');turn=0;done=false;msg.textContent='';paint();}
-  window.addEventListener('message',(e)=>{if(e.data?.type==='fambam:players'){players=e.data.players.slice(0,2);paint();}});
-  post({type:'fambam:ready', gameId:'tictactoe'});
-<\/script>`;
-const DEMO_FLAPPY = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Flappy</title>
-<style>html,body{height:100%;margin:0}canvas{display:block;width:100%;height:100%;background:#081228}.hud{position:fixed;top:10px;left:10px;color:#e5e7eb;font-family:system-ui}</style>
-<canvas id="c"></canvas><div class="hud" id="hud">Tap to flap!</div>
-<script>
-  const post=(m)=>parent.postMessage(m,'*'); let player={id:'',name:'Player'}, run=false,t0=0,elapsed=0;
-  window.addEventListener('message',(e)=>{if(e.data?.type==='fambam:players'){player=e.data.players[0]||player;start();}});
-  post({type:'fambam:ready', gameId:'flappy'});
-  function start(){run=true;t0=performance.now();requestAnimationFrame(loop);}
-  function loop(ts){if(!run) return; elapsed=(ts-t0)/1000; document.getElementById('hud').textContent='Time: '+elapsed.toFixed(1)+'s'; requestAnimationFrame(loop);}
-  setTimeout(()=>{ if(!run) return; run=false; const pts=Math.round(elapsed*10);
-    post({type:'fambam:score', gameId:'flappy', scores:[{id:player.id,name:player.name,points:pts}]}); post({type:'fambam:end'}); }, 8000);
-<\/script>`;
+document.addEventListener('DOMContentLoaded', paintLeaderboard);
 </script>
 </body>
 </html>
