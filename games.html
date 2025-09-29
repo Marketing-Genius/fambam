@@ -181,9 +181,8 @@ const LS = { scores:g=>`gm:scores:${g}` };
    - If it doesn’t (or while testing), leave it as 'inline:tictactoe' so it always works. */
 const GAMES = [
   { id:'tictactoe', name:'Tic-Tac-Toe', icon:'❌⭕', minPlayers:2, maxPlayers:2,
-    src:'/games/tic-tac-toe.html' },   // ← external page
-  { id:'flappy',    name:'Flappy (demo)', icon:'🐦', minPlayers:1, maxPlayers:1,
-    src:'inline:flappy' }
+    src:'games/tic-tac-toe.html' },   // ← relative path (no leading slash)
+  { id:'flappy', name:'Flappy (demo)', icon:'🐦', minPlayers:1, maxPlayers:1, src:'inline:flappy' }
 ];
 
 const state = { gameId:null, players:[] };
