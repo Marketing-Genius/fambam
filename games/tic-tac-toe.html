@@ -1,45 +1,59 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Tic-Tac-Toe</title>
+<title>Fambam · Tic-Tac-Toe</title>
 <style>
-  :root { --bg:#0b1224; --tile:#111827; --br:#27324a; --text:#e5e7eb; --accent:#22d3ee; }
+  :root { --bg:#0b1224; --panel:#0f172a; --card:#111827; --br:#27324a; --text:#e5e7eb; --accent:#22d3ee; }
   *{ -webkit-tap-highlight-color:transparent }
   html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui}
-  html,body,#app{touch-action:none; overscroll-behavior:none}
-  #app{display:grid;place-items:center;height:100%}
-  .wrap{width:min(92vmin,520px)}
-  h1{margin:10px 0 8px;font-size:18px}
-  .bar{display:flex;justify-content:space-between;gap:8px;margin:8px 0}
-  .pill{padding:6px 10px;border:1px solid var(--br);border-radius:999px;background:#0b162c;color:var(--text)}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  button.cell{aspect-ratio:1/1;font-size:42px;background:var(--tile);border:2px solid var(--br);border-radius:14px;color:var(--text)}
-  /* modal */
-  .back{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:5}
-  .modal{background:#0f172a;border:1px solid var(--br);border-radius:14px;padding:14px;min-width:min(90vw,420px)}
-  .modal header{font-weight:800;margin-bottom:8px}
-  .row{display:flex;gap:8px;justify-content:flex-end}
-  .btn{padding:8px 12px;border-radius:10px;border:1px solid var(--br);background:#0b162c;color:var(--text);cursor:pointer}
+  .wrap{max-width:680px;margin:0 auto;padding:16px;display:grid;gap:14px}
+  .panel{background:var(--panel);border:1px solid var(--br);border-radius:16px;padding:12px}
+  .hdr{display:flex;align-items:center;gap:10px}
+  .hdr .title{font-weight:800}
+  .btn{background:#0b162c;border:1px solid var(--br);border-radius:10px;padding:8px 10px;color:var(--text);cursor:pointer}
   .btn.primary{background:var(--accent);border:none;color:#001018;font-weight:800}
+  .pill{padding:6px 10px;border:1px solid var(--br);border-radius:999px;background:#0b162c;cursor:pointer}
+  .pill[aria-pressed="true"]{background:var(--accent);color:#001018;border-color:transparent;font-weight:800}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  button.cell{aspect-ratio:1/1;font-size:42px;background:var(--card);border:2px solid var(--br);border-radius:14px;color:var(--text)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+  /* end modal */
+  .back{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:5}
+  .modal{background:var(--panel);border:1px solid var(--br);border-radius:14px;padding:14px;min-width:min(90vw,420px)}
+  .modal header{font-weight:800;margin-bottom:8px}
+  .endrow{display:flex;gap:8px;justify-content:flex-end}
   canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:4}
 </style>
 
-<div id="app">
-  <div class="wrap">
-    <h1 id="title">Tic-Tac-Toe</h1>
-    <div class="bar"><div id="pNames">Loading players…</div><button id="restart" class="pill">Restart</button></div>
+<div class="wrap">
+  <div class="hdr">
+    <button class="btn" onclick="location.href='../games.html'">← Back</button>
+    <div class="title">Tic-Tac-Toe</div>
+  </div>
+
+  <!-- Pick players -->
+  <section class="panel">
+    <div class="row"><div style="font-weight:800">Players</div><div class="small" id="hint" style="opacity:.85">Pick 2 players</div></div>
+    <div id="kidPills" class="row"></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn primary" id="startBtn">Start</button></div>
+  </section>
+
+  <!-- Game -->
+  <section class="panel" id="gamePanel" style="display:none">
+    <div class="row"><div id="pNames" style="font-weight:700">—</div><button class="btn" id="restart">Restart</button></div>
     <div class="grid" id="board"></div>
     <div id="msg"></div>
-  </div>
+  </section>
 </div>
 
 <canvas id="fx"></canvas>
-
 <div class="back" id="endBack">
   <div class="modal">
     <header id="endTitle">Winner!</header>
     <div id="endMsg" style="opacity:.9;margin-bottom:6px"></div>
-    <div class="row">
+    <div class="endrow">
       <button class="btn" id="btnChange">Change players</button>
       <button class="btn" id="btnExit">Exit</button>
       <button class="btn primary" id="btnRematch">Rematch</button>
@@ -48,56 +62,91 @@
 </div>
 
 <script>
-  const post=(m)=>parent.postMessage(m,'*');
-  let players=[], turn=0, cells=Array(9).fill(null), finished=false;
+/* ------- Family (read kids) ------- */
+const Family=(function(){const K={kids:'hub:family:kids'};try{return {getKids(){return JSON.parse(localStorage.getItem(K.kids))||[]}}}catch{return{getKids(){return[]}}}})();
+const LS={ scores:g=>`gm:scores:${g}` };
+const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f}catch{return f}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const uid=()=>Math.random().toString(36).slice(2,10);
 
-  // build board
-  const board=document.getElementById('board');
-  for(let i=0;i<9;i++){const b=document.createElement('button'); b.className='cell'; b.onclick=()=>play(i); board.appendChild(b);}
-
-  function play(i){
-    if(finished||cells[i]!=null) return;
-    const mark = (turn%2===0)?'X':'O';
-    cells[i]=mark; board.children[i].textContent=mark;
-    if(win(mark)){ end(`${players[turn%2].name} wins!`, turn%2); return; }
-    if(cells.every(x=>x)){ end('Draw!', null, true); return; }
-    turn++; paint();
-  }
-  function win(m){ const w=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; return w.some(([a,b,c])=>cells[a]===m&&cells[b]===m&&cells[c]===m); }
-  function paint(){ document.getElementById('pNames').textContent = players.map((p,i)=>(i===turn%2?'👉 ':'')+p.name+(i===0?' (X)':' (O)')).join(' vs '); }
-  document.getElementById('restart').onclick=()=>{ cells=Array(9).fill(null); [...board.children].forEach(b=>b.textContent=''); finished=false; turn=0; document.getElementById('msg').textContent=''; paint(); };
-
-  // protocol
-  window.addEventListener('message', (e)=>{
-    if(e.data?.type==='fambam:players'){ players=e.data.players.slice(0,2); paint(); }
+/* ------- Player selection ------- */
+const state={ players:[] }; // array of kid ids
+const pillsWrap=document.getElementById('kidPills');
+function renderPills(){
+  pillsWrap.innerHTML='';
+  Family.getKids().filter(k=>k.enabled!==false).forEach(k=>{
+    const on=state.players.includes(k.id);
+    const b=document.createElement('button');
+    b.className='pill'; b.type='button'; b.textContent=k.name;
+    b.setAttribute('aria-pressed', String(on));
+    b.onclick=()=>{
+      const i=state.players.indexOf(k.id);
+      if(i>-1) state.players.splice(i,1);
+      else if(state.players.length<2) state.players.push(k.id);
+      renderPills();
+    };
+    pillsWrap.appendChild(b);
   });
-  post({type:'fambam:ready', gameId:'tictactoe'});
+}
+renderPills();
 
-  // end modal + confetti
-  const back=document.getElementById('endBack'); const fx=document.getElementById('fx'), fxc=fx.getContext('2d');
-  function end(text, winnerIdx, draw=false){
-    finished=true; document.getElementById('msg').textContent=text;
-    const scores = draw ? players.map(p=>({id:p.id,name:p.name,points:1})) : [
-      {id:players[winnerIdx].id,name:players[winnerIdx].name,points:3},
-      {id:players[1-winnerIdx].id,name:players[1-winnerIdx].name,points:0}
-    ];
-    post({type:'fambam:score', gameId:'tictactoe', scores});
-    // modal
-    document.getElementById('endTitle').textContent = draw ? 'It’s a draw!' : '🎉 ' + players[winnerIdx].name + ' wins!';
-    document.getElementById('endMsg').textContent = 'Choose what to do next.';
-    back.style.display='flex'; confetti(900);
-  }
-  document.getElementById('btnRematch').onclick=()=>{ back.style.display='none'; document.getElementById('restart').click(); };
-  document.getElementById('btnExit').onclick   =()=>{ back.style.display='none'; post({type:'fambam:end'}); };
-  document.getElementById('btnChange').onclick =()=>{ back.style.display='none'; post({type:'fambam:end'}); };
+function kidById(id){ return Family.getKids().find(k=>String(k.id)===String(id)); }
+function selected(){ return state.players.map(id=>({id,name:kidById(id)?.name||'Player'})); }
 
-  function confetti(ms){
-    const dpr=Math.max(1,devicePixelRatio||1); fx.width=innerWidth*dpr; fx.height=innerHeight*dpr;
-    const N=160, ps=[]; for(let i=0;i<N;i++) ps.push({x:Math.random()*fx.width,y:-20-Math.random()*200,vx:(Math.random()-.5)*400,vy:300+Math.random()*600,a:Math.random()*6,c:`hsl(${Math.random()*360},85%,60%)`,s:4+Math.random()*6});
-    const tEnd=performance.now()+ms;
-    (function step(ts){ fxc.clearRect(0,0,fx.width,fx.height);
-      ps.forEach(p=>{ p.vy+=14; p.x+=p.vx/60; p.y+=p.vy/60; p.a+=.2; fxc.save(); fxc.translate(p.x,p.y); fxc.rotate(p.a); fxc.fillStyle=p.c; fxc.fillRect(-p.s/2,-p.s/2,p.s,p.s); fxc.restore(); });
-      if(ts<tEnd) requestAnimationFrame(step); else fxc.clearRect(0,0,fx.width,fx.height);
-    })(performance.now());
-  }
+/* ------- Game logic ------- */
+const boardEl=document.getElementById('board');
+let players=[], turn=0, cells=Array(9).fill(null), finished=false;
+
+for(let i=0;i<9;i++){ const b=document.createElement('button'); b.className='cell'; b.onclick=()=>play(i); boardEl.appendChild(b); }
+function play(i){
+  if(finished||cells[i]!=null) return;
+  const mark=(turn%2===0)?'X':'O';
+  cells[i]=mark; boardEl.children[i].textContent=mark;
+  if(win(mark)){ end(`${players[turn%2].name} wins!`, turn%2); return; }
+  if(cells.every(Boolean)){ end('Draw!', null, true); return; }
+  turn++; paint();
+}
+function win(m){ return [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]].some(([a,b,c])=>cells[a]===m&&cells[b]===m&&cells[c]===m); }
+function paint(){ document.getElementById('pNames').textContent = players.map((p,i)=>(i===turn%2?'👉 ':'')+p.name+(i===0?' (X)':' (O)')).join(' vs '); }
+function resetBoard(){ cells=Array(9).fill(null); [...boardEl.children].forEach(b=>b.textContent=''); finished=false; turn=0; document.getElementById('msg').textContent=''; paint(); }
+document.getElementById('restart').onclick=resetBoard;
+
+/* ------- Start ------- */
+document.getElementById('startBtn').onclick=()=>{
+  if(state.players.length!==2){ alert('Pick exactly 2 players.'); return; }
+  players = selected();
+  document.getElementById('gamePanel').style.display='block';
+  resetBoard();
+  window.scrollTo(0,document.body.scrollHeight);
+};
+
+/* ------- End modal + confetti + save ------- */
+const back=document.getElementById('endBack'), fx=document.getElementById('fx'), fxc=fx.getContext('2d');
+function end(text, winnerIdx, draw=false){
+  finished=true; document.getElementById('msg').textContent=text;
+  const scores = draw ? players.map(p=>({id:p.id,name:p.name,points:1})) : [
+    {id:players[winnerIdx].id,name:players[winnerIdx].name,points:3},
+    {id:players[1-winnerIdx].id,name:players[1-winnerIdx].name,points:0}
+  ];
+  const arr=load(LS.scores('tictactoe'),[]);
+  arr.unshift({id:uid(),ts:Date.now(),players:[...players],scores});
+  save(LS.scores('tictactoe'),arr);
+
+  document.getElementById('endTitle').textContent = draw ? 'It’s a draw!' : '🎉 '+players[winnerIdx].name+' wins!';
+  document.getElementById('endMsg').textContent = 'Choose what to do next.';
+  back.style.display='flex'; confetti(900);
+}
+document.getElementById('btnRematch').onclick=()=>{ back.style.display='none'; resetBoard(); };
+document.getElementById('btnExit').onclick   =()=>{ location.href='../games.html'; };
+document.getElementById('btnChange').onclick =()=>{ back.style.display='none'; document.getElementById('gamePanel').style.display='none'; window.scrollTo(0,0); };
+
+function confetti(ms){
+  const dpr=Math.max(1,devicePixelRatio||1); fx.width=innerWidth*dpr; fx.height=innerHeight*dpr;
+  const N=160, ps=[]; for(let i=0;i<N;i++) ps.push({x:Math.random()*fx.width,y:-20-Math.random()*200,vx:(Math.random()-.5)*400,vy:300+Math.random()*600,a:Math.random()*6,c:`hsl(${Math.random()*360},85%,60%)`,s:4+Math.random()*6});
+  const tEnd=performance.now()+ms;
+  (function step(ts){ fxc.clearRect(0,0,fx.width,fx.height);
+    ps.forEach(p=>{ p.vy+=14; p.x+=p.vx/60; p.y+=p.vy/60; p.a+=.2; fxc.save(); fxc.translate(p.x,p.y); fxc.rotate(p.a); fxc.fillStyle=p.c; fxc.fillRect(-p.s/2,-p.s/2,p.s,p.s); fxc.restore(); });
+    if(ts<tEnd) requestAnimationFrame(step); else fxc.clearRect(0,0,fx.width,fx.height);
+  })(performance.now());
+}
 </script>
