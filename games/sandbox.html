@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover"/>
 <title>Fambam — Sandbox</title>
 <style>
   :root{
@@ -10,25 +10,28 @@
     --btn:#1f2937; --btnBorder:#334155;
   }
   *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+  html,body{
+    height:100%;margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
+    overscroll-behavior:none;
+  }
   .bar{
     position:fixed; inset:12px 12px auto 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;
     background:rgba(17,24,39,.8); border:1px solid #243244; backdrop-filter:blur(6px);
-    padding:8px; border-radius:12px; z-index:10
+    padding:8px; border-radius:12px; z-index:10;
   }
-  .btn{
-    appearance:none; font:inherit; color:var(--text); background:var(--btn);
-    border:1px solid var(--btnBorder); border-radius:10px; padding:8px 10px; cursor:pointer;
-  }
+  .btn{appearance:none; font:inherit; color:var(--text); background:var(--btn);
+    border:1px solid var(--btnBorder); border-radius:10px; padding:8px 10px; cursor:pointer}
   .btn[data-on="1"]{outline:2px solid var(--accent)}
   .sep{width:1px;height:28px;background:#243244;margin:0 2px}
   .row{display:flex;gap:8px;align-items:center}
   .tag{opacity:.85}
-  #world{position:fixed;inset:0}
-  .back{
-    position:fixed; left:12px; bottom:12px; z-index:10; background:rgba(17,24,39,.8);
-    border:1px solid #243244; padding:8px 12px; border-radius:10px; text-decoration:none; color:var(--text)
-  }
+  #world{position:fixed;inset:0; touch-action:none}
+  .back{position:fixed; left:12px; bottom:12px; z-index:10; background:rgba(17,24,39,.8);
+    border:1px solid #243244; padding:8px 12px; border-radius:10px; text-decoration:none; color:var(--text)}
+  /* Simulated fullscreen if Fullscreen API/iOS can’t go true FS */
+  .fs-sim .bar, .fs-sim .back { display:none; }
+  .fs-sim #world{ position:fixed; inset:0; width:100vw; height:100svh; }
 </style>
 </head>
 <body>
@@ -49,13 +52,24 @@
       <span class="tag">Gravity</span>
       <input id="grav" type="range" min="0" max="2000" value="800" />
     </div>
+    <button class="btn" id="btnFullscreen">⤢ Full screen</button>
     <button class="btn" id="btnReset">↺ Reset</button>
   </div>
   <a class="back" href="./games.html">← Games</a>
   <canvas id="world"></canvas>
 
 <script>
-(() => {
+// --- Mobile Safari gesture fix ---
+['gesturestart','gesturechange','gestureend'].forEach(evt =>
+  window.addEventListener(evt, e => e.preventDefault(), { passive:false })
+);
+// Block two-finger zoom/scroll on the canvas
+addEventListener('DOMContentLoaded', ()=>{
+  const el = document.getElementById('world');
+  el.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive:false });
+});
+
+(()=>{
   // ---------- Canvas + View ----------
   const cvs = document.getElementById('world');
   const ctx = cvs.getContext('2d');
@@ -67,12 +81,13 @@
     cvs.width = Math.round(W*DPR); cvs.height = Math.round(H*DPR);
     cvs.style.width = W+'px'; cvs.style.height = H+'px';
     ctx.setTransform(DPR,0,0,DPR,0,0);
+    makeGrid(); // keep grid sized to the viewport
   }
   addEventListener('resize', resize); resize();
 
   // ---------- World data ----------
   const gravity = { y: 800 };
-  const bounds = { left:-2000, right: 2000, top:-2000, bottom: 4000 }; // generous sandbox
+  const bounds = { left:-2000, right:2000, top:-2000, bottom: 1200 };
 
   // Rigid bodies: axis-aligned rectangles only (fast + stable)
   const bodies = []; // {id,x,y,w,h, vx,vy, static, mat, hp, burning, oilTank}
@@ -83,31 +98,29 @@
     METAL:{ density: 1.2, bounciness: 0.02, friction: 0.4, hp: 220 }
   };
 
-  // Particle grid (cellular) for water/oil/fire/acid
-  const CELL = 3; // px per cell (performance knob)
-  let gw, gh;
-  function makeGrid(){
-    gw = Math.ceil( (H/scale)/CELL ) + 200; // a bit oversized
-    gh = Math.ceil( (H/scale)/CELL ) + 200;
-  }
-  makeGrid();
+  // ---------- Particles (cellular) ----------
+  const CELL = 3;
   const G_EMPTY=0, G_WATER=1, G_FIRE=2, G_ACID=3, G_OIL=4;
-  let grid = new Uint8Array(gw*gh); // type grid
-  const heat = new Uint8Array(gw*gh); // tiny heat map for fire spread
+  let gw=0, gh=0; // grid width/height (in cells)
+  let grid = new Uint8Array(0); // type grid
+  let heat = new Uint8Array(0); // heat grid for fire spread
 
+  function makeGrid(){
+    gw = Math.ceil((W/scale)/CELL) + 200;  // generous sandbox
+    gh = Math.ceil((H/scale)/CELL) + 200;
+    grid = new Uint8Array(gw*gh);
+    heat = new Uint8Array(gw*gh);
+  }
   function gi(x,y){ return y*gw + x; }
 
   // ---------- Helpers ----------
   const rnd = (a,b)=> a + Math.random()*(b-a);
   const clamp=(v,a,b)=> v<a?a:(v>b?b:v);
 
-  // Create bodies
   function addBox(x,y,w,h,mat,opts={}){
     const m = mat===MAT.METAL ? MAT.METAL : MAT.WOOD;
     bodies.push({
-      id: nextId++,
-      x,y,w,h,
-      vx:0, vy:0,
+      id: nextId++, x,y,w,h, vx:0, vy:0,
       static: !!opts.static,
       mat: m===MAT.METAL?'metal':'wood',
       hp: opts.hp ?? (m.hp),
@@ -116,21 +129,45 @@
     });
   }
 
-  function worldToScreen(wx,wy){ return [(wx-camX)*scale, (wy-camY)*scale]; }
+  // particle vs static platform blocker
+  function cellBlocked(gx, gy){
+    const wx = gx * CELL + CELL*0.5;
+    const wy = gy * CELL + CELL*0.5;
+    for (const b of bodies){
+      if (!b.static) continue;
+      if (wx>=b.x && wx<=b.x+b.w && wy>=b.y && wy<=b.y+b.h) return true;
+    }
+    return false;
+  }
+
+  function goFullscreen(){
+    const el = document.documentElement;
+    if (!document.fullscreenElement && el.requestFullscreen) {
+      el.requestFullscreen({ navigationUI:'hide' }).catch(()=>{});
+    } else if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen();
+    } else {
+      // iOS Safari fallback (PWA recommended)
+      if ('standalone' in navigator && !navigator.standalone) {
+        alert('Tip: Add to Home Screen on iPad for true fullscreen.');
+      }
+      document.body.classList.toggle('fs-sim');
+    }
+  }
+  document.getElementById('btnFullscreen')?.addEventListener('click', goFullscreen);
+
   function screenToWorld(sx,sy){ return [sx/scale+camX, sy/scale+camY]; }
 
-  // Ground platform
+  // Ground platform (matches visible floor)
   addBox(-800, 900, 1600, 60, MAT.METAL, {static:true});
   // Starter pile
   addBox(-60, 200, 120, 60, MAT.WOOD);
   addBox( 90, 100, 120, 60, MAT.METAL);
 
   // Robot = a wood box that leaks oil on death
-  function addRobot(x,y){
-    addBox(x-40,y-40,80,80, MAT.WOOD, {hp:130, oilTank:true});
-  }
+  function addRobot(x,y){ addBox(x-40,y-40,80,80, MAT.WOOD, {hp:130, oilTank:true}); }
 
-  // ---------- Interaction ----------
+  // ---------- UI wiring ----------
   const ui = document.getElementById('ui');
   const state = { tool:'hand', paused:false, deleting:false };
   const toolBtns = [...ui.querySelectorAll('.btn[data-tool]')];
@@ -144,26 +181,26 @@
   });
   document.getElementById('btnDelete').onclick = ()=>{ state.deleting = !state.deleting; document.getElementById('btnDelete').dataset.on = state.deleting?'1':'0'; };
   document.getElementById('btnPause').onclick = ()=> state.paused = !state.paused;
-  document.getElementById('btnReset').onclick = ()=>{ bodies.length=0; grid.fill(0); heat.fill(0); addBox(-800, 900, 1600,60, MAT.METAL, {static:true}); };
+  document.getElementById('btnReset').onclick = ()=>{
+    bodies.length=0; grid.fill(0); heat.fill(0);
+    addBox(-800, 900, 1600,60, MAT.METAL, {static:true});
+  };
   const gravSlider = document.getElementById('grav');
   gravSlider.oninput = ()=> gravity.y = Number(gravSlider.value);
 
-  // Pointer (pan/zoom/drag/place/paint)
+  // ---------- Interaction ----------
   let dragging=null, dragOffX=0, dragOffY=0;
   let panning=false, lastPanX=0, lastPanY=0;
-  let lastTouches=[];
   cvs.addEventListener('pointerdown', onDown);
   cvs.addEventListener('pointermove', onMove);
   addEventListener('pointerup', onUp);
   cvs.addEventListener('wheel', (e)=>{
     e.preventDefault();
     const [wx,wy]=screenToWorld(e.clientX,e.clientY);
-    const s0=scale;
     scale = clamp(scale * (e.deltaY<0?1.1:0.9), 0.3, 2.5);
-    // zoom to cursor
     camX = wx - (e.clientX/scale);
     camY = wy - (e.clientY/scale);
-    makeGrid(); // simple: grid dims linked to scale; we keep one grid and clamp paints
+    makeGrid();
   }, {passive:false});
 
   function pickBody(wx,wy){
@@ -173,11 +210,12 @@
     }
     return null;
   }
+
   function onDown(e){
     cvs.setPointerCapture(e.pointerId);
     const [wx,wy]=screenToWorld(e.clientX,e.clientY);
-    if (e.pointerType==='touch') lastTouches=[{x:e.clientX,y:e.clientY,id:e.pointerId,time:performance.now()}];
 
+    // middle mouse / secondary touch = pan
     if (e.button===1 || (e.pointerType==='touch' && e.isPrimary===false)){
       panning=true; lastPanX=e.clientX; lastPanY=e.clientY; return;
     }
@@ -192,9 +230,7 @@
     switch(state.tool){
       case 'hand':{
         const b = pickBody(wx,wy);
-        if (b && !b.static){
-          dragging=b; dragOffX=wx-b.x; dragOffY=wy-b.y; b.vx=b.vy=0;
-        }
+        if (b && !b.static){ dragging=b; dragOffX=wx-b.x; dragOffY=wy-b.y; b.vx=b.vy=0; }
         break;
       }
       case 'wood': addBox(wx-30,wy-20, 60,40, MAT.WOOD); break;
@@ -215,7 +251,7 @@
       if (state.tool==='acid')  brush(wx,wy,G_ACID,6);
     }
   }
-  function onUp(e){ panning=false; dragging=null; }
+  function onUp(){ panning=false; dragging=null; }
 
   // ---------- Grid paint ----------
   function setCell(wx,wy, type){
@@ -231,9 +267,7 @@
   function brush(wx,wy, type, r){
     for(let y=-r; y<=r; y++){
       for(let x=-r; x<=r; x++){
-        if (x*x+y*y <= r*r){
-          setCell(wx + x*CELL, wy + y*CELL, type);
-        }
+        if (x*x+y*y <= r*r){ setCell(wx + x*CELL, wy + y*CELL, type); }
       }
     }
   }
@@ -246,19 +280,17 @@
   function stepPhysics(dt){
     for(const b of bodies){
       if (b.static) continue;
-      // gravity
-      b.vy += gravity.y * dt;
-      // integrate
-      b.x += b.vx * dt;
+      b.vy += gravity.y * dt; // gravity
+      b.x += b.vx * dt;       // integrate
       b.y += b.vy * dt;
 
-      // collide ground bounds (simple)
+      // collide sandbox bounds
       if (b.y + b.h > bounds.bottom){ b.y = bounds.bottom - b.h; b.vy *= -0.1; b.vx *= 0.9; }
       if (b.x < bounds.left){ b.x = bounds.left; b.vx *= -0.2; }
       if (b.x + b.w > bounds.right){ b.x = bounds.right - b.w; b.vx *= -0.2; }
       if (b.y < bounds.top){ b.y = bounds.top; b.vy *= 0; }
 
-      // collide other boxes (naive O(n^2), fine for < ~200)
+      // collide other boxes (naive O(n^2))
       for(const c of bodies){
         if (c===b || c.removed) continue;
         if (!aabbOverlap(b,c)) continue;
@@ -270,33 +302,25 @@
     return !(a.x+a.w<=b.x || a.x>=b.x+b.w || a.y+a.h<=b.y || a.y>=b.y+b.h);
   }
   function resolveAABB(a,b){
-    // push out the smaller/non-static one more
-    const ax = a.x, ay=a.y, bx=b.x, by=b.y;
-    const dx1 = (bx+b.w) - ax;
-    const dx2 = (ax+a.w) - bx;
-    const dy1 = (by+b.h) - ay;
-    const dy2 = (ay+a.h) - by;
+    const dx1 = (b.x+b.w) - a.x;
+    const dx2 = (a.x+a.w) - b.x;
+    const dy1 = (b.y+b.h) - a.y;
+    const dy2 = (a.y+a.h) - b.y;
     const minX = dx1<dx2 ? dx1 : -dx2;
     const minY = dy1<dy2 ? dy1 : -dy2;
     if (Math.abs(minX) < Math.abs(minY)){
-      // separate in X
-      if (!a.static && !b.static){
-        a.x +=  minX/2; b.x -= minX/2; a.vx *= 0.8; b.vx *= 0.8;
-      } else if (!a.static){ a.x += minX; a.vx *= -0.2; }
+      if (!a.static && !b.static){ a.x +=  minX/2; b.x -= minX/2; a.vx *= 0.8; b.vx *= 0.8; }
+      else if (!a.static){ a.x += minX; a.vx *= -0.2; }
       else if (!b.static){ b.x -= minX; b.vx *= -0.2; }
     } else {
-      // separate in Y
-      if (!a.static && !b.static){
-        a.y +=  minY/2; b.y -= minY/2; a.vy *= 0.4; b.vy *= 0.4;
-      } else if (!a.static){ a.y += minY; a.vy *= (minY<0? -0.05:0); a.vx *= 0.9; }
+      if (!a.static && !b.static){ a.y +=  minY/2; b.y -= minY/2; a.vy *= 0.4; b.vy *= 0.4; }
+      else if (!a.static){ a.y += minY; a.vy *= (minY<0? -0.05:0); a.vx *= 0.9; }
       else if (!b.static){ b.y -= minY; b.vy *= (minY>0? -0.05:0); b.vx *= 0.9; }
     }
   }
 
   // ---------- Chem/thermal interactions ----------
   function stepGrid(){
-    // simple falling sand rules (single pass bottom-up)
-    // To reduce artifacts, alternate sweep direction each frame
     const dir = (tick&1)?1:-1;
 
     for(let y=gh-2; y>=1; y--){
@@ -306,18 +330,18 @@
         if (t===G_EMPTY || t===G_FIRE) continue;
 
         // fall straight
-        if (grid[gi(x,y+1)]===G_EMPTY){ swap(i, gi(x,y+1)); continue; }
-        // slide diagonals
-        const downL = grid[gi(x-1,y+1)], downR = grid[gi(x+1,y+1)];
-        if (downL===G_EMPTY && downR===G_EMPTY){
-          swap(i, gi(x + (Math.random()<0.5?-1:1), y+1)); continue;
-        } else if (downL===G_EMPTY){ swap(i, gi(x-1,y+1)); continue; }
-        else if (downR===G_EMPTY){ swap(i, gi(x+1,y+1)); continue; }
+        if (grid[gi(x,y+1)]===G_EMPTY && !cellBlocked(x, y+1)) { swap(i, gi(x,y+1)); continue; }
+        // diagonals
+        const tryDL = grid[gi(x-1,y+1)]===G_EMPTY && !cellBlocked(x-1,y+1);
+        const tryDR = grid[gi(x+1,y+1)]===G_EMPTY && !cellBlocked(x+1,y+1);
+        if (tryDL && tryDR) { swap(i, gi(x + (Math.random()<0.5?-1:1), y+1)); continue; }
+        if (tryDL) { swap(i, gi(x-1,y+1)); continue; }
+        if (tryDR) { swap(i, gi(x+1,y+1)); continue; }
 
-        // liquids spread sideways a bit
+        // sideways spread for liquids
         if (t===G_WATER || t===G_OIL || t===G_ACID){
-          const side = Math.random()<0.5?-1:1;
-          if (grid[gi(x+side,y)]===G_EMPTY) swap(i, gi(x+side,y));
+          const side = Math.random()<0.5 ? -1 : 1;
+          if (grid[gi(x+side,y)]===G_EMPTY && !cellBlocked(x+side,y)) swap(i, gi(x+side,y));
         }
       }
     }
@@ -327,12 +351,9 @@
       for(let x=1; x<gw-1; x++){
         const i=gi(x,y);
         if (grid[i]===G_FIRE){
-          // warm neighbors (for wood ignition)
           const n=[i-1,i+1,i-gw,i+gw];
           n.forEach(j=> heat[j] = Math.min(255, heat[j]+6));
-          // extinguish if water nearby
           if (nbrHas(x,y,G_WATER)) { grid[i]=G_EMPTY; continue; }
-          // burn out randomly
           if (Math.random()<0.01) grid[i]=G_EMPTY;
         } else {
           heat[i] = Math.max(0, heat[i]-1);
@@ -340,7 +361,7 @@
       }
     }
 
-    // Damage bodies from acid/fire contact + ignite oil
+    // Body interactions
     for (const b of bodies){
       if (b.static) continue;
       const gx0 = Math.floor(b.x/CELL), gy0 = Math.floor(b.y/CELL);
@@ -352,31 +373,19 @@
           if (t===G_FIRE) touchingFire=true;
           if (t===G_ACID) touchingAcid=true;
           if (t===G_WATER) touchingWater=true;
-          // wood ignition by heat
           if (b.mat==='wood' && heat[gi(gx,gy)]>200 && Math.random()<0.02) b.burning=true;
         }
       }
-      if (touchingAcid){
-        b.hp -= (b.mat==='metal'? 6: 12);
-      }
+      if (touchingAcid){ b.hp -= (b.mat==='metal'? 6: 12); }
       if (b.burning){
         b.hp -= 2;
-        // add fire cells inside the box randomly
-        if (Math.random()<0.2){
-          setCell(b.x + rnd(0,b.w), b.y + rnd(0,b.h), G_FIRE);
-        }
-        if (touchingWater) b.burning=false; // quenched
+        if (Math.random()<0.2){ setCell(b.x + rnd(0,b.w), b.y + rnd(0,b.h), G_FIRE); }
+        if (touchingWater) b.burning=false;
       } else if (touchingFire && b.mat==='wood' && Math.random()<0.1){
         b.burning=true;
       }
-
-      // Oil tanks leak oil when damaged
-      if (b.oilTank && b.hp<70 && Math.random()<0.3){
-        setCell(b.x + rnd(0,b.w), b.y + b.h+2, G_OIL);
-      }
-
+      if (b.oilTank && b.hp<70 && Math.random()<0.3){ setCell(b.x + rnd(0,b.w), b.y + b.h+2, G_OIL); }
       if (b.hp<=0){
-        // explode into debris (tiny boxes) and, if oil tank, spill oil
         const n = 4 + (b.oilTank?6:0);
         for(let i=0;i<n;i++){
           if (b.oilTank) setCell(b.x + rnd(0,b.w), b.y + rnd(0,b.h), (Math.random()<0.8)?G_OIL:G_FIRE);
@@ -385,7 +394,6 @@
         b.removed=true;
       }
     }
-    // purge removed
     for (let i=bodies.length-1;i>=0;i--) if (bodies[i].removed) bodies.splice(i,1);
   }
   function nbrHas(x,y,type){
@@ -397,13 +405,11 @@
   function draw(){
     ctx.setTransform(DPR,0,0,DPR,0,0);
     ctx.clearRect(0,0,W,H);
-    // world transform
     ctx.save();
     ctx.translate(-camX*scale, -camY*scale);
     ctx.scale(scale, scale);
 
-    // draw particles
-    const vis = CELL;
+    // particles
     for(let y=0; y<gh; y++){
       for(let x=0; x<gw; x++){
         const t = grid[gi(x,y)];
@@ -412,11 +418,11 @@
         else if (t===G_OIL) ctx.fillStyle = 'rgba(120,89,61,0.9)';
         else if (t===G_ACID) ctx.fillStyle = 'rgba(34,197,94,0.9)';
         else if (t===G_FIRE) ctx.fillStyle = 'rgba(252,165,3,0.9)';
-        ctx.fillRect(x*CELL, y*CELL, vis, vis);
+        ctx.fillRect(x*CELL, y*CELL, CELL, CELL);
       }
     }
 
-    // draw bodies
+    // bodies
     for(const b of bodies){
       ctx.lineWidth = 2;
       if (b.static){ ctx.fillStyle='#1f2937'; ctx.strokeStyle='#475569'; }
@@ -424,17 +430,13 @@
       else { ctx.fillStyle='#5b6775'; ctx.strokeStyle='#cbd5e1'; }
       ctx.fillRect(b.x, b.y, b.w, b.h);
       ctx.strokeRect(b.x, b.y, b.w, b.h);
-      // HP bar
       if (!b.static){
         ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(b.x, b.y-8, b.w, 4);
         const hpPct = clamp(b.hp / (b.mat==='wood'?100:220), 0, 1);
         ctx.fillStyle = b.mat==='wood' ? '#84cc16' : '#22d3ee';
         ctx.fillRect(b.x, b.y-8, b.w*hpPct, 4);
       }
-      if (b.oilTank){
-        ctx.fillStyle='rgba(255,255,255,0.35)';
-        ctx.fillRect(b.x+b.w-14, b.y+6, 8, 12);
-      }
+      if (b.oilTank){ ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.fillRect(b.x+b.w-14, b.y+6, 8, 12); }
     }
 
     ctx.restore();
@@ -446,11 +448,7 @@
     requestAnimationFrame(frame);
     const dt = Math.min(1/30, (t-last)/1000 || 0.016);
     last=t;
-    if (!state.paused){
-      stepPhysics(dt);
-      stepGrid();
-      tick++;
-    }
+    if (!state.paused){ stepPhysics(dt); stepGrid(); tick++; }
     draw();
   }
   requestAnimationFrame(frame);
