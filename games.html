@@ -25,7 +25,7 @@
   display:grid; place-items:center; gap:10px; text-decoration:none; color:inherit;
   aspect-ratio:1/1; background:var(--card); border:1px solid var(--panelBorder); border-radius:16px;
 }
-.game-tile .icon{line-height:1;font-size:clamp(56px,12vw,112px)}
+.game-tile .icon{line-height:1;font-size:clamp(56px,12vw,70px)}
 .game-tile .name{font-weight:800}
 
 /* leaderboard */
@@ -87,7 +87,7 @@
           <div class="icon">❌⭕</div><div class="name">Tic-Tac-Toe</div>
         </a>
         <a class="game-tile" href="games/flappy.html">
-          <div class="icon">🐦</div><div class="name">Flappy (demo)</div>
+          <div class="icon">🚀</div><div class="name">Flappy-moji</div>
         </a>
       </div>
     </section>
@@ -100,7 +100,7 @@
         <div class="pill" id="tabPer" aria-pressed="false">Per-game</div>
         <select id="lbGameSel" class="btn right" style="display:none">
           <option value="tictactoe">Tic-Tac-Toe</option>
-          <option value="flappy">Flappy (demo)</option>
+          <option value="flappy">Flappy-moji</option>
         </select>
       </div>
       <table class="table">
@@ -118,7 +118,7 @@ const LS = { scores:g=>`gm:scores:${g}` };
 const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f}catch{return f}};
 const GAMES = {
   tictactoe: {name:'Tic-Tac-Toe'},
-  flappy:    {name:'Flappy (demo)'}
+  flappy:    {name:'Flappy-moji'}
 };
 
 function allScores(){
