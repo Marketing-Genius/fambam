@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover"/>
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover"/>
 <title>Fambam — Sandbox</title>
 <style>
   :root{
@@ -21,14 +22,17 @@
     position:fixed; left:12px; right:12px; top:12px;
     display:flex; gap:8px; flex-wrap:wrap; align-items:center;
     background:rgba(17,24,39,.8); border:1px solid #243244; backdrop-filter:blur(6px);
-    padding:8px; border-radius:12px; z-index:10;
+    padding:8px; border-radius:12px;
+    z-index:10;                 /* always above canvas */
+    pointer-events:auto;        /* ensure clickable even if any parent disables */
   }
-  /* When in *true* fullscreen, drop the bar a bit so the browser's X doesn't cover the first button */
+  /* When in true fullscreen, drop bar to avoid browser “X” pill */
   body.fs-true .bar{ top:56px; }
 
   .btn{
     appearance:none; font:inherit; color:var(--text); background:var(--btn);
-    border:1px solid var(--btnBorder); border-radius:10px; padding:8px 10px; cursor:pointer
+    border:1px solid var(--btnBorder); border-radius:10px;
+    padding:8px 10px; cursor:pointer; user-select:none;
   }
   .btn[data-on="1"]{ outline:2px solid var(--accent) }
   .btn[disabled]{ opacity:.45; cursor:not-allowed }
@@ -36,7 +40,13 @@
   .row{display:flex;gap:8px;align-items:center}
   .tag{opacity:.85}
 
-  #world{ position:fixed; inset:0; touch-action:none; z-index:0; }
+  #world{
+    position:fixed; inset:0; z-index:0;
+    touch-action:none;           /* we handle gestures ourselves */
+    pointer-events:auto;         /* receive drags on the canvas */
+    display:block;
+    background:#0b1220;
+  }
 
   .back{
     position:fixed; left:12px; bottom:12px; z-index:10;
@@ -44,13 +54,13 @@
     text-decoration:none; color:var(--text)
   }
 
-  /* Simulated fullscreen for iOS */
+  /* Simulated fullscreen for iOS (don’t use Fullscreen API there) */
   .fs-sim .bar, .fs-sim .back { display:none; }
   .fs-sim #world{ position:fixed; inset:0; width:100vw; height:100svh; }
 </style>
 </head>
 <body>
-  <div class="bar" id="ui">
+  <div class="bar" id="ui" aria-label="Toolbar">
     <button class="btn" data-tool="wood">🪵 Wood</button>
     <button class="btn" data-tool="metal">🔩 Metal</button>
     <button class="btn" data-tool="robot">🤖 Robot</button>
@@ -71,11 +81,388 @@
     <button class="btn" id="btnFullscreen">⤢ Full screen</button>
   </div>
 
-  <!-- If this file lives at /games/sandbox.html and your “Games” hub is /games.html at the site root: -->
+  <!-- from /games/sandbox.html back to site-root /games.html -->
   <a class="back" href="../games.html">← Games</a>
 
   <canvas id="world"></canvas>
 
-  <script src="sandbox.js" defer></script>
+<script>
+/* --- SAFARI/iOS SAFEGUARDS ------------------------------------------------ */
+['gesturestart','gesturechange','gestureend'].forEach(evt =>
+  window.addEventListener(evt, e => e.preventDefault(), { passive:false })
+);
+
+/* --- APP ------------------------------------------------------------------ */
+(function(){
+  const cvs = document.getElementById('world');
+  const ctx = cvs.getContext('2d', { alpha:false });
+
+  // Block browser two-finger zoom; we implement our own pinch
+  cvs.addEventListener('touchmove', e => {
+    if (e.touches && e.touches.length > 1) e.preventDefault();
+  }, { passive:false });
+
+  /* Canvas + viewport */
+  let W=innerWidth, H=innerHeight, DPR=window.devicePixelRatio||1;
+  let scale=1, camX=0, camY=0;
+
+  function resize(){
+    W = innerWidth; H = innerHeight; DPR = devicePixelRatio||1;
+    cvs.width  = Math.round(W*DPR);
+    cvs.height = Math.round(H*DPR);
+    cvs.style.width = W+'px';
+    cvs.style.height = H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    rebuildGrid();
+  }
+  addEventListener('resize', resize); resize();
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+             || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  /* World (boxes) */
+  const gravity = { y:800 };
+  const bounds  = { left:-2000,right:2000, top:-2000, bottom:1200 };
+  const MAT = {
+    WOOD:{ name:'wood', hp:100, fill:'#9a6e4c', stroke:'#e9d5b5' },
+    METAL:{ name:'metal', hp:220, fill:'#5b6775', stroke:'#cbd5e1' }
+  };
+  const bodies=[]; let nextId=1;
+
+  function addBox(x,y,w,h,mat,opts={}){
+    bodies.push({ id:nextId++, x,y,w,h, vx:0,vy:0, static:!!opts.static, mat, hp:opts.hp ?? mat.hp });
+  }
+  function seed(){
+    bodies.length=0;
+    addBox(-800, 900, 1600, 60, MAT.METAL, {static:true}); // ground
+    addBox(-60, 200, 120, 60, MAT.WOOD);
+    addBox( 90, 100, 120, 60, MAT.METAL);
+    clearFluids();
+  }
+  seed();
+
+  /* Fluids grid */
+  const CELL=4; let gw=0, gh=0; let grid, heat;
+  const G_EMPTY=0, G_WATER=1, G_FIRE=2, G_ACID=3, G_OIL=4;
+  const gi=(x,y)=> y*gw+x; const inG=(x,y)=> x>=0&&y>=0&&x<gw&&y<gh;
+
+  function rebuildGrid(){
+    gw = Math.ceil((W/scale)/CELL) + 128;
+    gh = Math.ceil((H/scale)/CELL) + 128;
+    grid = new Uint8Array(gw*gh); heat = new Uint8Array(gw*gh);
+  }
+  function clearFluids(){ if(grid) grid.fill(0); if(heat) heat.fill(0); }
+
+  function staticCell(gx,gy){
+    const wx=gx*CELL+CELL*.5, wy=gy*CELL+CELL*.5;
+    for(const b of bodies){ if(!b.static) continue;
+      if(wx>=b.x && wx<=b.x+b.w && wy>=b.y && wy<=b.y+b.h) return true;
+    }
+    return false;
+  }
+  function setCellWorld(wx,wy,type){
+    const gx=Math.floor(wx/CELL), gy=Math.floor(wy/CELL);
+    if(!inG(gx,gy)) return;
+    grid[gi(gx,gy)] = type;
+    if (type===G_FIRE) heat[gi(gx,gy)] = 255;
+  }
+  function brush(wx,wy,type,r){
+    for(let yy=-r; yy<=r; yy++){
+      for(let xx=-r; xx<=r; xx++){
+        if (xx*xx+yy*yy<=r*r) setCellWorld(wx+xx*CELL, wy+yy*CELL, type);
+      }
+    }
+  }
+  function swap(i,j){ const t=grid[i]; grid[i]=grid[j]; grid[j]=t; }
+  function nbrHas(x,y,type){
+    return (inG(x-1,y)&&grid[gi(x-1,y)]===type) ||
+           (inG(x+1,y)&&grid[gi(x+1,y)]===type) ||
+           (inG(x,y-1)&&grid[gi(x,y-1)]===type) ||
+           (inG(x,y+1)&&grid[gi(x,y+1)]===type);
+  }
+
+  function stepGrid(){
+    if(!grid) return;
+    const dir = (tick&1)?1:-1;
+    for(let y=gh-2;y>=1;y--){
+      const xs = dir>0?1:gw-2, xe = dir>0?gw-1:0;
+      for(let x=xs; x!==xe; x+=dir){
+        const i=gi(x,y), t=grid[i];
+        if (t===G_EMPTY || t===G_FIRE) continue;
+
+        // down
+        const dn=gi(x,y+1);
+        if(grid[dn]===G_EMPTY && !staticCell(x,y+1)){ swap(i,dn); continue; }
+
+        // diagonals
+        const dl=gi(x-1,y+1), dr=gi(x+1,y+1);
+        const canDL=inG(x-1,y+1)&&grid[dl]===G_EMPTY&&!staticCell(x-1,y+1);
+        const canDR=inG(x+1,y+1)&&grid[dr]===G_EMPTY&&!staticCell(x+1,y+1);
+        if (canDL && canDR){ swap(i, Math.random()<0.5?dl:dr); continue; }
+        if (canDL){ swap(i, dl); continue; }
+        if (canDR){ swap(i, dr); continue; }
+
+        // sideways seep
+        if (t===G_WATER || t===G_OIL || t===G_ACID){
+          const side = Math.random()<0.5?-1:1, si=gi(x+side,y);
+          if (inG(x+side,y) && grid[si]===G_EMPTY && !staticCell(x+side,y)) swap(i, si);
+        }
+      }
+    }
+
+    // fire heat/quenched
+    for(let y=1;y<gh-1;y++){
+      for(let x=1;x<gw-1;x++){
+        const i=gi(x,y);
+        if(grid[i]===G_FIRE){
+          if (nbrHas(x,y,G_WATER)){ grid[i]=G_EMPTY; continue; }
+          heat[i]=255;
+          [i-1,i+1,i-gw,i+gw].forEach(j=>{ if(j>=0&&j<heat.length) heat[j]=Math.min(255,heat[j]+6); });
+          if(Math.random()<0.01) grid[i]=G_EMPTY;
+        }else{
+          heat[i]=Math.max(0,heat[i]-1);
+        }
+      }
+    }
+  }
+
+  /* UI */
+  const ui = document.getElementById('ui');
+  const toolBtns = Array.from(ui.querySelectorAll('.btn[data-tool]'));
+  const btnDelete = document.getElementById('btnDelete');
+  const btnPause  = document.getElementById('btnPause');
+  const btnReset  = document.getElementById('btnReset');
+  const btnFS     = document.getElementById('btnFullscreen');
+  const grav      = document.getElementById('grav');
+
+  const state = { tool:'hand', deleting:false, paused:false };
+
+  toolBtns.forEach(b=>{
+    b.addEventListener('click', ()=>{
+      toolBtns.forEach(x=>x.dataset.on='0');
+      b.dataset.on='1';
+      state.tool = b.dataset.tool;
+      state.deleting=false; btnDelete.dataset.on='0';
+    }, { passive:true });
+  });
+
+  btnDelete.addEventListener('click', ()=>{
+    state.deleting=!state.deleting;
+    btnDelete.dataset.on = state.deleting ? '1' : '0';
+  });
+
+  btnPause.addEventListener('click', ()=>{
+    state.paused = !state.paused;
+    btnPause.textContent = state.paused ? '▶️ Resume' : '⏸️ Pause';
+  });
+
+  btnReset.addEventListener('click', ()=> seed() );
+
+  grav.addEventListener('input', e=> gravity.y = Number(e.target.value)||800 );
+
+  function goFullscreen(){
+    // iOS: use simulated mode to avoid the system “typing in fullscreen” modal
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+               || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints>1);
+    if (isIOS){ document.body.classList.toggle('fs-sim'); return; }
+
+    const root=document.documentElement;
+    if (!document.fullscreenElement && root.requestFullscreen){
+      root.requestFullscreen({ navigationUI:'hide' }).catch(()=>{});
+    } else if (document.fullscreenElement && document.exitFullscreen){
+      document.exitFullscreen();
+    }
+  }
+  btnFS.addEventListener('click', goFullscreen);
+  document.addEventListener('fullscreenchange', ()=>{
+    document.body.classList.toggle('fs-true', !!document.fullscreenElement);
+  });
+
+  /* Pointer / touch */
+  const worldToScreen=(wx,wy)=>[(wx-camX)*scale,(wy-camY)*scale];
+  const screenToWorld=(sx,sy)=>[sx/scale+camX, sy/scale+camY];
+
+  let dragging=null, offX=0, offY=0;
+  let panning=false, lastPX=0, lastPY=0;
+
+  function pickBody(wx,wy){
+    for (let i=bodies.length-1;i>=0;i--){
+      const b=bodies[i];
+      if (wx>=b.x && wx<=b.x+b.w && wy>=b.y && wy<=b.y+b.h) return b;
+    }
+    return null;
+  }
+
+  cvs.addEventListener('pointerdown', e=>{
+    cvs.setPointerCapture(e.pointerId);
+    const [wx,wy]=screenToWorld(e.clientX,e.clientY);
+
+    if (e.button===1 || (e.pointerType==='touch' && !e.isPrimary)){
+      panning=true; lastPX=e.clientX; lastPY=e.clientY; return;
+    }
+
+    if (state.deleting){
+      const b=pickBody(wx,wy);
+      if (b && !b.static) bodies.splice(bodies.indexOf(b),1);
+      brush(wx,wy,G_EMPTY,6); return;
+    }
+
+    switch(state.tool){
+      case 'hand': {
+        const b=pickBody(wx,wy);
+        if (b && !b.static){ dragging=b; offX=wx-b.x; offY=wy-b.y; b.vx=b.vy=0; }
+        break;
+      }
+      case 'wood':  addBox(wx-30,wy-20,60,40,MAT.WOOD); break;
+      case 'metal': addBox(wx-30,wy-20,60,40,MAT.METAL); break;
+      case 'robot': addBox(wx-40,wy-40,80,80,MAT.WOOD,{hp:130}); break;
+      case 'water': brush(wx,wy,G_WATER,8); break;
+      case 'fire':  brush(wx,wy,G_FIRE,6);  break;
+      case 'acid':  brush(wx,wy,G_ACID,6);  break;
+    }
+  });
+
+  cvs.addEventListener('pointermove', e=>{
+    const [wx,wy]=screenToWorld(e.clientX,e.clientY);
+    if (panning){ camX -= (e.clientX-lastPX)/scale; camY -= (e.clientY-lastPY)/scale; lastPX=e.clientX; lastPY=e.clientY; return; }
+    if (dragging){ dragging.x = wx-offX; dragging.y = wy-offY; return; }
+    if (e.buttons & 1){
+      if (state.tool==='water') brush(wx,wy,G_WATER,8);
+      if (state.tool==='fire')  brush(wx,wy,G_FIRE,6);
+      if (state.tool==='acid')  brush(wx,wy,G_ACID,6);
+    }
+  });
+
+  addEventListener('pointerup', ()=>{ panning=false; dragging=null; });
+
+  // Desktop wheel zoom
+  cvs.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const [wx,wy]=screenToWorld(e.clientX,e.clientY);
+    scale = Math.max(.3, Math.min(3, scale * (e.deltaY<0?1.12:0.9)));
+    camX = wx - (e.clientX/scale);
+    camY = wy - (e.clientY/scale);
+  }, { passive:false });
+
+  // Touch pinch zoom
+  let pinchPrev=0, pinchMidX=0, pinchMidY=0;
+  cvs.addEventListener('touchstart', e=>{
+    if (e.touches.length===2){
+      pinchPrev = Math.hypot(
+        e.touches[0].clientX-e.touches[1].clientX,
+        e.touches[0].clientY-e.touches[1].clientY
+      );
+      pinchMidX = (e.touches[0].clientX+e.touches[1].clientX)/2;
+      pinchMidY = (e.touches[0].clientY+e.touches[1].clientY)/2;
+    }
+  }, { passive:false });
+
+  cvs.addEventListener('touchmove', e=>{
+    if (e.touches.length===2){
+      e.preventDefault();
+      const d = Math.hypot(
+        e.touches[0].clientX-e.touches[1].clientX,
+        e.touches[0].clientY-e.touches[1].clientY
+      );
+      const [wx,wy]=screenToWorld(pinchMidX,pinchMidY);
+      const k = d/(pinchPrev||d);
+      pinchPrev = d;
+      scale = Math.max(.3, Math.min(3, scale * k));
+      camX = wx - (pinchMidX/scale);
+      camY = wy - (pinchMidY/scale);
+    }
+  }, { passive:false });
+
+  /* Physics */
+  function aabbOverlap(a,b){
+    return !(a.x+a.w<=b.x || a.x>=b.x+b.w || a.y+a.h<=b.y || a.y>=b.y+b.h);
+  }
+  function resolveAABB(a,b){
+    const dx1=(b.x+b.w)-a.x, dx2=(a.x+a.w)-b.x;
+    const dy1=(b.y+b.h)-a.y, dy2=(a.y+a.h)-b.y;
+    const minX = dx1<dx2 ? dx1 : -dx2;
+    const minY = dy1<dy2 ? dy1 : -dy2;
+    if (Math.abs(minX) < Math.abs(minY)){
+      if (!a.static && !b.static){ a.x+=minX/2; b.x-=minX/2; a.vx*=0.8; b.vx*=0.8; }
+      else if (!a.static){ a.x+=minX; a.vx*=-0.2; }
+      else if (!b.static){ b.x-=minX; b.vx*=-0.2; }
+    } else {
+      if (!a.static && !b.static){ a.y+=minY/2; b.y-=minY/2; a.vy*=0.4; b.vy*=0.4; }
+      else if (!a.static){ a.y+=minY; a.vy*=(minY<0?-0.05:0); a.vx*=0.9; }
+      else if (!b.static){ b.y-=minY; b.vy*=(minY>0?-0.05:0); b.vx*=0.9; }
+    }
+  }
+  function stepPhysics(dt){
+    for(const b of bodies){
+      if (b.static) continue;
+      b.vy += gravity.y*dt;
+      b.x  += b.vx*dt;
+      b.y  += b.vy*dt;
+
+      if (b.y+b.h > bounds.bottom){ b.y=bounds.bottom-b.h; b.vy*=-0.12; b.vx*=0.98; }
+      if (b.x < bounds.left){ b.x=bounds.left; b.vx*=-0.2; }
+      if (b.x+b.w > bounds.right){ b.x=bounds.right-b.w; b.vx*=-0.2; }
+      if (b.y < bounds.top){ b.y=bounds.top; b.vy*=0; }
+
+      for(const c of bodies){
+        if (c===b || c.removed) continue;
+        if (!aabbOverlap(b,c)) continue;
+        resolveAABB(b,c);
+      }
+    }
+  }
+
+  /* Render */
+  function draw(){
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.clearRect(0,0,W,H);
+    ctx.save();
+    ctx.translate(-camX*scale, -camY*scale);
+    ctx.scale(scale, scale);
+
+    // Fluids
+    if (grid){
+      const vis=CELL;
+      for(let y=0;y<gh;y++){
+        for(let x=0;x<gw;x++){
+          const t=grid[gi(x,y)];
+          if (!t) continue;
+          if (t===G_WATER) ctx.fillStyle='rgba(96,165,250,0.9)';
+          else if (t===G_OIL) ctx.fillStyle='rgba(120,89,61,0.9)';
+          else if (t===G_ACID) ctx.fillStyle='rgba(34,197,94,0.9)';
+          else if (t===G_FIRE) ctx.fillStyle='rgba(252,165,3,0.92)';
+          ctx.fillRect(x*CELL, y*CELL, vis, vis);
+        }
+      }
+    }
+
+    // Bodies
+    for(const b of bodies){
+      ctx.lineWidth=2;
+      if (b.static){ ctx.fillStyle='#1f2937'; ctx.strokeStyle='#475569'; }
+      else if (b.mat===MAT.WOOD){ ctx.fillStyle=MAT.WOOD.fill; ctx.strokeStyle=MAT.WOOD.stroke; }
+      else { ctx.fillStyle=MAT.METAL.fill; ctx.strokeStyle=MAT.METAL.stroke; }
+      ctx.fillRect(b.x,b.y,b.w,b.h);
+      ctx.strokeRect(b.x,b.y,b.w,b.h);
+    }
+
+    ctx.restore();
+  }
+
+  /* Main loop */
+  let last=0, tick=0;
+  function frame(t){
+    requestAnimationFrame(frame);
+    const dt=Math.min(.03,(t-last)/1000||0.016);
+    last=t;
+    if (!state.paused){ stepPhysics(dt); stepGrid(); tick++; }
+    draw();
+  }
+  requestAnimationFrame(frame);
+
+  // tiny ping to confirm the script actually ran
+  console.log('[Sandbox] inline build ready');
+})();
+</script>
 </body>
 </html>
