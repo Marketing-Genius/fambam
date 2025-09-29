@@ -210,6 +210,32 @@ html[data-theme="light"] .bf-face{ background:#e3e0d8; color:#1b2432; }
 .dp-row .who{font-weight:800}
 .dp-icons{display:flex; align-items:center; gap:10px; font-size:1.4rem; line-height:1}
 
+/* Games preview */
+.gm-box{ margin-top:6px; width:100%;
+  background:var(--previewBg); border:1px solid var(--previewBorder);
+  border-radius:16px; padding:12px; max-height: calc(var(--slotH) - 72px); overflow:hidden; }
+.gm-title{font-size:.95rem;font-weight:800}
+.gm-empty{opacity:.8;font-size:.95rem;margin-top:10px}
+.gm-grid{ margin-top:10px; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
+.gm-cell{ display:flex; align-items:center; gap:10px; min-height:40px; }
+.gm-face{ width:34px;height:34px;border-radius:50%;overflow:hidden;display:grid;place-items:center;flex:0 0 auto;background:#334155;color:#e5e7eb;font-size:.95rem;font-weight:800 }
+html[data-theme="light"] .gm-face{ background:#e3e0d8; color:#1b2432; }
+.gm-face img{width:100%;height:100%;object-fit:cover}
+.gm-game{font-size:1.2rem;line-height:1}
+.gm-score{margin-left:auto;font-weight:800}
+
+/* Budget preview */
+.bd-box{ margin-top:6px; width:100%;
+  background:var(--previewBg); border:1px solid var(--previewBorder);
+  border-radius:16px; padding:12px; max-height: calc(var(--slotH) - 72px); overflow:hidden; }
+.bd-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin-top:10px; }
+.bd-item{ display:flex; align-items:center; gap:10px; min-height:40px; }
+.bd-face{ width:34px;height:34px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#334155;color:#e5e7eb;font-size:.95rem;font-weight:800 }
+html[data-theme="light"] .bd-face{ background:#e3e0d8; color:#1b2432; }
+.bd-face img{width:100%;height:100%;object-fit:cover}
+.bd-name{font-weight:800}
+.bd-amt{margin-left:auto;font-weight:800}
+
 /* Chores preview */
 .ch-title{font-size:.95rem;font-weight:800}
 .ch-empty{opacity:.8;font-size:.95rem;margin-top:10px}
@@ -1179,14 +1205,16 @@ const SLOT_KEY = 'hub:home:slots:v2';
 const SLOTS_TOTAL = 16;
 
 const CARDS = [
-  {id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast', hint:''},
-  {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner', hint:'Weekly plan'},
+  {id:'breakfast', href:'./breakfast.html', emoji:'🍽️', label:'Breakfast',       hint:''},
+  {id:'dinner',    href:'./dinner.html',    emoji:'🍝', label:'Dinner Planner',  hint:'Weekly plan'},
   {id:'chores',    href:'./chores.html',    emoji:'🧹', label:'Chores',          hint:'Weekly rotation'},
   {id:'points',    href:'./points.html',    emoji:'⭐', label:'Points',          hint:'Leaderboard'},
-  {id:'family',    href:'./family.html',    emoji:'👨‍👩‍👧‍👦', label:'Family',    hint:''},
+  {id:'family',    href:'./family.html',    emoji:'👨‍👩‍👧‍👦', label:'Family',          hint:''},
   {id:'calendar',  href:'./calendar.html',  emoji:'📅', label:'Family Calendar', hint:'Events & activities'},
   {id:'photos',    href:'./photos.html',    emoji:'🖼️', label:'Photos',          hint:'Slideshow'},
   {id:'store',     href:'./store.html',     emoji:'🛒', label:'Store',           hint:'Rewards'}
+  {id:'games',     href:'./games.html',     emoji:'🎮', label:'Games',           hint:'Leaderboard'},
+  {id:'budget',    href:'./budget.html',    emoji:'💸', label:'Budget',          hint:'Who owes who'},
 ];
 const byId = Object.fromEntries(CARDS.map(c=>[c.id,c]));
 
@@ -1196,7 +1224,7 @@ function loadSlots(){
     const v=JSON.parse(localStorage.getItem(SLOT_KEY));
     if(Array.isArray(v)) return v.slice(0,SLOTS_TOTAL).concat(Array(SLOTS_TOTAL).fill(null)).slice(0,SLOTS_TOTAL);
   }catch{}
-  const seed = ['breakfast','dinner','chores','calendar','points','family','store']; // include Store by default
+  const seed = ['breakfast','dinner','chores','games','points','family','budget','store'];
   return seed.concat(Array(SLOTS_TOTAL-seed.length).fill(null));
 }
 function saveSlots(a){ localStorage.setItem(SLOT_KEY, JSON.stringify(a)); }
@@ -1262,6 +1290,40 @@ function choreIconFromName(label){
   return first || s.charAt(0).toUpperCase();
 }
 
+// ---- Games storage helpers ----
+function readAllGameScores(){
+  const rows = [];
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith('gm:scores:')){
+      const gameId = k.slice('gm:scores:'.length);
+      try{
+        const arr = JSON.parse(localStorage.getItem(k) || '[]') || [];
+        // each entry has .scores array; flatten to per-player rows
+        arr.forEach(r=>{
+          (r.scores||[]).forEach(s=>{
+            rows.push({
+              gameId,
+              gameEmoji: gameIcon(gameId),
+              playerId: s.id,
+              playerName: s.name,
+              points: Number(s.points||0),
+              ts: r.ts || 0
+            });
+          });
+        });
+      }catch{}
+    }
+  }
+  return rows;
+}
+// map game id → emoji you’re using on the Games page
+function gameIcon(id){
+  if (id==='tictactoe') return '❌⭕';
+  if (id==='flappy' || id==='flappy-moji' || id==='flappy_moji') return '🚀'; // you said rocket 👍
+  return '🎮';
+}
+  
 /* === renderGrid (accepts optional preview order) === */
 function renderGrid(previewOrder=null){
   const order = Array.isArray(previewOrder) ? previewOrder : slots;
@@ -1536,6 +1598,96 @@ function renderTile(c, slotIndex, orderRef){
     });
   }catch(err){ console.warn('Family preview error', err); }
 
+} else if (c.id === 'games') {
+  a.innerHTML = `
+    <div class="label">Games</div>
+    <div class="gm-box">
+      <div class="gm-title">Leaderboard</div>
+      <div class="gm-empty">No scores yet — tap Games.</div>
+      <div class="gm-grid" style="display:none"></div>
+    </div>
+    <button class="minus" type="button">−</button>
+  `;
+  try{
+    const kids = (Family.getKids?.() || []);
+    const faceHTML = (p)=>{
+      const name = (p?.name || '').trim();
+      const initial = name ? name[0].toUpperCase() : '?';
+      return p?.photo
+        ? `<span class="gm-face"><img src="${p.photo}" alt=""></span>`
+        : `<span class="gm-face">${initial}</span>`;
+    };
+    // top scores across all games; pick best per player+game, then take top 9
+    const rows = readAllGameScores();
+    // best score per (playerId, gameId)
+    const bestMap = new Map();
+    for(const r of rows){
+      const key = `${r.playerId}::${r.gameId}`;
+      const cur = bestMap.get(key);
+      if(!cur || r.points>cur.points) bestMap.set(key, r);
+    }
+    const best = [...bestMap.values()]
+      .sort((a,b)=> b.points - a.points || (b.ts - a.ts))
+      .slice(0,9);
+
+    if (best.length){
+      const grid = a.querySelector('.gm-grid');
+      const empty = a.querySelector('.gm-empty');
+      empty.style.display='none'; grid.style.display='grid';
+
+      best.forEach(row=>{
+        const kid = kids.find(k=>k.id===row.playerId);
+        const div = document.createElement('div');
+        div.className = 'gm-cell';
+        div.innerHTML = `
+          ${faceHTML(kid || {name:row.playerName})}
+          <div class="gm-game">${gameIcon(row.gameId)}</div>
+          <div class="gm-score">${row.points}</div>
+        `;
+        grid.appendChild(div);
+      });
+    }
+  }catch(e){ console.warn('Games preview error', e); }
+
+} else if (c.id === 'budget') {
+  a.innerHTML = `
+    <div class="label">Budget</div>
+    <div class="bd-box">
+      <div class="bd-grid" id="bdGrid"></div>
+    </div>
+    <button class="minus" type="button">−</button>
+  `;
+  try{
+    const parents = (Family.getParents?.() || []);
+    // You can replace this with your real budget math later.
+    // Try to read a simple object: { [parentId]: netBalanceNumber }
+    // Positive means they are OWED money; negative means they OWE.
+    const balances =
+      JSON.parse(localStorage.getItem('budget:balances') || 'null')
+      || Object.fromEntries(parents.map(p=>[p.id,0]));
+
+    const faceHTML = p=>{
+      const name = (p?.name || '').trim();
+      const initial = name ? name[0].toUpperCase() : '?';
+      return p?.photo
+        ? `<span class="bd-face"><img src="${p.photo}" alt=""></span>`
+        : `<span class="bd-face">${initial}</span>`;
+    };
+
+    const grid = a.querySelector('#bdGrid');
+    parents.slice(0,4).forEach(p=>{
+      const row = document.createElement('div');
+      row.className = 'bd-item';
+      const amt = Number(balances[p.id] || 0);
+      row.innerHTML = `
+        ${faceHTML(p)}
+        <div class="bd-name">${p.name||'Parent'}</div>
+        <div class="bd-amt" style="color:${amt<0?'#fca5a5':'#86efac'}">${amt<0?'-':'+'}$${Math.abs(amt).toFixed(2)}</div>
+      `;
+      grid.appendChild(row);
+    });
+  }catch(e){ console.warn('Budget preview error', e); }
+    
 } else if (c.id === 'store') {
   a.innerHTML = `
     <div class="label">Store</div>
