@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Fambam · Games</title>
+
+<meta name="theme-color" content="#0f172a">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<link rel="stylesheet" href="wallpaper.css">
+<link rel="stylesheet" href="fambam.css">
+<script src="wallpaper.js" defer></script>
+
+<style>
+/* ---------- Scoped UI for Games Hub ---------- */
+.page-games .app{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px}
+.header .title{font-weight:800}
+
+.grid{display:grid;gap:14px}
+@media(min-width:880px){ .grid.games{grid-template-columns:repeat(3,minmax(0,1fr))} }
+
+.panel.soft{background:var(--card);border:1px solid var(--panelBorder);border-radius:16px;padding:12px}
+
+.game-card{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;
+  background:var(--card);border:1px solid var(--panelBorder);border-radius:14px;padding:12px;cursor:pointer}
+.game-card .icon{font-size:28px;display:grid;place-items:center;width:48px;height:48px;border-radius:12px;
+  background:var(--chipBg);border:1px solid var(--chipBorder)}
+.game-card .name{font-weight:800}
+.game-card small{opacity:.75}
+
+.pill{padding:6px 10px;border:1px solid var(--chipBorder);border-radius:999px;background:var(--chipBg);cursor:pointer}
+.pill[aria-pressed="true"]{background:var(--accent);color:#001018;border-color:transparent;font-weight:800}
+.pill-wrap{display:flex;gap:8px;flex-wrap:wrap}
+
+.table{width:100%;border-collapse:separate;border-spacing:0 8px}
+.table th{font-weight:700;text-align:left;opacity:.8;padding:0 10px}
+.table td{background:var(--card);border:1px solid var(--panelBorder);padding:10px;border-radius:10px}
+.table td:not(:first-child){border-left:0}
+
+.tabs{display:flex;gap:8px}
+.tab{padding:6px 10px;border:1px solid var(--chipBorder);border-radius:999px;background:var(--chipBg);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);color:#001018;border-color:transparent;font-weight:800}
+
+/* Fullscreen game modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:0;z-index:3000}
+.modal.game{width:100%;height:100%;background:transparent;border:none;box-shadow:none;border-radius:0;padding:0;display:flex;flex-direction:column}
+.modal.game header{display:flex;justify-content:space-between;align-items:center;padding:10px}
+.modal.game iframe{flex:1;border:0;width:100%}
+.btn{background:var(--chipBg);border:1px solid var(--chipBorder);border-radius:10px;padding:8px 10px;color:var(--text);cursor:pointer}
+.btn.primary{background:var(--accent);border:none;color:#001018;font-weight:800}
+
+.small{font-size:.9rem;color:var(--muted)}
+.nowrap{white-space:nowrap}
+.right{margin-left:auto}
+</style>
+
+<script>
+/* ---------- Theme + header float boot ---------- */
+(function () {
+  function applyTheme(t){
+    const mode=(t&&t.mode==='light')?'light':'dark';
+    const accent=(t&&t.accent)||'#22d3ee';
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.style.setProperty('--accent', accent);
+    const meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', mode==='light' ? '#f2efe7' : '#0f172a');
+  }
+  try{ applyTheme(JSON.parse(localStorage.getItem('ui:theme')||'null')||{mode:'dark',accent:'#22d3ee'}); }catch{}
+  window.addEventListener('storage', e=>{ if(e.key==='ui:theme'){ try{ applyTheme(JSON.parse(e.newValue||'{}')); }catch{} }});
+
+  function applyHeader(){
+    try{
+      const on = JSON.parse(localStorage.getItem('ui:headerFloat') || 'false') ? true : false;
+      document.body.classList.toggle('header-float', on);
+    }catch(_){}
+  }
+  if (document.readyState==='loading') { document.addEventListener('DOMContentLoaded', applyHeader, {once:true}); } else { applyHeader(); }
+  window.addEventListener('storage', e=>{ if(e.key==='ui:headerFloat') applyHeader(); });
+})();
+</script>
+</head>
+
+<body class="page-games">
+  <div class="app">
+    <header class="panel header app-header">
+      <a href="./index.html" class="brand" title="Home">
+        <img src="fambam.png" alt="Fambam">
+      </a>
+      <div class="title">Games</div>
+
+      <!-- Hamburger (uses your existing CSS) -->
+      <div class="menu-wrap">
+        <button class="hamburger" id="menuBtn" aria-label="Menu"><span class="small" aria-hidden="true">≡</span></button>
+        <div class="menu-dd" id="mainMenu" role="menu">
+          <button class="mi" id="miExport">Export scores (CSV)</button>
+          <div class="hr" style="height:1px;background:var(--panelBorder);margin:6px 0"></div>
+          <button class="mi" id="miReset">Reset all scores</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Pick game & players -->
+    <section class="panel soft">
+      <div style="display:grid;gap:12px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div style="font-weight:800">Choose a game</div>
+          <div id="gameChoice" class="pill-wrap"></div>
+          <button id="startBtn" class="btn primary right">Start</button>
+        </div>
+        <div>
+          <div class="small" style="margin-bottom:6px">Who’s playing?</div>
+          <div id="playerPills" class="pill-wrap"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Games grid (nice icons) -->
+    <section class="grid games" id="gamesGrid"></section>
+
+    <!-- Leaderboards -->
+    <section class="panel soft">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="font-weight:800">Leaderboards</div>
+        <div class="tabs">
+          <button class="tab" id="tabAll" aria-selected="true">All-time</button>
+          <button class="tab" id="tabPer" aria-selected="false">Per-game</button>
+        </div>
+        <select id="lbGameSel" class="btn right" style="display:none"></select>
+      </div>
+
+      <table class="table">
+        <thead><tr><th>Player</th><th>Game</th><th>Score</th><th class="nowrap">When</th></tr></thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+    </section>
+
+    <footer class="small" style="text-align:center;opacity:.75">Works offline. Data stays on this device (local only).</footer>
+  </div>
+
+  <!-- Fullscreen Game Modal -->
+  <div class="modal-backdrop" id="playModal" aria-hidden="true">
+    <div class="modal game" role="dialog" aria-labelledby="playTitle">
+      <header>
+        <div id="playTitle" style="font-weight:800">Playing…</div>
+        <button class="btn" id="btnExit">Exit</button>
+      </header>
+      <iframe id="gameFrame" allow="autoplay; fullscreen"></iframe>
+    </div>
+  </div>
+
+<script>
+/* ------------------ Registry & Storage ------------------ */
+const LS = {
+  scores: g => `gm:scores:${g}`,
+};
+const $=(s,e=document)=>e.querySelector(s);
+const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f}catch{return f}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const uid = ()=>Math.random().toString(36).slice(2,10);
+
+// Pull kids from Family store
+const Family = (function(){
+  if (window.Family) return window.Family;
+  const K={kids:'hub:family:kids',parents:'hub:family:parents'};
+  const ld=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}};
+  return { getKids(){return ld(K.kids,[])}, getParents(){return ld(K.parents,[])} };
+})();
+
+/* Game registry (add real game files later under /games/<id>.html) */
+const GAMES = [
+  {id:'tictactoe', name:'Tic-Tac-Toe', icon:'❌⭕', minPlayers:2, maxPlayers:2, src:'inline:tictactoe'},
+  {id:'flappy',    name:'Flappy (demo)', icon:'🐦',   minPlayers:1, maxPlayers:1, src:'inline:flappy'},
+  // Example for real file: {id:'runner', name:'Runner', icon:'🏃', minPlayers:1,maxPlayers:1, src:'/games/runner.html'}
+];
+
+/* ------------------ UI boot ------------------ */
+const state = { gameId: GAMES[0].id, players: [] };
+
+function renderGamesGrid(){
+  const grid = $('#gamesGrid'); grid.innerHTML='';
+  GAMES.forEach(g=>{
+    const card=document.createElement('button'); card.className='game-card';
+    card.innerHTML=`<div class="icon">${g.icon}</div><div><div class="name">${g.name}</div><small>${g.minPlayers===g.maxPlayers?`${g.minPlayers} player${g.minPlayers>1?'s':''}`:`${g.minPlayers}-${g.maxPlayers} players`}</small></div>`;
+    card.onclick=()=>{ selectGame(g.id); };
+    grid.appendChild(card);
+  });
+}
+function renderGameChoice(){
+  const wrap=$('#gameChoice'); wrap.innerHTML='';
+  GAMES.forEach(g=>{
+    const b=document.createElement('button'); b.className='pill';
+    b.textContent=g.name; b.setAttribute('aria-pressed', String(state.gameId===g.id));
+    b.onclick=()=>{ selectGame(g.id) };
+    wrap.appendChild(b);
+  });
+  // per-game selector for leaderboard (when Per-game tab active)
+  const sel=$('#lbGameSel'); sel.innerHTML='';
+  GAMES.forEach(g=>{ const o=document.createElement('option'); o.value=g.id; o.textContent=g.name; sel.appendChild(o); });
+  sel.value=state.gameId;
+}
+
+function renderPlayerPills(){
+  const kids = Family.getKids().filter(k=>k.enabled!==false);
+  const wrap=$('#playerPills'); wrap.innerHTML='';
+  kids.forEach(k=>{
+    const b=document.createElement('button'); b.className='pill'; b.textContent=k.name;
+    b.setAttribute('aria-pressed', String(state.players.includes(k.id)));
+    b.onclick=()=>{
+      const g=GAMES.find(x=>x.id===state.gameId);
+      if(state.players.includes(k.id)){ state.players=state.players.filter(id=>id!==k.id); }
+      else{
+        if(state.players.length>=g.maxPlayers) return; // cap
+        state.players.push(k.id);
+      }
+      renderPlayerPills();
+    };
+    wrap.appendChild(b);
+  });
+}
+
+function selectGame(id){
+  state.gameId=id;
+  state.players=[]; // reset selection for clarity
+  renderGameChoice(); renderPlayerPills(); paintLeaderboard();
+}
+
+/* ------------------ Leaderboards ------------------ */
+function allScores(){
+  const rows=[];
+  GAMES.forEach(g=>{
+    const arr=load(LS.scores(g.id),[]);
+    arr.forEach(r=> rows.push({...r, gameId:g.id}));
+  });
+  // newest first
+  return rows.sort((a,b)=> (b.ts||0)-(a.ts||0) );
+}
+function paintLeaderboard(){
+  const all=allScores();
+  const per = all.filter(r=> r.gameId===state.gameId);
+  const lbAllOn = $('#tabAll').getAttribute('aria-selected')==='true';
+  const rows = lbAllOn ? all : per;
+  const body=$('#lbBody'); body.innerHTML='';
+  rows.forEach(r=>{
+    const when=new Date(r.ts||Date.now()).toLocaleString();
+    // show top score (max) for the posting player set
+    const best = (r.scores||[]).slice().sort((a,b)=>b.points-a.points)[0];
+    const playerName = best ? best.name : (r.players?.map(p=>p.name).join(', ')||'—');
+    const gameName = (GAMES.find(g=>g.id===r.gameId)?.name)||r.gameId;
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${playerName}</td><td>${gameName}</td><td>${best?best.points:'—'}</td><td class="small nowrap">${when}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+/* Tabs */
+$('#tabAll').onclick=()=>{ $('#tabAll').setAttribute('aria-selected','true'); $('#tabPer').setAttribute('aria-selected','false'); $('#lbGameSel').style.display='none'; paintLeaderboard(); }
+$('#tabPer').onclick=()=>{ $('#tabAll').setAttribute('aria-selected','false'); $('#tabPer').setAttribute('aria-selected','true'); $('#lbGameSel').style.display='inline-block'; paintLeaderboard(); }
+$('#lbGameSel').onchange=(e)=>{ selectGame(e.target.value); paintLeaderboard(); };
+
+/* ------------------ Play modal & SDK wiring ------------------ */
+function kidById(id){ return Family.getKids().find(k=>String(k.id)===String(id)); }
+function selectedPlayers(){
+  return state.players.map(id=>({ id, name: kidById(id)?.name||'Player' }));
+}
+function openPlay(){
+  const game = GAMES.find(g=>g.id===state.gameId);
+  if(!game) return;
+  // validate player count
+  if(selectedPlayers().length < game.minPlayers || selectedPlayers().length > game.maxPlayers){
+    alert(`Select ${game.minPlayers===game.maxPlayers?game.minPlayers:`${game.minPlayers}-${game.maxPlayers}` } player(s) for ${game.name}.`);
+    return;
+  }
+  $('#playTitle').textContent = game.name;
+  const frame = $('#gameFrame');
+  // inline demo games use srcdoc
+  if(game.src?.startsWith('inline:')){
+    frame.src = 'about:blank';
+    frame.srcdoc = (game.src==='inline:tictactoe') ? DEMO_TTT : DEMO_FLAPPY;
+  }else{
+    frame.src = game.src;
+  }
+  show('#playModal', true);
+  // tell game who’s playing (after it signals ready)
+}
+function closePlay(){
+  $('#gameFrame').src='about:blank';
+  show('#playModal', false);
+}
+$('#startBtn').onclick=openPlay;
+$('#btnExit').onclick=closePlay;
+
+/* postMessage protocol:
+   - Game -> Parent:
+     {type:'fambam:ready', gameId}
+     {type:'fambam:score', gameId, scores:[{id,name,points},...], meta?:{}}
+     {type:'fambam:end'}
+   - Parent -> Game:
+     {type:'fambam:players', players:[{id,name},...]}
+*/
+window.addEventListener('message', (e)=>{
+  const msg=e.data||{};
+  if(msg.type==='fambam:ready'){
+    // send players
+    $('#gameFrame').contentWindow?.postMessage({type:'fambam:players', players:selectedPlayers()}, '*');
+  }else if(msg.type==='fambam:score'){
+    // persist
+    const arr = load(LS.scores(msg.gameId), []);
+    arr.unshift({
+      id: uid(),
+      ts: Date.now(),
+      players: msg.players || selectedPlayers(),
+      scores: (msg.scores||[]).map(s=>({id:s.id, name:s.name, points:Number(s.points||0)})),
+      meta: msg.meta||{}
+    });
+    save(LS.scores(msg.gameId), arr);
+    paintLeaderboard();
+  }else if(msg.type==='fambam:end'){
+    closePlay();
+  }
+});
+
+/* --------------- Menu items --------------- */
+(function wireMenu(){
+  const btn=$('#menuBtn'), dd=$('#mainMenu');
+  btn.onclick=()=> dd.style.display = (dd.style.display==='block'?'none':'block');
+  document.addEventListener('click',(e)=>{ if(!dd.contains(e.target) && e.target!==btn){ dd.style.display='none'; }});
+  $('#miExport').onclick=exportCSV;
+  $('#miReset').onclick=()=>{ if(confirm('Reset all game scores?')){ GAMES.forEach(g=>localStorage.removeItem(LS.scores(g.id))); paintLeaderboard(); } };
+})();
+
+function exportCSV(){
+  const rows=[['game','timestamp','player_id','player_name','points']];
+  allScores().forEach(r=>{
+    (r.scores||[]).forEach(s=>{
+      rows.push([GAMES.find(g=>g.id===r.gameId)?.name||r.gameId, new Date(r.ts).toISOString(), s.id, s.name, s.points]);
+    });
+  });
+  const csv = rows.map(r=>r.map(String).map(x=>x.includes(',')?`"${x.replace(/"/g,'""')}"`:x).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='fambam-games-scores.csv'; a.click(); URL.revokeObjectURL(url);
+}
+
+/* --------------- Boot --------------- */
+document.addEventListener('DOMContentLoaded', ()=>{
+  renderGamesGrid();
+  renderGameChoice();
+  renderPlayerPills();
+  paintLeaderboard();
+});
+
+/* ------------------ Demo inline games ------------------ */
+const DEMO_TTT = `
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tic-Tac-Toe</title>
+<style>
+  html,body{height:100%;margin:0}
+  body{display:grid;place-items:center;background:#0b1224;color:#e5e7eb;font-family:system-ui}
+  .wrap{width:min(90vmin,520px)}
+  h1{margin:10px 0 6px;font-size:20px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  button.cell{aspect-ratio:1/1;font-size:42px;background:#111827;border:2px solid #27324a;border-radius:14px;color:#e5e7eb}
+  .bar{display:flex;justify-content:space-between;margin:8px 0}
+  .pill{padding:6px 10px;border:1px solid #27324a;border-radius:999px;background:#0b1224}
+</style>
+<div class="wrap">
+  <h1>Tic-Tac-Toe</h1>
+  <div class="bar"><div id="pNames">Loading players…</div><button id="restart" class="pill">Restart</button></div>
+  <div class="grid" id="board"></div>
+  <div id="msg"></div>
+</div>
+<script>
+  const post=(m)=>parent.postMessage(m,'*');
+  const board=document.getElementById('board');
+  const msg=document.getElementById('msg'); const names=document.getElementById('pNames');
+  let players=[], turn=0, cells=Array(9).fill(null), finished=false;
+
+  // build UI
+  for(let i=0;i<9;i++){ const b=document.createElement('button'); b.className='cell'; b.onclick=()=>play(i); b.textContent=''; board.appendChild(b); }
+
+  function play(i){
+    if(finished||cells[i]!=null) return;
+    cells[i]= (turn%2===0)?'X':'O';
+    board.children[i].textContent=cells[i];
+    if(checkWin(cells[i])){ end(`${players[turn%2].name} wins!`, turn%2); return; }
+    if(cells.every(x=>x)) { end('Draw!', null, true); return; }
+    turn++; paint();
+  }
+  function paint(){ names.textContent = players.map((p,idx)=> (idx===turn%2 ? '👉 ' : '') + p.name + (idx===0?' (X)':' (O)')).join(' vs '); }
+  function end(text, winnerIdx, draw=false){
+    finished=true; msg.textContent=text;
+    const scores = draw ? players.map(p=>({id:p.id,name:p.name,points:1})) : [
+      {id:players[winnerIdx].id,name:players[winnerIdx].name,points:3},
+      {id:players[1-winnerIdx].id,name:players[1-winnerIdx].name,points:0}
+    ];
+    post({type:'fambam:score', gameId:'tictactoe', scores});
+    setTimeout(()=>post({type:'fambam:end'}), 800);
+  }
+  function checkWin(m){
+    const w=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    return w.some(([a,b,c])=>cells[a]===m && cells[b]===m && cells[c]===m);
+  }
+  document.getElementById('restart').onclick=()=>{ cells=Array(9).fill(null); [...board.children].forEach(b=>b.textContent=''); finished=false; turn=0; msg.textContent=''; paint(); }
+  window.addEventListener('message', (e)=>{ if(e.data?.type==='fambam:players'){ players=e.data.players.slice(0,2); paint(); } });
+  post({type:'fambam:ready', gameId:'tictactoe'});
+</script>
+`;
+
+const DEMO_FLAPPY = `
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flappy Demo</title>
+<style>
+  html,body{height:100%;margin:0} canvas{display:block;width:100%;height:100%;background:#081228}
+  .hud{position:fixed;top:10px;left:10px;color:#e5e7eb;font-family:system-ui}
+</style>
+<canvas id="c"></canvas><div class="hud" id="hud">Tap to flap!</div>
+<script>
+  const post=(m)=>parent.postMessage(m,'*');
+  let player={id:'',name:'Player'}, running=false, t0=0, elapsed=0;
+  window.addEventListener('message',(e)=>{ if(e.data?.type==='fambam:players'){ const p=e.data.players[0]; player=p||player; start(); } });
+  post({type:'fambam:ready', gameId:'flappy'});
+  function start(){ running=true; t0=performance.now(); requestAnimationFrame(loop); }
+  function loop(ts){ if(!running) return; elapsed=(ts-t0)/1000; document.getElementById('hud').textContent=\`Time: \${elapsed.toFixed(1)}s\`; requestAnimationFrame(loop); }
+  // End after 8s with a “score” = elapsed*10
+  setTimeout(()=>{ if(!running) return; running=false; const pts=Math.round(elapsed*10); post({type:'fambam:score', gameId:'flappy', scores:[{id:player.id,name:player.name,points:pts}]}); post({type:'fambam:end'}); }, 8000);
+</script>
+`;
+</script>
+</body>
+</html>
