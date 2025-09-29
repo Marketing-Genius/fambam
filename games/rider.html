@@ -2,14 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Fambam — Rider</title>
 <style>
   :root{
     --bg:#070b12;
     --road:#0f172a;
-    --edge:#0b1220;
     --stripe:#3a4a6b;
     --glow:#22d3ee;
     --text:#e5e7eb;
@@ -18,11 +16,11 @@
   }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
-    overscroll-behavior:none;}
-  canvas{position:fixed;inset:0;display:block;touch-action:none}
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial; overscroll-behavior:none;}
+  /* Canvas sits at z=0 so overlays can sit above without issues */
+  canvas{position:fixed;inset:0;display:block;touch-action:none; z-index:0}
   .hud{
-    position:fixed; left:12px; right:12px; top:12px; z-index:10;
+    position:fixed; left:12px; right:12px; top:12px; z-index:20;
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
     background:var(--panel); border:1px solid var(--panelBorder);
     padding:8px 10px; border-radius:12px; backdrop-filter:blur(6px);
@@ -35,13 +33,14 @@
   }
   .score{font-weight:800; letter-spacing:.3px}
   .back{
-    position:fixed; left:12px; bottom:12px; z-index:10;
+    position:fixed; left:12px; bottom:12px; z-index:20;
     background:var(--panel); border:1px solid var(--panelBorder);
     padding:8px 12px; border-radius:10px; text-decoration:none; color:var(--text)
   }
+  /* Full-screen overlay sits above everything and is explicitly click-through OFF */
   .overlay{
-    position:fixed; inset:0; display:grid; place-items:center; z-index:20;
-    padding:24px;
+    position:fixed; inset:0; display:grid; place-items:center; z-index:30;
+    padding:24px; pointer-events:auto;
   }
   .card{
     width:min(520px, 100%); background:var(--panel);
@@ -49,7 +48,7 @@
     padding:18px; display:grid; gap:14px; text-align:center;
   }
   .title{font-weight:900; font-size:1.25rem}
-  .muted{opacity:.8}
+  .muted{opacity:.85}
   .hidden{display:none!important}
 </style>
 </head>
@@ -57,24 +56,24 @@
   <div class="hud" id="hud">
     <div class="score" id="score">00.0 s</div>
     <div class="grow"></div>
-    <button class="btn" id="btnPause">⏸️ Pause</button>
-    <button class="btn" id="btnReset">↺ Reset</button>
+    <button class="btn" id="btnPause" type="button">⏸️ Pause</button>
+    <button class="btn" id="btnReset" type="button">↺ Reset</button>
   </div>
 
   <a class="back" href="../games.html">← Games</a>
   <canvas id="view"></canvas>
 
-  <div class="overlay" id="overlay">
-    <div class="card">
+  <div class="overlay" id="overlay" aria-modal="true" role="dialog">
+    <div class="card" id="startCard">
       <div class="title">🏍️ Rider</div>
       <div class="muted">Drag up/down to steer. Dodge traffic. You’re blazing past the flow.</div>
       <div id="best" class="muted"></div>
-      <button class="btn" id="btnStart" style="font-weight:800">Start</button>
+      <button class="btn" id="btnStart" type="button" style="font-weight:800">Start</button>
     </div>
   </div>
 
 <script>
-/* Block Safari’s pinch gestures from stealing focus while playing */
+/* Stop Safari pinch gestures from hijacking the app */
 ['gesturestart','gesturechange','gestureend'].forEach(evt=>{
   window.addEventListener(evt, e=>e.preventDefault(), {passive:false});
 });
@@ -96,14 +95,13 @@
   addEventListener('resize', resize);
   resize();
 
-  // ---------------- Road / Lanes (horizontal lanes; scroll left) -------------
-  const road = { x:0, y:0, w:0, h:0, top:0, bottom:0, marginY:0, lanes:5, centers:[], stripeScroll:0 };
+  // ---------------- Road (horizontal lanes, scroll left) --------------------
+  const road = { lanes:5, centers:[], top:0, bottom:0, h:0, stripeScroll:0 };
   function layoutRoad(){
-    road.marginY = Math.max(48, Math.min(120, H*0.08)); // shoulders
-    road.top     = road.marginY;
-    road.bottom  = H - road.marginY;
+    const shoulder = Math.max(48, Math.min(120, H*0.08));
+    road.top     = shoulder;
+    road.bottom  = H - shoulder;
     road.h       = road.bottom - road.top;
-    road.w       = W;
     road.centers = [];
     for (let i=0;i<road.lanes;i++){
       const t = (i+0.5)/road.lanes;
@@ -111,44 +109,33 @@
     }
   }
 
-  // ---------------- Bike (top-down, facing right) ----------------------------
-  const bike = {
-    x: 0, y: 0, w: 80, h: 36,
-    vx: 0, vy: 0,
-    targetY: 0,
-    k: 10.5,   // spring stiffness to target
-    c: 8.2,    // damping
-    trail: []
-  };
+  // ---------------- Bike (top-down, facing →) --------------------------------
+  const bike = { x:0,y:0,w:80,h:36, vx:0,vy:0, targetY:0, k:10.5, c:8.2, trail:[] };
   function resetBike(){
     bike.x = 120;
     bike.y = road.centers[Math.floor(road.lanes/2)] || H*0.5;
     bike.vx = 0; bike.vy = 0; bike.targetY = bike.y; bike.trail.length=0;
   }
 
-  // ---------------- Traffic (moving left) ------------------------------------
+  // ---------------- Traffic (moves left) -------------------------------------
   const cars = [];
-  const carTypes = [
-    {w:90,  h:46, color:'#60a5fa', glow:'#93c5fd'},  // car
-    {w:120, h:52, color:'#34d399', glow:'#6ee7b7'},  // sedan
-    {w:150, h:58, color:'#fbbf24', glow:'#fde68a'},  // van
-    {w:200, h:62, color:'#f87171', glow:'#fecaca'},  // truck
-    {w:260, h:68, color:'#a78bfa', glow:'#ddd6fe'}   // semi
+  const types = [
+    {w:90,  h:46, color:'#60a5fa', glow:'#93c5fd'},
+    {w:120, h:52, color:'#34d399', glow:'#6ee7b7'},
+    {w:150, h:58, color:'#fbbf24', glow:'#fde68a'},
+    {w:200, h:62, color:'#f87171', glow:'#fecaca'},
+    {w:260, h:68, color:'#a78bfa', glow:'#ddd6fe'}
   ];
-  let trafficMin = 140, trafficMax = 360; // px/s
+  let vMin=140, vMax=360;
 
   function spawnCar(){
-    const t = carTypes[(Math.random()*carTypes.length)|0];
-    // choose a lane center with a small random offset (so it feels “alive”)
+    const t = types[(Math.random()*types.length)|0];
     const lane = road.centers[(Math.random()*road.centers.length)|0] || H*0.5;
     const y = lane - t.h/2 + (Math.random()*10-5);
-    const s = trafficMin + Math.random()*(trafficMax - trafficMin);
+    const s = vMin + Math.random()*(vMax - vMin);
     cars.push({ x: W + 60 + Math.random()*120, y, w:t.w, h:t.h, speed:s, color:t.color, glow:t.glow });
   }
-  function resetCars(){
-    cars.length = 0;
-    for (let i=0;i<7;i++) spawnCar();
-  }
+  function resetCars(){ cars.length=0; for (let i=0;i<7;i++) spawnCar(); }
 
   // ---------------- Game state / score ---------------------------------------
   let running=false, paused=false, dead=false;
@@ -157,52 +144,74 @@
   function resetGame(){
     timeAlive=0; running=false; paused=false; dead=false;
     resetBike(); resetCars();
-    updateScore(0); showOverlay(true);
+    updateScore(0); showOverlay(true, '🏍️ Rider', 'Drag up/down to steer. Dodge traffic. You’re blazing past the flow.');
   }
   function updateScore(t){ document.getElementById('score').textContent = `${t.toFixed(1)} s`; }
-  function showOverlay(on){
-    const bestEl=document.getElementById('best');
-    bestEl.textContent = best ? `Best: ${best.toFixed(1)} s` : '';
-    document.getElementById('overlay').classList.toggle('hidden', !on);
+  function showOverlay(on, title, msg){
+    const ov=document.getElementById('overlay');
+    ov.classList.toggle('hidden', !on);
+    if (on){
+      document.getElementById('best').textContent = best ? `Best: ${best.toFixed(1)} s` : '';
+      const card=document.getElementById('startCard');
+      card.querySelector('.title').textContent = title;
+      card.querySelector('.muted').textContent = msg;
+    }
   }
 
-  // ---------------- Input (drag up/down) -------------------------------------
-  cvs.addEventListener('pointerdown', e=>{
-    cvs.setPointerCapture(e.pointerId);
-    bike.targetY = e.clientY;
+  // ---------------- Input / Buttons -----------------------------------------
+  // Steering target (drag anywhere on canvas)
+  cvs.addEventListener('pointerdown', e=>{ bike.targetY = e.clientY; });
+  cvs.addEventListener('pointermove', e=>{ bike.targetY = e.clientY; });
+
+  // Start handlers — multiple ways so iPad never misses it
+  function startGame(){
+    showOverlay(false);
+    running=true; paused=false; dead=false;
+    document.getElementById('btnPause').textContent = '⏸️ Pause';
+  }
+  const btnStart = document.getElementById('btnStart');
+  const overlay  = document.getElementById('overlay');
+  const startCard= document.getElementById('startCard');
+
+  // Click + pointerdown on button
+  ['click','pointerdown'].forEach(evt=>{
+    btnStart.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); startGame(); }, {passive:false});
   });
-  cvs.addEventListener('pointermove', e=>{
-    bike.targetY = e.clientY;
+  // Tap anywhere on the overlay/card to start (backup)
+  ;['click','pointerdown'].forEach(evt=>{
+    overlay.addEventListener(evt, (e)=>{
+      if (overlay.classList.contains('hidden')) return;
+      e.preventDefault(); startGame();
+    }, {passive:false});
+    startCard.addEventListener(evt, (e)=>{
+      if (overlay.classList.contains('hidden')) return;
+      e.preventDefault(); e.stopPropagation(); startGame();
+    }, {passive:false});
+  });
+  // Absolute fallback: first tap on canvas when overlay is up
+  cvs.addEventListener('pointerdown', ()=>{
+    if (!running && !dead && !overlay.classList.contains('hidden')) startGame();
   });
 
-  // Buttons
+  // Pause / Reset
   document.getElementById('btnPause').onclick = ()=>{
     if (!running) return;
     paused = !paused;
     document.getElementById('btnPause').textContent = paused ? '▶️ Resume' : '⏸️ Pause';
   };
   document.getElementById('btnReset').onclick = resetGame;
-  document.getElementById('btnStart').onclick = ()=>{
-    showOverlay(false);
-    running=true; paused=false; dead=false;
-    document.getElementById('btnPause').textContent = '⏸️ Pause';
-  };
 
   // ---------------- Physics ---------------------------------------------------
   function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
-
   function step(dt){
-    // Bike spring to target (lag/overcorrect)
     const ty = clamp(bike.targetY, road.top+12, road.bottom-12);
     const ay = bike.k * (ty - bike.y) - bike.c * bike.vy;
     bike.vy += ay * dt;
     bike.y  += bike.vy * dt;
 
-    // Trail (for motion streak)
     bike.trail.push({x:bike.x-16, y:bike.y});
     if (bike.trail.length>90) bike.trail.shift();
 
-    // Traffic updates
     if (cars.length<12 && Math.random() < 0.9*dt) spawnCar();
     for (let i=cars.length-1;i>=0;i--){
       const c=cars[i];
@@ -210,7 +219,6 @@
       if (c.x + c.w < -80) cars.splice(i,1);
     }
 
-    // Collisions (AABB, slightly tightened bike hitbox)
     const bx = bike.x+6, by = bike.y - (bike.h*0.5) + 4, bw = bike.w-18, bh = bike.h-8;
     for (const c of cars){
       if (bx < c.x+c.w && bx+bw > c.x && by < c.y+c.h && by+bh > c.y){
@@ -218,126 +226,65 @@
       }
     }
 
-    // Score
     timeAlive += dt;
     updateScore(timeAlive);
-
-    // Leftward “road stripes” scroll
-    road.stripeScroll = (road.stripeScroll + 420*dt) % 60; // 60px dash cycle
+    road.stripeScroll = (road.stripeScroll + 420*dt) % 60;
   }
 
   // ---------------- Rendering -------------------------------------------------
   function draw(){
-    // road base
     ctx.fillStyle = getCss('--road','#0f172a');
     ctx.fillRect(0,0,W,H);
 
-    // side glows
-    const gy1 = ctx.createLinearGradient(0, road.top, 0, 0);
-    gy1.addColorStop(0,'rgba(34,211,238,0.10)');
-    gy1.addColorStop(1,'rgba(34,211,238,0.00)');
-    ctx.fillStyle=gy1; ctx.fillRect(0,0,W,road.top);
-
-    const gy2 = ctx.createLinearGradient(0, H-road.top, 0, H);
-    gy2.addColorStop(0,'rgba(34,211,238,0.10)');
-    gy2.addColorStop(1,'rgba(34,211,238,0.00)');
-    ctx.fillStyle=gy2; ctx.fillRect(0,H-road.top,W,road.top);
-
-    // horizontal dashed stripes per lane center; scroll LEFT
-    const dash = 34, gap = 26;
-    const phase = road.stripeScroll;
+    // lane stripes (horizontal, scrolling left)
+    const dash = 34, gap = 26, phase = road.stripeScroll;
     ctx.fillStyle = getCss('--stripe','#3a4a6b');
-
-    for (let i=0;i<road.centers.length;i++){
-      const y = road.centers[i]-2;
-      // draw a row of dashes across width with leftward offset
-      let x = -phase;
-      while (x < W){
-        ctx.fillRect(x, y, dash, 4);
-        x += dash + gap;
-      }
+    for (const cy of road.centers){
+      const y = cy-2; let x = -phase;
+      while (x < W){ ctx.fillRect(x, y, dash, 4); x += dash + gap; }
     }
 
-    // cars
-    for (let i=0;i<cars.length;i++) drawCar(cars[i]);
-
-    // bike
+    for (const c of cars) drawCar(c);
     drawBike();
   }
 
   function drawCar(c){
-    // shadow
     ctx.fillStyle='rgba(0,0,0,.35)';
     roundRect(c.x, c.y + c.h*0.25, c.w, c.h*0.85, 12, true, false);
-
-    // body
     const g = ctx.createLinearGradient(c.x, c.y, c.x+c.w, c.y);
-    g.addColorStop(0, shade(c.color, .08));
-    g.addColorStop(1, shade(c.color,-.08));
-    ctx.fillStyle = g;
-    roundRect(c.x, c.y, c.w, c.h, 10, true, false);
-
-    // windows band
-    ctx.fillStyle='rgba(255,255,255,.18)';
-    roundRect(c.x+10, c.y+8, c.w-20, c.h-16, 8, true, false);
-
-    // glow line
+    g.addColorStop(0, shade(c.color, .08)); g.addColorStop(1, shade(c.color,-.08));
+    ctx.fillStyle = g; roundRect(c.x, c.y, c.w, c.h, 10, true, false);
+    ctx.fillStyle='rgba(255,255,255,.18)'; roundRect(c.x+10, c.y+8, c.w-20, c.h-16, 8, true, false);
     ctx.globalAlpha=.25; ctx.strokeStyle=c.glow; ctx.lineWidth=3;
-    roundRect(c.x+1.5, c.y+1.5, c.w-3, c.h-3, 9, false, true);
-    ctx.globalAlpha=1;
+    roundRect(c.x+1.5, c.y+1.5, c.w-3, c.h-3, 9, false, true); ctx.globalAlpha=1;
   }
-
   function drawBike(){
-    // trail
     for (let i=0;i<bike.trail.length;i++){
       const p = bike.trail[i], t = i/bike.trail.length;
       ctx.globalAlpha = 0.10 * t;
       ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.ellipse(p.x, p.y, 22*(1-t), 9*(1-t), 0, 0, Math.PI*2);
-      ctx.fill();
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, 22*(1-t), 9*(1-t), 0, 0, Math.PI*2); ctx.fill();
     }
     ctx.globalAlpha=1;
-
-    // main body (top-down, facing → right)
-    const x = bike.x, y = bike.y - bike.h/2, w=bike.w, h=bike.h;
-
-    // under shadow
-    ctx.fillStyle='rgba(0,0,0,.35)';
-    roundRect(x+2, y+6, w, h, 14, true, false);
-
-    // chassis
+    const x=bike.x, y=bike.y-bike.h/2, w=bike.w, h=bike.h;
+    ctx.fillStyle='rgba(0,0,0,.35)'; roundRect(x+2, y+6, w, h, 14, true, false);
     const g = ctx.createLinearGradient(x, y, x+w, y);
-    g.addColorStop(0, '#1f2937');
-    g.addColorStop(1, '#374151');
-    ctx.fillStyle = g;
-    roundRect(x, y, w, h, 14, true, false);
-
-    // neon stripe
-    ctx.fillStyle=getCss('--glow','#22d3ee');
-    ctx.globalAlpha=.9;
-    roundRect(x+10, y+h/2-3, w-28, 6, 3, true, false);
-    ctx.globalAlpha=1;
-
-    // front cap / “wheel”
-    ctx.fillStyle='#cbd5e1';
-    roundRect(x+w-16, y+6, 10, h-12, 4, true, false);
+    g.addColorStop(0, '#1f2937'); g.addColorStop(1, '#374151');
+    ctx.fillStyle=g; roundRect(x, y, w, h, 14, true, false);
+    ctx.fillStyle=getCss('--glow','#22d3ee'); ctx.globalAlpha=.9;
+    roundRect(x+10, y+h/2-3, w-28, 6, 3, true, false); ctx.globalAlpha=1;
+    ctx.fillStyle='#cbd5e1'; roundRect(x+w-16, y+6, 10, h-12, 4, true, false);
   }
 
   function roundRect(x,y,w,h,r,fill,stroke){
     const rr=Math.min(r,w/2,h/2);
     ctx.beginPath();
     ctx.moveTo(x+rr,y);
-    ctx.lineTo(x+w-rr,y);
-    ctx.quadraticCurveTo(x+w,y,x+w,y+rr);
-    ctx.lineTo(x+w,y+h-rr);
-    ctx.quadraticCurveTo(x+w,y+h,x+w-rr,y+h);
-    ctx.lineTo(x+rr,y+h);
-    ctx.quadraticCurveTo(x,y+h,x,y+h-rr);
-    ctx.lineTo(x,y+rr);
-    ctx.quadraticCurveTo(x,y,x+rr,y);
-    if (fill) ctx.fill();
-    if (stroke) ctx.stroke();
+    ctx.lineTo(x+w-rr,y); ctx.quadraticCurveTo(x+w,y,x+w,y+rr);
+    ctx.lineTo(x+w,y+h-rr); ctx.quadraticCurveTo(x+w,y+h,x+w-rr,y+h);
+    ctx.lineTo(x+rr,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-rr);
+    ctx.lineTo(x,y+rr); ctx.quadraticCurveTo(x,y,x+rr,y);
+    if (fill) ctx.fill(); if (stroke) ctx.stroke();
   }
   function shade(hex, amt){
     const c=parseInt(hex.slice(1),16);
@@ -349,30 +296,19 @@
   }
   function getCss(name, fallback){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback; }
 
-  // ---------------- Main loop -----------------------------------------------
-  let last=0;
-  function frame(t){
+  // ---------------- Loop ------------------------------------------------------
+  let last=0; function frame(t){
     requestAnimationFrame(frame);
-    const dt=Math.min(0.033, (t-last)/1000 || 0.016);
-    last=t;
-
+    const dt=Math.min(0.033, (t-last)/1000 || 0.016); last=t;
     if (running && !paused && !dead) step(dt);
     draw();
-
     if (dead){
       if (timeAlive>best){ best=timeAlive; localStorage.setItem('rider:best', String(best)); }
-      const ov=document.getElementById('overlay');
-      if (ov.classList.contains('hidden')){
-        // show crash overlay and text once
-        ov.classList.remove('hidden');
-        ov.querySelector('.title').textContent='💥 Crash!';
-        ov.querySelector('.muted').textContent=`You lasted ${timeAlive.toFixed(1)} s. Tap Start to try again.`;
-      }
+      showOverlay(true, '💥 Crash!', `You lasted ${timeAlive.toFixed(1)} s. Tap Start to try again.`);
     }
   }
 
   // Boot
-  layoutRoad();
   resetGame();
   requestAnimationFrame(frame);
 })();
