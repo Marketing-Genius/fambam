@@ -15,22 +15,37 @@
     font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
     overscroll-behavior:none;
   }
+
+  /* UI bar */
   .bar{
     position:fixed; inset:12px 12px auto 12px;
     display:flex; gap:8px; flex-wrap:wrap; align-items:center;
     background:rgba(17,24,39,.8); border:1px solid #243244; backdrop-filter:blur(6px);
     padding:8px; border-radius:12px; z-index:10;
   }
-  .btn{appearance:none; font:inherit; color:var(--text); background:var(--btn);
-    border:1px solid var(--btnBorder); border-radius:10px; padding:8px 10px; cursor:pointer}
+  .btn{
+    appearance:none; font:inherit; color:var(--text); background:var(--btn);
+    border:1px solid var(--btnBorder); border-radius:10px; padding:8px 10px; cursor:pointer
+  }
   .btn[data-on="1"]{outline:2px solid var(--accent)}
   .sep{width:1px;height:28px;background:#243244;margin:0 2px}
   .row{display:flex;gap:8px;align-items:center}
   .tag{opacity:.85}
-  #world{position:fixed;inset:0; touch-action:none;}
-  .back{position:fixed; left:12px; bottom:12px; z-index:10; background:rgba(17,24,39,.8);
-    border:1px solid #243244; padding:8px 12px; border-radius:10px; text-decoration:none; color:var(--text)}
-  /* Simulated fullscreen */
+
+  /* Canvas */
+  #world{
+    position:fixed; inset:0; touch-action:none; z-index:0;
+  }
+
+  /* Back button */
+  .back{
+    position:fixed; left:12px; bottom:12px; z-index:10;
+    background:rgba(17,24,39,.8);
+    border:1px solid #243244; padding:8px 12px; border-radius:10px;
+    text-decoration:none; color:var(--text)
+  }
+
+  /* Simulated fullscreen (iOS fallback) */
   .fs-sim .bar, .fs-sim .back { display:none; }
   .fs-sim #world{ position:fixed; inset:0; width:100vw; height:100svh; }
 </style>
@@ -41,9 +56,9 @@
     <button class="btn" data-tool="metal">🔩 Metal</button>
     <button class="btn" data-tool="robot">🤖 Robot</button>
     <div class="sep"></div>
-    <button class="btn" data-tool="water">💧 Water</button>
-    <button class="btn" data-tool="fire">🔥 Fire</button>
-    <button class="btn" data-tool="acid">🧪 Acid</button>
+    <button class="btn" data-tool="water" disabled title="Coming soon">💧 Water</button>
+    <button class="btn" data-tool="fire"  disabled title="Coming soon">🔥 Fire</button>
+    <button class="btn" data-tool="acid"  disabled title="Coming soon">🧪 Acid</button>
     <div class="sep"></div>
     <button class="btn" data-tool="hand" data-on="1">✋ Move</button>
     <button class="btn" id="btnDelete">🧹 Delete</button>
@@ -56,9 +71,13 @@
     <button class="btn" id="btnReset">↺ Reset</button>
     <button class="btn" id="btnFullscreen">⤢ Full screen</button>
   </div>
-  <a class="back" href="./games.html">← Games</a>
+
+  <!-- If this file is /games/sandbox.html and your hub is /games.html at root: -->
+  <a class="back" href="../games.html">← Games</a>
+
   <canvas id="world"></canvas>
 
-  <script src="sandbox.js"></script>
+  <!-- Load game code after DOM is parsed -->
+  <script src="sandbox.js" defer></script>
 </body>
 </html>
