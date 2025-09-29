@@ -213,21 +213,22 @@ function openPlayers(gameId){
     `Who’s playing? (${game.minPlayers===game.maxPlayers?game.minPlayers:`${game.minPlayers}-${game.maxPlayers}`} player${game.maxPlayers>1?'s':''})`;
 
   function paintPills(){
-    const wrap = $('#playerPills'); wrap.innerHTML = '';
-    Family.getKids().filter(k=>k.enabled!==false).forEach(k=>{
-      const on = state.players.includes(k.id);
-      const btn = document.createElement('button');
-      btn.className = 'pill'; btn.type='button'; btn.textContent = k.name;
-      btn.setAttribute('aria-pressed', String(on));
-      btn.onclick = ()=>{
-        const i = state.players.indexOf(k.id);
-        if(i>-1){ state.players.splice(i,1); }
-        else if(state.players.length < game.maxPlayers){ state.players.push(k.id); }
-        paintPills(); // re-render to keep aria/state perfect
-      };
-      wrap.appendChild(btn);
-    });
-  }
+  const wrap = $('#playerPills'); wrap.innerHTML = '';
+  const game = GAMES.find(g=>g.id===state.gameId);
+  Family.getKids().filter(k=>k.enabled!==false).forEach(k=>{
+    const btn = document.createElement('button');
+    btn.className = 'pill'; btn.type='button'; btn.textContent = k.name;
+    const on = state.players.includes(k.id);
+    btn.setAttribute('aria-pressed', String(on));
+    btn.onclick = ()=>{
+      const i = state.players.indexOf(k.id);
+      if(i>-1){ state.players.splice(i,1); }
+      else if(state.players.length < game.maxPlayers){ state.players.push(k.id); }
+      paintPills(); // re-render to update aria-pressed highlight
+    };
+    wrap.appendChild(btn);
+  });
+}
 
   paintPills();
   $('#playerHint').textContent = 'Tap names to select players.';
@@ -253,17 +254,23 @@ function openPlay(){
   $('#playTitle').textContent = game.name;
   const frame = $('#gameFrame');
   frame.removeAttribute('srcdoc');
-  frame.src = 'about:blank';              // ← always clear first (iOS fix)
-  if(game.src.startsWith('inline:')){
-    frame.srcdoc = (game.src==='inline:tictactoe') ? DEMO_TTT : DEMO_FLAPPY;
-  }else{
-    frame.removeAttribute('srcdoc');
-    frame.src = game.src;
-  }
+  frame.src = 'about:blank';
+  frame.src = game.src; // (now external pages for both games)
+
+  // lock background scroll while modal is shown
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+
   show($('#playModal'), true);
 }
-function closePlay(){ $('#gameFrame').src='about:blank'; show($('#playModal'), false); }
-$('#btnExit').onclick=closePlay;
+
+function closePlay(){
+  $('#gameFrame').src='about:blank';
+  show($('#playModal'), false);
+  // unlock scroll
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
+}
 
 /* messaging */
 window.addEventListener('message',(e)=>{
