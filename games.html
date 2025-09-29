@@ -36,12 +36,6 @@
 .pill{padding:6px 10px;border:1px solid var(--chipBorder);border-radius:999px;background:var(--chipBg);cursor:pointer}
 .pill[aria-pressed="true"]{background:var(--accent);color:#001018;border-color:transparent;font-weight:800}
 .pill-wrap{display:flex;gap:8px;flex-wrap:wrap}
-.player{display:inline-flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid var(--chipBorder);
-  background:var(--chipBg);border-radius:999px;cursor:pointer}
-.player[aria-pressed="true"]{background:var(--accent);border-color:transparent;color:#001018}
-.player .face{width:26px;height:26px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
-  background:var(--chipBg);border:1px solid var(--chipBorder);font-weight:800;font-size:12px}
-.player .face img{width:100%;height:100%;object-fit:cover}
 
 /* table */
 .table{width:100%;border-collapse:separate;border-spacing:0 8px}
@@ -168,83 +162,84 @@
   </div>
 
 <script>
-/* ------------------ Registry & Storage ------------------ */
-const LS = {
-  scores: g => `gm:scores:${g}`,
-  lastGame: 'gm:lastGame'
-};
-const $=(s,e=document)=>e.querySelector(s);
-const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f}catch{return f}};
-const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-const uid = ()=>Math.random().toString(36).slice(2,10);
+/* ------------------ Utilities ------------------ */
+const $ = (s, e=document)=>e.querySelector(s);
+const load = (k,f)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? f; }catch{ return f; } };
+const save = (k,v)=>localStorage.setItem(k, JSON.stringify(v));
+const uid  = ()=>Math.random().toString(36).slice(2,10);
+function showSel(sel, on){ const el=$(sel); if(el) el.style.display = on ? 'flex' : 'none'; }
 
-// Pull kids from Family store
+/* ------------------ Lightweight Family store ------------------ */
 const Family = (function(){
   if (window.Family) return window.Family;
   const K={kids:'hub:family:kids',parents:'hub:family:parents'};
-  const ld=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}};
+  const ld=(k,f)=>{ try{ return JSON.parse(localStorage.getItem(k)) ?? f; }catch{ return f; } };
   return { getKids(){return ld(K.kids,[])}, getParents(){return ld(K.parents,[])} };
 })();
 
-/* Game registry (add real game files later under /games/<id>.html) */
+/* ------------------ Registry & Storage ------------------ */
+const LS = { scores: g => `gm:scores:${g}` };
+
+/* If you have /games/tic-tac-toe.html, leave the src as that path.
+   If not yet created, swap to 'inline:tictactoe' and keep the DEMO_TTT below. */
 const GAMES = [
-  { id:'tictactoe',
-    name:'Tic-Tac-Toe',
-    icon:'❌⭕',
-    minPlayers:2, maxPlayers:2,
-    src:'/games/tic-tac-toe.html'   // ← use the separate page
-  },
-  { id:'flappy', name:'Flappy (demo)', icon:'🐦', minPlayers:1, maxPlayers:1, src:'inline:flappy' }
+  { id:'tictactoe', name:'Tic-Tac-Toe', icon:'❌⭕', minPlayers:2, maxPlayers:2, src:'/games/tic-tac-toe.html' },
+  { id:'flappy',    name:'Flappy (demo)', icon:'🐦',   minPlayers:1, maxPlayers:1, src:'inline:flappy' }
 ];
 
-/* ------------------ UI boot ------------------ */
-const state = { gameId: load(LS.lastGame, GAMES[0].id), players: [] };
+/* ------------------ State ------------------ */
+const state = { gameId: GAMES[0].id, players: [] };
 
+/* ------------------ Paint ------------------ */
 function renderGamesGrid(){
-  const grid = $('#gamesGrid'); grid.innerHTML='';
+  const grid = $('#gamesGrid'); if(!grid) return; grid.innerHTML='';
   GAMES.forEach(g=>{
-    const card=document.createElement('button'); card.className='game-card';
-    card.innerHTML=`<div class="icon">${g.icon}</div><div><div class="name">${g.name}</div><small>${g.minPlayers===g.maxPlayers?`${g.minPlayers} player${g.minPlayers>1?'s':''}`:`${g.minPlayers}-${g.maxPlayers} players`}</small></div>`;
-    card.onclick=()=>{ selectGame(g.id); };
+    const card=document.createElement('button');
+    card.className='game-card';
+    card.type='button';
+    const playersText = (g.minPlayers===g.maxPlayers)
+      ? `${g.minPlayers} player${g.minPlayers>1?'s':''}`
+      : `${g.minPlayers}-${g.maxPlayers} players`;
+    card.innerHTML = `
+      <div class="icon">${g.icon}</div>
+      <div>
+        <div class="name">${g.name}</div>
+        <small>${playersText}</small>
+      </div>`;
+    card.onclick=()=>selectGame(g.id);
     grid.appendChild(card);
   });
 }
+
 function renderGameChoice(){
-  const wrap=$('#gameChoice'); wrap.innerHTML='';
+  const wrap = $('#gameChoice'); if(!wrap) return; wrap.innerHTML='';
   GAMES.forEach(g=>{
-    const b=document.createElement('button'); b.className='pill';
-    b.textContent=g.name; b.setAttribute('aria-pressed', String(state.gameId===g.id));
-    b.onclick=()=>{ selectGame(g.id) };
+    const b=document.createElement('button');
+    b.className='pill'; b.type='button';
+    b.textContent=g.name;
+    b.setAttribute('aria-pressed', String(state.gameId===g.id));
+    b.onclick=()=>selectGame(g.id);
     wrap.appendChild(b);
   });
-  // per-game selector for leaderboard (when Per-game tab active)
-  const sel=$('#lbGameSel'); sel.innerHTML='';
-  GAMES.forEach(g=>{ const o=document.createElement('option'); o.value=g.id; o.textContent=g.name; sel.appendChild(o); });
-  sel.value=state.gameId;
+  const sel=$('#lbGameSel'); if(sel){
+    sel.innerHTML=''; GAMES.forEach(g=>{ const o=new Option(g.name,g.id); sel.add(o); });
+    sel.value=state.gameId;
+  }
 }
 
-function playerFaceHTML(p){
-  const prof = (function(){ try{ return JSON.parse(localStorage.getItem(`prof:${p.id}`))||{} }catch{ return {} }})();
-  const ring = prof?.accent ? `style="border-color:${prof.accent}"` : '';
-  if (p.photo) return `<span class="face" ${ring}><img src="${p.photo}"></span>`;
-  const ini = (p.name||'?').trim().charAt(0).toUpperCase();
-  return `<span class="face" ${ring}>${ini}</span>`;
-}
 function renderPlayerPills(){
+  const wrap = $('#playerPills'); if(!wrap) return; wrap.innerHTML='';
   const kids = Family.getKids().filter(k=>k.enabled!==false);
-  const wrap=$('#playerPills'); wrap.innerHTML='';
-  const g=GAMES.find(x=>x.id===state.gameId);
-  $('#playerHint').textContent = g ? `Select ${g.minPlayers===g.maxPlayers?g.minPlayers:`${g.minPlayers}-${g.maxPlayers}`} player(s)` : '';
   kids.forEach(k=>{
-    const b=document.createElement('button'); b.className='player';
-    b.innerHTML = `${playerFaceHTML(k)} <span>${k.name}</span>`;
+    const b=document.createElement('button');
+    b.className='pill'; b.type='button';
+    b.textContent=k.name;
     b.setAttribute('aria-pressed', String(state.players.includes(k.id)));
     b.onclick=()=>{
-      if(state.players.includes(k.id)){ state.players=state.players.filter(id=>id!==k.id); }
-      else{
-        if(state.players.length>=(g?.maxPlayers||99)) return; // cap
-        state.players.push(k.id);
-      }
+      const game = GAMES.find(x=>x.id===state.gameId);
+      const i = state.players.indexOf(k.id);
+      if(i>-1) state.players.splice(i,1);
+      else if(state.players.length < game.maxPlayers) state.players.push(k.id);
       renderPlayerPills();
     };
     wrap.appendChild(b);
@@ -252,9 +247,8 @@ function renderPlayerPills(){
 }
 
 function selectGame(id){
-  state.gameId=id;
-  save(LS.lastGame, id);
-  state.players=[]; // reset selection for clarity
+  state.gameId = id;
+  state.players = [];
   renderGameChoice(); renderPlayerPills(); paintLeaderboard();
 }
 
@@ -262,86 +256,54 @@ function selectGame(id){
 function allScores(){
   const rows=[];
   GAMES.forEach(g=>{
-    const arr=load(LS.scores(g.id),[]);
-    arr.forEach(r=> rows.push({...r, gameId:g.id}));
+    (load(LS.scores(g.id),[])||[]).forEach(r=>rows.push({...r, gameId:g.id}));
   });
-  // newest first
-  return rows.sort((a,b)=> (b.ts||0)-(a.ts||0) );
+  return rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
 }
 function paintLeaderboard(){
-  const all=allScores();
-  const per = all.filter(r=> r.gameId===state.gameId);
-  const lbAllOn = $('#tabAll').getAttribute('aria-selected')==='true';
-  const rows = lbAllOn ? all : per;
-  const body=$('#lbBody'); body.innerHTML='';
-  rows.forEach(r=>{
+  const body=$('#lbBody'); if(!body) return; body.innerHTML='';
+  const perGame = ($('#tabPer')?.getAttribute('aria-selected')==='true');
+  const chosen  = perGame ? allScores().filter(r=>r.gameId===state.gameId) : allScores();
+  chosen.forEach(r=>{
     const when=new Date(r.ts||Date.now()).toLocaleString();
-    const best = (r.scores||[]).slice().sort((a,b)=>b.points-a.points)[0];
-    const playerName = best ? best.name : (r.players?.map(p=>p.name).join(', ')||'—');
+    const best=(r.scores||[]).slice().sort((a,b)=>b.points-a.points)[0];
     const gameName = (GAMES.find(g=>g.id===r.gameId)?.name)||r.gameId;
+    const who = best ? best.name : (r.players?.map(p=>p.name).join(', ')||'—');
     const tr=document.createElement('tr');
-    tr.innerHTML = `<td>${playerName}</td><td>${gameName}</td><td>${best?best.points:'—'}</td><td class="small nowrap">${when}</td>`;
+    tr.innerHTML=`<td>${who}</td><td>${gameName}</td><td>${best?best.points:'—'}</td><td class="small nowrap">${when}</td>`;
     body.appendChild(tr);
   });
 }
 
-/* Tabs */
-$('#tabAll').onclick=()=>{ $('#tabAll').setAttribute('aria-selected','true'); $('#tabPer').setAttribute('aria-selected','false'); $('#lbGameSel').style.display='none'; paintLeaderboard(); }
-$('#tabPer').onclick=()=>{ $('#tabAll').setAttribute('aria-selected','false'); $('#tabPer').setAttribute('aria-selected','true'); $('#lbGameSel').style.display='inline-block'; paintLeaderboard(); }
-$('#lbGameSel').onchange=(e)=>{ selectGame(e.target.value); paintLeaderboard(); };
-
-/* ------------------ Play modal & SDK wiring ------------------ */
+/* ------------------ Play modal & SDK ------------------ */
 function kidById(id){ return Family.getKids().find(k=>String(k.id)===String(id)); }
-function selectedPlayers(){
-  return state.players.map(id=>{
-    const k = kidById(id);
-    return { id, name: k?.name||'Player', photo:k?.photo||'' };
-  });
-}
-function show(sel, on){ const el=$(sel); if(!el) return; el.style.display = on?'flex':'none'; el.setAttribute('aria-hidden', on?'false':'true'); }
+function selectedPlayers(){ return state.players.map(id=>({id, name:kidById(id)?.name||'Player'})); }
 function openPlay(){
-  const game = GAMES.find(g=>g.id===state.gameId);
-  if(!game) return;
-  const players=selectedPlayers();
+  const game = GAMES.find(g=>g.id===state.gameId); if(!game) return;
+  const players = selectedPlayers();
   if(players.length < game.minPlayers || players.length > game.maxPlayers){
-    alert(`Select ${game.minPlayers===game.maxPlayers?game.minPlayers:`${game.minPlayers}-${game.maxPlayers}` } player(s) for ${game.name}.`);
+    alert(`Select ${game.minPlayers===game.maxPlayers?game.minPlayers:`${game.minPlayers}-${game.maxPlayers}`} player(s) for ${game.name}.`);
     return;
   }
   $('#playTitle').textContent = game.name;
   const frame = $('#gameFrame');
-  // inline demo games use srcdoc
-  if(game.src?.startsWith('inline:')){
+  if(game.src.startsWith('inline:')){
     frame.src = 'about:blank';
     frame.srcdoc = (game.src==='inline:tictactoe') ? DEMO_TTT : DEMO_FLAPPY;
   }else{
     frame.src = game.src;
   }
-  show('#playModal', true);
+  showSel('#playModal', true);
 }
-function closePlay(){
-  $('#gameFrame').src='about:blank';
-  show('#playModal', false);
-}
-$('#startBtn').onclick=openPlay;
-$('#btnExit').onclick=closePlay;
-$('#playModal').addEventListener('click', (e)=>{ if(e.target.id==='playModal') closePlay(); });
-window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePlay(); });
+function closePlay(){ $('#gameFrame').src='about:blank'; showSel('#playModal', false); }
+$('#startBtn').onclick = openPlay;
+$('#btnExit').onclick  = closePlay;
 
-/* postMessage protocol:
-   - Game -> Parent:
-     {type:'fambam:ready', gameId}
-     {type:'fambam:score', gameId, scores:[{id,name,points},...], meta?:{}}
-     {type:'fambam:end'}
-   - Parent -> Game:
-     {type:'fambam:players', players:[{id,name},...]}
-*/
 window.addEventListener('message', (e)=>{
   const msg=e.data||{};
   if(msg.type==='fambam:ready'){
-    // send players
     $('#gameFrame').contentWindow?.postMessage({type:'fambam:players', players:selectedPlayers()}, '*');
   }else if(msg.type==='fambam:score'){
-    // persist
     const arr = load(LS.scores(msg.gameId), []);
     arr.unshift({
       id: uid(),
@@ -357,14 +319,16 @@ window.addEventListener('message', (e)=>{
   }
 });
 
-/* --------------- Menu items --------------- */
-(function wireMenu(){
+/* ------------------ Menu wiring ------------------ */
+(function(){
   const btn=$('#menuBtn'), dd=$('#mainMenu');
-  btn.onclick=(e)=>{ e.stopPropagation(); dd.style.display = (dd.style.display==='block'?'none':'block'); };
+  if(!btn || !dd) return;
+  btn.addEventListener('click', ()=> dd.style.display = (dd.style.display==='block'?'none':'block'));
   document.addEventListener('click',(e)=>{ if(!dd.contains(e.target) && e.target!==btn){ dd.style.display='none'; }});
-  document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') dd.style.display='none'; });
-  $('#miExport').onclick=exportCSV;
-  $('#miReset').onclick=()=>{ if(confirm('Reset all game scores?')){ GAMES.forEach(g=>localStorage.removeItem(LS.scores(g.id))); paintLeaderboard(); } };
+  $('#miExport')?.addEventListener('click', exportCSV);
+  $('#miReset')?.addEventListener('click', ()=>{
+    if(confirm('Reset all game scores?')){ GAMES.forEach(g=>localStorage.removeItem(LS.scores(g.id))); paintLeaderboard(); }
+  });
 })();
 
 function exportCSV(){
@@ -375,94 +339,65 @@ function exportCSV(){
     });
   });
   const csv = rows.map(r=>r.map(String).map(x=>x.includes(',')?`"${x.replace(/"/g,'""')}"`:x).join(',')).join('\n');
-  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const url = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   const a=document.createElement('a'); a.href=url; a.download='fambam-games-scores.csv'; a.click(); URL.revokeObjectURL(url);
 }
 
-/* --------------- Boot --------------- */
+/* ------------------ Tabs ------------------ */
+$('#tabAll').onclick=()=>{ $('#tabAll').setAttribute('aria-selected','true');  $('#tabPer').setAttribute('aria-selected','false'); $('#lbGameSel').style.display='none';  paintLeaderboard(); };
+$('#tabPer').onclick=()=>{ $('#tabAll').setAttribute('aria-selected','false'); $('#tabPer').setAttribute('aria-selected','true');  $('#lbGameSel').style.display='inline-block'; paintLeaderboard(); };
+$('#lbGameSel').onchange=(e)=>{ selectGame(e.target.value); };
+
+/* ------------------ Boot ------------------ */
 document.addEventListener('DOMContentLoaded', ()=>{
-  renderGamesGrid();
-  renderGameChoice();
-  renderPlayerPills();
-  paintLeaderboard();
+  try{
+    renderGamesGrid();
+    renderGameChoice();
+    renderPlayerPills();
+    paintLeaderboard();
+  }catch(err){
+    console.error('Games init failed:', err);
+    const g = $('#gamesGrid'); if(g) g.innerHTML = `<div class="small">Error loading Games UI. Open Console for details.</div>`;
+  }
 });
 
-/* ------------------ Demo inline games ------------------ */
-const DEMO_TTT = `
-<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+/* ------------------ Inline demo fallbacks ------------------ */
+const DEMO_TTT = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tic-Tac-Toe</title>
-<style>
-  html,body{height:100%;margin:0}
-  body{display:grid;place-items:center;background:#0b1224;color:#e5e7eb;font-family:system-ui}
-  .wrap{width:min(90vmin,520px)}
-  h1{margin:10px 0 6px;font-size:20px}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  button.cell{aspect-ratio:1/1;font-size:42px;background:#111827;border:2px solid #27324a;border-radius:14px;color:#e5e7eb}
-  .bar{display:flex;justify-content:space-between;margin:8px 0}
-  .pill{padding:6px 10px;border:1px solid #27324a;border-radius:999px;background:#0b1224}
-</style>
-<div class="wrap">
-  <h1>Tic-Tac-Toe</h1>
-  <div class="bar"><div id="pNames">Loading players…</div><button id="restart" class="pill">Restart</button></div>
-  <div class="grid" id="board"></div>
-  <div id="msg"></div>
-</div>
+<style>html,body{height:100%;margin:0}body{display:grid;place-items:center;background:#0b1224;color:#e5e7eb;font-family:system-ui}
+.wrap{width:min(90vmin,520px)}h1{margin:10px 0 6px;font-size:20px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+button.cell{aspect-ratio:1/1;font-size:42px;background:#111827;border:2px solid #27324a;border-radius:14px;color:#e5e7eb}
+.bar{display:flex;justify-content:space-between;margin:8px 0}.pill{padding:6px 10px;border:1px solid #27324a;border-radius:999px;background:#0b1224}</style>
+<div class="wrap"><h1>Tic-Tac-Toe</h1><div class="bar"><div id="pNames">Loading players…</div><button id="restart" class="pill">Restart</button></div><div class="grid" id="board"></div><div id="msg"></div></div>
 <script>
-  const post=(m)=>parent.postMessage(m,'*');
-  const board=document.getElementById('board');
-  const msg=document.getElementById('msg'); const names=document.getElementById('pNames');
+  const post=(m)=>parent.postMessage(m,'*'); const board=document.getElementById('board'); const msg=document.getElementById('msg'); const names=document.getElementById('pNames');
   let players=[], turn=0, cells=Array(9).fill(null), finished=false;
-
-  // build UI
-  for(let i=0;i<9;i++){ const b=document.createElement('button'); b.className='cell'; b.onclick=()=>play(i); b.textContent=''; board.appendChild(b); }
-
-  function play(i){
-    if(finished||cells[i]!=null) return;
-    cells[i]= (turn%2===0)?'X':'O';
-    board.children[i].textContent=cells[i];
-    if(checkWin(cells[i])){ end(\`\${players[turn%2].name} wins!\`, turn%2); return; }
-    if(cells.every(x=>x)) { end('Draw!', null, true); return; }
-    turn++; paint();
-  }
+  for(let i=0;i<9;i++){ const b=document.createElement('button'); b.className='cell'; b.onclick=()=>play(i); board.appendChild(b); }
+  function play(i){ if(finished||cells[i]!=null) return; cells[i]=(turn%2===0)?'X':'O'; board.children[i].textContent=cells[i];
+    if(win(cells[i])){ end(\`\${players[turn%2].name} wins!\`, turn%2); return; }
+    if(cells.every(Boolean)){ end('Draw!', null, true); return; } turn++; paint(); }
   function paint(){ names.textContent = players.map((p,idx)=> (idx===turn%2 ? '👉 ' : '') + p.name + (idx===0?' (X)':' (O)')).join(' vs '); }
-  function end(text, winnerIdx, draw=false){
-    finished=true; msg.textContent=text;
-    const scores = draw ? players.map(p=>({id:p.id,name:p.name,points:1})) : [
-      {id:players[winnerIdx].id,name:players[winnerIdx].name,points:3},
-      {id:players[1-winnerIdx].id,name:players[1-winnerIdx].name,points:0}
-    ];
-    post({type:'fambam:score', gameId:'tictactoe', scores});
-    setTimeout(()=>post({type:'fambam:end'}), 800);
-  }
-  function checkWin(m){
-    const w=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-    return w.some(([a,b,c])=>cells[a]===m && cells[b]===m && cells[c]===m);
-  }
+  function end(text, w, draw){ finished=true; msg.textContent=text;
+    const scores = draw ? players.map(p=>({id:p.id,name:p.name,points:1})) : [{id:players[w].id,name:players[w].name,points:3},{id:players[1-w].id,name:players[1-w].name,points:0}];
+    post({type:'fambam:score', gameId:'tictactoe', scores}); setTimeout(()=>post({type:'fambam:end'}),800); }
+  function win(m){ return [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]].some(([a,b,c])=>cells[a]===m&&cells[b]===m&&cells[c]===m); }
   document.getElementById('restart').onclick=()=>{ cells=Array(9).fill(null); [...board.children].forEach(b=>b.textContent=''); finished=false; turn=0; msg.textContent=''; paint(); }
   window.addEventListener('message', (e)=>{ if(e.data?.type==='fambam:players'){ players=e.data.players.slice(0,2); paint(); } });
   post({type:'fambam:ready', gameId:'tictactoe'});
-</script>
-`;
-
-const DEMO_FLAPPY = `
-<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Flappy Demo</title>
-<style>
-  html,body{height:100%;margin:0} canvas{display:block;width:100%;height:100%;background:#081228}
-  .hud{position:fixed;top:10px;left:10px;color:#e5e7eb;font-family:system-ui}
-</style>
+<\/script>`;
+const DEMO_FLAPPY = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flappy Demo</title><style>html,body{height:100%;margin:0}canvas{display:block;width:100%;height:100%;background:#081228}.hud{position:fixed;top:10px;left:10px;color:#e5e7eb;font-family:system-ui}</style>
 <canvas id="c"></canvas><div class="hud" id="hud">Tap to flap!</div>
 <script>
-  const post=(m)=>parent.postMessage(m,'*');
-  let player={id:'',name:'Player'}, running=false, t0=0, elapsed=0;
-  window.addEventListener('message',(e)=>{ if(e.data?.type==='fambam:players'){ const p=e.data.players[0]; player=p||player; start(); } });
+  const post=(m)=>parent.postMessage(m,'*'); let player={id:'',name:'Player'}, running=false, t0=0, elapsed=0;
+  window.addEventListener('message',(e)=>{ if(e.data?.type==='fambam:players'){ player=e.data.players[0]||player; start(); } });
   post({type:'fambam:ready', gameId:'flappy'});
   function start(){ running=true; t0=performance.now(); requestAnimationFrame(loop); }
   function loop(ts){ if(!running) return; elapsed=(ts-t0)/1000; document.getElementById('hud').textContent=\`Time: \${elapsed.toFixed(1)}s\`; requestAnimationFrame(loop); }
-  // End after 8s with a “score” = elapsed*10
-  setTimeout(()=>{ if(!running) return; running=false; const pts=Math.round(elapsed*10); post({type:'fambam:score', gameId:'flappy', scores:[{id:player.id,name:player.name,points:pts}]}); post({type:'fambam:end'}); }, 8000);
-</script>
-`;
+  setTimeout(()=>{ if(!running) return; running=false; const pts=Math.round(elapsed*10);
+    post({type:'fambam:score', gameId:'flappy', scores:[{id:player.id,name:player.name,points:pts}]}); post({type:'fambam:end'}); }, 8000);
+<\/script>`;
 </script>
 </body>
 </html>
