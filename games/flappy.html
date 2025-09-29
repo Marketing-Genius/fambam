@@ -1,108 +1,304 @@
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Flappy (demo)</title>
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
+<title>Fambam · Flappy</title>
+
+<!-- Basic theme boot (reads ui:theme from localStorage) -->
+<script>
+(function(){
+  function apply(t){
+    const mode=(t&&t.mode==='light')?'light':'dark';
+    const accent=(t&&t.accent)||'#22d3ee';
+    document.documentElement.setAttribute('data-theme',mode);
+    document.documentElement.style.setProperty('--accent',accent);
+    const meta=document.querySelector('meta[name="theme-color"]')||document.createElement('meta');
+    meta.setAttribute('name','theme-color');
+    meta.setAttribute('content', mode==='light' ? '#f2efe7' : '#0f172a');
+    if(!meta.parentNode) document.head.appendChild(meta);
+  }
+  try{ apply(JSON.parse(localStorage.getItem('ui:theme')||'null')||{mode:'dark',accent:'#22d3ee'}); }catch{ apply({mode:'dark',accent:'#22d3ee'}); }
+})();
+</script>
+
 <style>
-  :root { --bg:#081228; --hud:#e5e7eb; --panel:#0f172a; --border:#27324a; --accent:#22d3ee; }
-  *{ -webkit-tap-highlight-color:transparent }
-  html,body,#game{height:100%;margin:0;background:var(--bg);touch-action:none;overscroll-behavior:none}
-  canvas#game{display:block;width:100%;height:100%}
-  .hud{position:fixed;top:10px;left:10px;color:var(--hud);font-family:system-ui}
-  .pill{padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:#0b162c;margin-right:8px}
-  .back{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:5}
-  .modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;min-width:min(90vw,460px)}
-  .modal header{font-weight:800;margin-bottom:8px}
-  .row{display:flex;gap:8px;justify-content:flex-end}
-  .btn{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:#0b162c;color:var(--hud);cursor:pointer}
-  .btn.primary{background:var(--accent);border:none;color:#001018;font-weight:800}
-  canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:4}
+:root{
+  --panel:#111827; --text:#e5e7eb; --muted:#94a3b8;
+  --chipBg:#0b1224; --chipBorder:#334155; --panelBorder:#0b1224;
+}
+html[data-theme="light"]{
+  --panel:#f2efe7; --text:#0f1623; --muted:#556070;
+  --chipBg:#fffdf7; --chipBorder:#e3ded4; --panelBorder:#e6e2da;
+}
+*{box-sizing:border-box}
+html,body{height:100%; margin:0; overflow:hidden; background:#081228; color:var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;}
+/* Header */
+.topbar{
+  position:fixed; inset:auto 0 0 0; top:0; height:48px; z-index:10;
+  display:flex; align-items:center; gap:10px;
+  background: color-mix(in oklab, var(--panel) 55%, transparent);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  border-bottom:1px solid var(--panelBorder); padding:8px 10px;
+}
+.topbar .btn{ background:var(--chipBg); border:1px solid var(--chipBorder); color:var(--text);
+  border-radius:10px; padding:6px 10px; cursor:pointer; }
+.topbar .title{ font-weight:800; margin-left:6px }
+/* Canvas fills viewport underneath UI */
+.stage{ position:fixed; inset:0; }
+#c{ width:100%; height:100%; display:block; background:#081228; }
+/* Center overlays */
+.center{ position:fixed; inset:0; display:grid; place-items:center; z-index:20; }
+.hidden{ display:none !important; }
+/* Card */
+.card{ width:min(560px,92vw); background:color-mix(in oklab, var(--panel) 60%, transparent);
+  border:1px solid var(--panelBorder); border-radius:16px; padding:14px;
+  backdrop-filter: blur(14px) saturate(1.1); -webkit-backdrop-filter: blur(14px) saturate(1.1); }
+.card header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.card .pill{ padding:6px 10px; border:1px solid var(--chipBorder); border-radius:999px; background:var(--chipBg); cursor:pointer; }
+.card .pill[aria-pressed="true"]{ background:var(--accent); color:#001018; border-color:transparent; font-weight:800 }
+.row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+.hr{ height:1px; background:var(--panelBorder); margin:8px 0 }
+.small{ font-size:.9rem; color:var(--muted) }
+/* Big on-screen hint */
+.hint{ position:fixed; inset:auto 0 20% 0; text-align:center; z-index:5; opacity:.9; pointer-events:none; font-weight:700 }
+/* Game over modal */
+.actions .btn{ background:var(--chipBg); border:1px solid var(--chipBorder); color:var(--text);
+  border-radius:10px; padding:8px 12px; cursor:pointer; }
+.actions .btn.primary{ background:var(--accent); border:none; color:#001018; font-weight:800 }
 </style>
+</head>
+<body>
 
-<canvas id="game"></canvas>
-<canvas id="fx"></canvas>
-
-<div class="hud">
-  <span class="pill" id="pLbl">Waiting for player…</span>
-  <span class="pill" id="tLbl">Time: 0.0s</span>
+<!-- Top bar -->
+<div class="topbar">
+  <button class="btn" id="btnBack">← Games</button>
+  <div class="title">Flappy</div>
+  <div class="small" id="who" style="margin-left:auto; opacity:.75">No player</div>
 </div>
 
-<div class="back" id="endBack">
-  <div class="modal">
-    <header id="endTitle">Nice!</header>
-    <div id="endMsg" style="opacity:.9;margin-bottom:6px"></div>
+<!-- Game canvas -->
+<div class="stage"><canvas id="c"></canvas></div>
+
+<!-- Tap hint -->
+<div class="hint small" id="tapHint">Tap / click / space to flap</div>
+
+<!-- Player picker -->
+<div class="center" id="picker">
+  <div class="card">
+    <header><div style="font-weight:800">Who’s playing?</div></header>
+    <div id="kidPills" class="row"></div>
     <div class="row">
-      <button class="btn" id="btnChange">Change players</button>
+      <input id="nameInput" class="pill" placeholder="or type a name" style="flex:1;min-width:160px"/>
+      <button id="startBtn" class="pill" style="font-weight:800">Start</button>
+    </div>
+    <div class="hr"></div>
+    <div class="small">Tip: add kids in Family. This list reads <code>hub:family:kids</code> from this device.</div>
+  </div>
+</div>
+
+<!-- Game over -->
+<div class="center hidden" id="over">
+  <div class="card">
+    <header><div style="font-weight:800">Game Over</div><div class="small" id="overSub"></div></header>
+    <div class="row actions">
+      <button class="btn primary" id="btnAgain">Play again</button>
+      <button class="btn" id="btnChange">Change player</button>
       <button class="btn" id="btnExit">Exit</button>
-      <button class="btn primary" id="btnRematch">Rematch</button>
     </div>
   </div>
 </div>
 
 <script>
-const post = (m)=>parent.postMessage(m,'*');
-let PLAYER={id:'',name:'Player'};
+/* ---------------- Family + Storage helpers ---------------- */
+const load=(k,f)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? f; }catch{ return f; } };
+const save=(k,v)=>localStorage.setItem(k, JSON.stringify(v));
+const uid = ()=>Math.random().toString(36).slice(2,10);
+const LS_SCORES = 'gm:scores:flappy';
+const Family = (()=>({
+  getKids(){ return load('hub:family:kids',[])||[]; }
+}))();
 
-window.addEventListener('message',(e)=>{
-  if(e.data?.type==='fambam:players'){ const p=e.data.players?.[0]; if(p){ PLAYER=p; document.getElementById('pLbl').textContent='Player: '+PLAYER.name; start(); } }
-});
-post({type:'fambam:ready', gameId:'flappy'});
+/* ---------------- UI wiring ---------------- */
+const back = document.getElementById('btnBack');
+back.onclick = ()=> location.href = '../games.html';
 
-const cvs=document.getElementById('game'), ctx=cvs.getContext('2d',{alpha:false});
-let w,h,tPrev=0,elapsed=0,running=false,y,vy,gravity=900,flap=-360,ground=0;
+let player = { id:'', name:'' };
 
-function size(){ const dpr=Math.max(1,devicePixelRatio||1); cvs.width=innerWidth*dpr; cvs.height=innerHeight*dpr; w=cvs.width; h=cvs.height; ground=h*0.85; }
-addEventListener('resize', size, {passive:true}); size();
+function paintPills(){
+  const wrap = document.getElementById('kidPills'); wrap.innerHTML='';
+  Family.getKids().filter(k=>k.enabled!==false).forEach(k=>{
+    const b=document.createElement('button'); b.className='pill'; b.textContent=k.name;
+    b.onclick=()=>{ player={id:k.id||k.name||uid(), name:k.name||'Player'}; selectDone(); };
+    wrap.appendChild(b);
+  });
+}
+function selectDone(){
+  document.getElementById('picker').classList.add('hidden');
+  document.getElementById('who').textContent = player.name;
+  startGame();
+}
+document.getElementById('startBtn').onclick=()=>{
+  const s=(document.getElementById('nameInput').value||'').trim();
+  if(!s){ alert('Type a name or pick a kid.'); return; }
+  player={id:uid(), name:s}; selectDone();
+};
 
-function start(){ running=true; elapsed=0; tPrev=performance.now(); y=h*0.45; vy=0; requestAnimationFrame(loop); }
+/* ---------------- Canvas + Game ---------------- */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
 
-function flapTap(ev){ if(ev&&ev.cancelable) ev.preventDefault(); if(running) vy = flap; }
-addEventListener('pointerdown', flapTap, {passive:false});
-addEventListener('mousedown',   flapTap, {passive:false});
-addEventListener('touchstart',  flapTap, {passive:false});
-addEventListener('keydown', (e)=>{ if(e.code==='Space') flapTap(e); });
+let W=0,H=0, DPR=1;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  W = canvas.clientWidth;
+  H = canvas.clientHeight;
+  canvas.width = Math.floor(W*DPR);
+  canvas.height = Math.floor(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+addEventListener('resize', resize, {passive:true});
 
+/* Prevent page scroll during game on iOS */
+addEventListener('touchmove', e=>{ e.preventDefault(); }, {passive:false});
+addEventListener('gesturestart', e=>{ e.preventDefault(); }, {passive:false});
+
+/* Game state */
+let running=false, started=false, t0=0, last=0, score=0, bird, pipes=[], spawnT=0;
+
+function reset(){
+  score=0; pipes=[]; spawnT=0;
+  bird={ x: W*0.28, y: H*0.45, vy:0, r: 14 };
+}
+function startGame(){
+  resize(); reset(); running=true; started=false; t0=performance.now(); last=t0;
+  document.getElementById('tapHint').classList.remove('hidden');
+  requestAnimationFrame(loop);
+}
+function flap(){
+  started=true;
+  bird.vy = -5.2; // flap strength
+}
 function loop(ts){
   if(!running) return;
-  const dt=Math.min(0.033,(ts-tPrev)/1000); tPrev=ts; elapsed+=dt;
-  document.getElementById('tLbl').textContent='Time: '+elapsed.toFixed(1)+'s';
-
-  vy += gravity*dt; y += vy*dt;
-  if(y>ground){ y=ground; vy=0; return end(); }
-  if(y<0){ y=0; vy=0; }
-
-  ctx.fillStyle='#081228'; ctx.fillRect(0,0,w,h);
-  const bx=w*0.3, rr=Math.max(18,Math.min(36,w/50));
-  ctx.save(); ctx.translate(bx,y);
-  ctx.fillStyle='#e5e7eb'; ctx.beginPath(); ctx.arc(0,0,rr,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(rr*0.25,-rr*0.2,rr*0.1,0,Math.PI*2); ctx.fill();
-  ctx.restore();
-  ctx.fillStyle='#0b1e3e'; ctx.fillRect(0,ground+rr,w,h-ground);
+  const dt = Math.min(0.03, (ts-last)/1000); last=ts;
+  // physics
+  if(started){
+    bird.vy += 14 * dt;     // gravity
+    bird.y  += bird.vy;
+    spawnT += dt;
+    if(spawnT > 1.2){ spawnPipe(); spawnT=0; }
+    movePipes(dt);
+  }
+  // collisions
+  if(collide()){
+    return gameOver();
+  }
+  // draw
+  draw();
   requestAnimationFrame(loop);
 }
 
-// safety auto-end
-setTimeout(()=>running && end(), 12000);
-
-const back=document.getElementById('endBack'), fx=document.getElementById('fx'), fxc=fx.getContext('2d');
-function end(){
-  if(!running) return; running=false;
-  const points=Math.max(0,Math.round(elapsed*10));
-  post({type:'fambam:score', gameId:'flappy', scores:[{id:PLAYER.id,name:PLAYER.name,points}]});
-  document.getElementById('endTitle').textContent='🎉 '+PLAYER.name+' scored '+points+'!';
-  document.getElementById('endMsg').textContent='Great flight! Choose next action.';
-  back.style.display='flex'; confetti(900);
+function spawnPipe(){
+  const gap = Math.max(120, Math.min(220, H*0.28));
+  const topMin = 60, topMax = H - gap - 60;
+  const y = Math.floor(Math.random()*(topMax-topMin))+topMin;
+  const w = 60, x = W+20, speed = Math.max(120, Math.min(220, W*0.25));
+  pipes.push({x, w, top:y, bot:y+gap, speed, passed:false});
+  // keep list small
+  if(pipes.length>10) pipes.shift();
 }
-document.getElementById('btnRematch').onclick=()=>{ back.style.display='none'; start(); };
-document.getElementById('btnExit').onclick   =()=>{ back.style.display='none'; post({type:'fambam:end'}); };
-document.getElementById('btnChange').onclick =()=>{ back.style.display='none'; post({type:'fambam:end'}); };
-
-function confetti(ms){
-  const dpr=Math.max(1,devicePixelRatio||1); fx.width=innerWidth*dpr; fx.height=innerHeight*dpr;
-  const N=180, ps=[]; for(let i=0;i<N;i++) ps.push({x:Math.random()*fx.width,y:-20-Math.random()*200,vx:(Math.random()-.5)*400,vy:300+Math.random()*600,a:Math.random()*6,c:`hsl(${Math.random()*360},85%,60%)`,s:4+Math.random()*6});
-  const tEnd=performance.now()+ms;
-  (function step(ts){ fxc.clearRect(0,0,fx.width,fx.height);
-    ps.forEach(p=>{ p.vy+=14; p.x+=p.vx/60; p.y+=p.vy/60; p.a+=.2; fxc.save(); fxc.translate(p.x,p.y); fxc.rotate(p.a); fxc.fillStyle=p.c; fxc.fillRect(-p.s/2,-p.s/2,p.s,p.s); fxc.restore(); });
-    if(ts<tEnd) requestAnimationFrame(step); else fxc.clearRect(0,0,fx.width,fx.height);
-  })(performance.now());
+function movePipes(dt){
+  for(const p of pipes){
+    p.x -= p.speed * dt;
+    if(!p.passed && p.x + p.w < bird.x - bird.r){
+      p.passed=true; score++;
+    }
+  }
+  // drop off-screen
+  while(pipes.length && pipes[0].x + pipes[0].w < -40) pipes.shift();
 }
+function collide(){
+  // ground / ceiling
+  if(bird.y - bird.r < 0 || bird.y + bird.r > H) return true;
+  // pipes
+  for(const p of pipes){
+    if(bird.x + bird.r > p.x && bird.x - bird.r < p.x + p.w){
+      if(bird.y - bird.r < p.top || bird.y + bird.r > p.bot) return true;
+    }
+  }
+  return false;
+}
+function draw(){
+  // sky
+  ctx.fillStyle = '#081228';
+  ctx.fillRect(0,0,W,H);
+  // subtle stars
+  ctx.fillStyle = 'rgba(255,255,255,.08)';
+  for(let i=0;i<40;i++){ const x=(i*97)%W, y=(i*57)%H; ctx.fillRect(x,y,1,1); }
+  // pipes
+  for(const p of pipes){
+    ctx.fillStyle = '#0aa1b4';
+    ctx.fillRect(p.x, 0, p.w, p.top);
+    ctx.fillRect(p.x, p.bot, p.w, H-p.bot);
+    // lips
+    ctx.fillStyle = '#19c6db';
+    ctx.fillRect(p.x-2, p.top-10, p.w+4, 6);
+    ctx.fillRect(p.x-2, p.bot+4,  p.w+4, 6);
+  }
+  // bird
+  ctx.fillStyle = '#ffd166';
+  ctx.beginPath(); ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#333';
+  ctx.beginPath(); ctx.arc(bird.x+6, bird.y-4, 3, 0, Math.PI*2); ctx.fill();
+  // score
+  ctx.fillStyle = '#e5e7eb';
+  ctx.font = '700 28px system-ui, sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText(String(score), W/2, 42);
+  if(!started){
+    ctx.font = '600 16px system-ui, sans-serif';
+    ctx.fillStyle='rgba(229,231,235,.8)';
+    ctx.fillText('Tap to start', W/2, H/2 - 20);
+  }
+}
+
+/* Input */
+function onTap(e){ e&&e.preventDefault(); flap(); document.getElementById('tapHint').classList.add('hidden'); }
+addEventListener('mousedown', onTap);
+addEventListener('touchstart', onTap, {passive:false});
+addEventListener('keydown', (e)=>{ if(e.code==='Space' || e.code==='ArrowUp') onTap(e); });
+
+/* Game over */
+function gameOver(){
+  running=false;
+  // persist score
+  try{
+    const arr = load(LS_SCORES, []);
+    arr.unshift({
+      id: uid(),
+      ts: Date.now(),
+      players: [{id: player.id, name: player.name}],
+      scores: [{id: player.id, name: player.name, points: Number(score)}],
+      meta: {}
+    });
+    save(LS_SCORES, arr);
+  }catch{}
+  document.getElementById('overSub').textContent = `${player.name} scored ${score}`;
+  document.getElementById('over').classList.remove('hidden');
+}
+
+/* Over buttons */
+document.getElementById('btnAgain').onclick = ()=>{ document.getElementById('over').classList.add('hidden'); startGame(); };
+document.getElementById('btnChange').onclick= ()=>{ document.getElementById('over').classList.add('hidden'); document.getElementById('picker').classList.remove('hidden'); };
+document.getElementById('btnExit').onclick  = ()=>{ location.href = '../games.html'; };
+
+/* Boot */
+paintPills();
+document.getElementById('picker').classList.remove('hidden');
+resize();
 </script>
+</body>
+</html>
