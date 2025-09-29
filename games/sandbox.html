@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>Fambam — Sandbox</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#111827; --text:#e5e7eb; --accent:#22d3ee;
+    --btn:#1f2937; --btnBorder:#334155;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+  .bar{
+    position:fixed; inset:12px 12px auto 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    background:rgba(17,24,39,.8); border:1px solid #243244; backdrop-filter:blur(6px);
+    padding:8px; border-radius:12px; z-index:10
+  }
+  .btn{
+    appearance:none; font:inherit; color:var(--text); background:var(--btn);
+    border:1px solid var(--btnBorder); border-radius:10px; padding:8px 10px; cursor:pointer;
+  }
+  .btn[data-on="1"]{outline:2px solid var(--accent)}
+  .sep{width:1px;height:28px;background:#243244;margin:0 2px}
+  .row{display:flex;gap:8px;align-items:center}
+  .tag{opacity:.85}
+  #world{position:fixed;inset:0}
+  .back{
+    position:fixed; left:12px; bottom:12px; z-index:10; background:rgba(17,24,39,.8);
+    border:1px solid #243244; padding:8px 12px; border-radius:10px; text-decoration:none; color:var(--text)
+  }
+</style>
+</head>
+<body>
+  <div class="bar" id="ui">
+    <button class="btn" data-tool="wood">🪵 Wood</button>
+    <button class="btn" data-tool="metal">🔩 Metal</button>
+    <button class="btn" data-tool="robot">🤖 Robot</button>
+    <div class="sep"></div>
+    <button class="btn" data-tool="water">💧 Water</button>
+    <button class="btn" data-tool="fire">🔥 Fire</button>
+    <button class="btn" data-tool="acid">🧪 Acid</button>
+    <div class="sep"></div>
+    <button class="btn" data-tool="hand" data-on="1">✋ Move</button>
+    <button class="btn" id="btnDelete">🧹 Delete</button>
+    <div class="sep"></div>
+    <button class="btn" id="btnPause">⏸️ Pause</button>
+    <div class="row">
+      <span class="tag">Gravity</span>
+      <input id="grav" type="range" min="0" max="2000" value="800" />
+    </div>
+    <button class="btn" id="btnReset">↺ Reset</button>
+  </div>
+  <a class="back" href="./games.html">← Games</a>
+  <canvas id="world"></canvas>
+
+<script>
+(() => {
+  // ---------- Canvas + View ----------
+  const cvs = document.getElementById('world');
+  const ctx = cvs.getContext('2d');
+  let W=innerWidth, H=innerHeight, DPR=window.devicePixelRatio||1;
+  let scale=1, camX=0, camY=0;
+
+  function resize(){
+    W = innerWidth; H = innerHeight; DPR = devicePixelRatio||1;
+    cvs.width = Math.round(W*DPR); cvs.height = Math.round(H*DPR);
+    cvs.style.width = W+'px'; cvs.style.height = H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  addEventListener('resize', resize); resize();
+
+  // ---------- World data ----------
+  const gravity = { y: 800 };
+  const bounds = { left:-2000, right: 2000, top:-2000, bottom: 4000 }; // generous sandbox
+
+  // Rigid bodies: axis-aligned rectangles only (fast + stable)
+  const bodies = []; // {id,x,y,w,h, vx,vy, static, mat, hp, burning, oilTank}
+  let nextId = 1;
+
+  const MAT = {
+    WOOD: { density: 0.6, bounciness: 0.05, friction: 0.6, hp: 100 },
+    METAL:{ density: 1.2, bounciness: 0.02, friction: 0.4, hp: 220 }
+  };
+
+  // Particle grid (cellular) for water/oil/fire/acid
+  const CELL = 3; // px per cell (performance knob)
+  let gw, gh;
+  function makeGrid(){
+    gw = Math.ceil( (H/scale)/CELL ) + 200; // a bit oversized
+    gh = Math.ceil( (H/scale)/CELL ) + 200;
+  }
+  makeGrid();
+  const G_EMPTY=0, G_WATER=1, G_FIRE=2, G_ACID=3, G_OIL=4;
+  let grid = new Uint8Array(gw*gh); // type grid
+  const heat = new Uint8Array(gw*gh); // tiny heat map for fire spread
+
+  function gi(x,y){ return y*gw + x; }
+
+  // ---------- Helpers ----------
+  const rnd = (a,b)=> a + Math.random()*(b-a);
+  const clamp=(v,a,b)=> v<a?a:(v>b?b:v);
+
+  // Create bodies
+  function addBox(x,y,w,h,mat,opts={}){
+    const m = mat===MAT.METAL ? MAT.METAL : MAT.WOOD;
+    bodies.push({
+      id: nextId++,
+      x,y,w,h,
+      vx:0, vy:0,
+      static: !!opts.static,
+      mat: m===MAT.METAL?'metal':'wood',
+      hp: opts.hp ?? (m.hp),
+      burning: false,
+      oilTank: !!opts.oilTank
+    });
+  }
+
+  function worldToScreen(wx,wy){ return [(wx-camX)*scale, (wy-camY)*scale]; }
+  function screenToWorld(sx,sy){ return [sx/scale+camX, sy/scale+camY]; }
+
+  // Ground platform
+  addBox(-800, 900, 1600, 60, MAT.METAL, {static:true});
+  // Starter pile
+  addBox(-60, 200, 120, 60, MAT.WOOD);
+  addBox( 90, 100, 120, 60, MAT.METAL);
+
+  // Robot = a wood box that leaks oil on death
+  function addRobot(x,y){
+    addBox(x-40,y-40,80,80, MAT.WOOD, {hp:130, oilTank:true});
+  }
+
+  // ---------- Interaction ----------
+  const ui = document.getElementById('ui');
+  const state = { tool:'hand', paused:false, deleting:false };
+  const toolBtns = [...ui.querySelectorAll('.btn[data-tool]')];
+  toolBtns.forEach(b=>{
+    b.addEventListener('click', ()=>{
+      toolBtns.forEach(x=>x.dataset.on='0');
+      b.dataset.on='1';
+      state.tool = b.dataset.tool;
+      state.deleting = false;
+    });
+  });
+  document.getElementById('btnDelete').onclick = ()=>{ state.deleting = !state.deleting; document.getElementById('btnDelete').dataset.on = state.deleting?'1':'0'; };
+  document.getElementById('btnPause').onclick = ()=> state.paused = !state.paused;
+  document.getElementById('btnReset').onclick = ()=>{ bodies.length=0; grid.fill(0); heat.fill(0); addBox(-800, 900, 1600,60, MAT.METAL, {static:true}); };
+  const gravSlider = document.getElementById('grav');
+  gravSlider.oninput = ()=> gravity.y = Number(gravSlider.value);
+
+  // Pointer (pan/zoom/drag/place/paint)
+  let dragging=null, dragOffX=0, dragOffY=0;
+  let panning=false, lastPanX=0, lastPanY=0;
+  let lastTouches=[];
+  cvs.addEventListener('pointerdown', onDown);
+  cvs.addEventListener('pointermove', onMove);
+  addEventListener('pointerup', onUp);
+  cvs.addEventListener('wheel', (e)=>{
+    e.preventDefault();
+    const [wx,wy]=screenToWorld(e.clientX,e.clientY);
+    const s0=scale;
+    scale = clamp(scale * (e.deltaY<0?1.1:0.9), 0.3, 2.5);
+    // zoom to cursor
+    camX = wx - (e.clientX/scale);
+    camY = wy - (e.clientY/scale);
+    makeGrid(); // simple: grid dims linked to scale; we keep one grid and clamp paints
+  }, {passive:false});
+
+  function pickBody(wx,wy){
+    for(let i=bodies.length-1;i>=0;i--){
+      const b = bodies[i];
+      if (wx>=b.x && wx<=b.x+b.w && wy>=b.y && wy<=b.y+b.h) return b;
+    }
+    return null;
+  }
+  function onDown(e){
+    cvs.setPointerCapture(e.pointerId);
+    const [wx,wy]=screenToWorld(e.clientX,e.clientY);
+    if (e.pointerType==='touch') lastTouches=[{x:e.clientX,y:e.clientY,id:e.pointerId,time:performance.now()}];
+
+    if (e.button===1 || (e.pointerType==='touch' && e.isPrimary===false)){
+      panning=true; lastPanX=e.clientX; lastPanY=e.clientY; return;
+    }
+
+    if (state.deleting){
+      const b = pickBody(wx,wy);
+      if (b && !b.static){ bodies.splice(bodies.indexOf(b),1); return; }
+      paint(wx,wy, (x,y)=> setCell(x,y,G_EMPTY));
+      return;
+    }
+
+    switch(state.tool){
+      case 'hand':{
+        const b = pickBody(wx,wy);
+        if (b && !b.static){
+          dragging=b; dragOffX=wx-b.x; dragOffY=wy-b.y; b.vx=b.vy=0;
+        }
+        break;
+      }
+      case 'wood': addBox(wx-30,wy-20, 60,40, MAT.WOOD); break;
+      case 'metal': addBox(wx-30,wy-20, 60,40, MAT.METAL); break;
+      case 'robot': addRobot(wx,wy); break;
+      case 'water': brush(wx,wy, G_WATER, 8); break;
+      case 'fire':  brush(wx,wy, G_FIRE, 6); break;
+      case 'acid':  brush(wx,wy, G_ACID, 6); break;
+    }
+  }
+  function onMove(e){
+    const [wx,wy]=screenToWorld(e.clientX,e.clientY);
+    if (panning){ camX -= (e.clientX-lastPanX)/scale; camY -= (e.clientY-lastPanY)/scale; lastPanX=e.clientX; lastPanY=e.clientY; return; }
+    if (dragging){ dragging.x = wx - dragOffX; dragging.y = wy - dragOffY; return; }
+    if (e.buttons&1){
+      if (state.tool==='water') brush(wx,wy,G_WATER,8);
+      if (state.tool==='fire')  brush(wx,wy,G_FIRE,6);
+      if (state.tool==='acid')  brush(wx,wy,G_ACID,6);
+    }
+  }
+  function onUp(e){ panning=false; dragging=null; }
+
+  // ---------- Grid paint ----------
+  function setCell(wx,wy, type){
+    const gx = Math.floor((wx)/CELL), gy = Math.floor((wy)/CELL);
+    if (gx<0||gy<0||gx>=gw||gy>=gh) return;
+    grid[gi(gx,gy)] = type;
+    if (type===G_FIRE) heat[gi(gx,gy)] = 255;
+  }
+  function getCell(gx,gy){
+    if (gx<0||gy<0||gx>=gw||gy>=gh) return G_EMPTY;
+    return grid[gi(gx,gy)];
+  }
+  function brush(wx,wy, type, r){
+    for(let y=-r; y<=r; y++){
+      for(let x=-r; x<=r; x++){
+        if (x*x+y*y <= r*r){
+          setCell(wx + x*CELL, wy + y*CELL, type);
+        }
+      }
+    }
+  }
+  function paint(wx,wy, fn){
+    const gx = Math.floor(wx/CELL), gy = Math.floor(wy/CELL);
+    for(let y=-3;y<=3;y++) for(let x=-3;x<=3;x++) fn((gx+x)*CELL,(gy+y)*CELL);
+  }
+
+  // ---------- Physics (AABB only) ----------
+  function stepPhysics(dt){
+    for(const b of bodies){
+      if (b.static) continue;
+      // gravity
+      b.vy += gravity.y * dt;
+      // integrate
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+
+      // collide ground bounds (simple)
+      if (b.y + b.h > bounds.bottom){ b.y = bounds.bottom - b.h; b.vy *= -0.1; b.vx *= 0.9; }
+      if (b.x < bounds.left){ b.x = bounds.left; b.vx *= -0.2; }
+      if (b.x + b.w > bounds.right){ b.x = bounds.right - b.w; b.vx *= -0.2; }
+      if (b.y < bounds.top){ b.y = bounds.top; b.vy *= 0; }
+
+      // collide other boxes (naive O(n^2), fine for < ~200)
+      for(const c of bodies){
+        if (c===b || c.removed) continue;
+        if (!aabbOverlap(b,c)) continue;
+        resolveAABB(b,c);
+      }
+    }
+  }
+  function aabbOverlap(a,b){
+    return !(a.x+a.w<=b.x || a.x>=b.x+b.w || a.y+a.h<=b.y || a.y>=b.y+b.h);
+  }
+  function resolveAABB(a,b){
+    // push out the smaller/non-static one more
+    const ax = a.x, ay=a.y, bx=b.x, by=b.y;
+    const dx1 = (bx+b.w) - ax;
+    const dx2 = (ax+a.w) - bx;
+    const dy1 = (by+b.h) - ay;
+    const dy2 = (ay+a.h) - by;
+    const minX = dx1<dx2 ? dx1 : -dx2;
+    const minY = dy1<dy2 ? dy1 : -dy2;
+    if (Math.abs(minX) < Math.abs(minY)){
+      // separate in X
+      if (!a.static && !b.static){
+        a.x +=  minX/2; b.x -= minX/2; a.vx *= 0.8; b.vx *= 0.8;
+      } else if (!a.static){ a.x += minX; a.vx *= -0.2; }
+      else if (!b.static){ b.x -= minX; b.vx *= -0.2; }
+    } else {
+      // separate in Y
+      if (!a.static && !b.static){
+        a.y +=  minY/2; b.y -= minY/2; a.vy *= 0.4; b.vy *= 0.4;
+      } else if (!a.static){ a.y += minY; a.vy *= (minY<0? -0.05:0); a.vx *= 0.9; }
+      else if (!b.static){ b.y -= minY; b.vy *= (minY>0? -0.05:0); b.vx *= 0.9; }
+    }
+  }
+
+  // ---------- Chem/thermal interactions ----------
+  function stepGrid(){
+    // simple falling sand rules (single pass bottom-up)
+    // To reduce artifacts, alternate sweep direction each frame
+    const dir = (tick&1)?1:-1;
+
+    for(let y=gh-2; y>=1; y--){
+      const xStart = (dir>0?1:gw-2), xEnd = (dir>0?gw-1:0);
+      for(let x=xStart; x!==xEnd; x+=dir){
+        const i = gi(x,y), t = grid[i];
+        if (t===G_EMPTY || t===G_FIRE) continue;
+
+        // fall straight
+        if (grid[gi(x,y+1)]===G_EMPTY){ swap(i, gi(x,y+1)); continue; }
+        // slide diagonals
+        const downL = grid[gi(x-1,y+1)], downR = grid[gi(x+1,y+1)];
+        if (downL===G_EMPTY && downR===G_EMPTY){
+          swap(i, gi(x + (Math.random()<0.5?-1:1), y+1)); continue;
+        } else if (downL===G_EMPTY){ swap(i, gi(x-1,y+1)); continue; }
+        else if (downR===G_EMPTY){ swap(i, gi(x+1,y+1)); continue; }
+
+        // liquids spread sideways a bit
+        if (t===G_WATER || t===G_OIL || t===G_ACID){
+          const side = Math.random()<0.5?-1:1;
+          if (grid[gi(x+side,y)]===G_EMPTY) swap(i, gi(x+side,y));
+        }
+      }
+    }
+
+    // Fire spread & cooling
+    for(let y=1; y<gh-1; y++){
+      for(let x=1; x<gw-1; x++){
+        const i=gi(x,y);
+        if (grid[i]===G_FIRE){
+          // warm neighbors (for wood ignition)
+          const n=[i-1,i+1,i-gw,i+gw];
+          n.forEach(j=> heat[j] = Math.min(255, heat[j]+6));
+          // extinguish if water nearby
+          if (nbrHas(x,y,G_WATER)) { grid[i]=G_EMPTY; continue; }
+          // burn out randomly
+          if (Math.random()<0.01) grid[i]=G_EMPTY;
+        } else {
+          heat[i] = Math.max(0, heat[i]-1);
+        }
+      }
+    }
+
+    // Damage bodies from acid/fire contact + ignite oil
+    for (const b of bodies){
+      if (b.static) continue;
+      const gx0 = Math.floor(b.x/CELL), gy0 = Math.floor(b.y/CELL);
+      const gx1 = Math.floor((b.x+b.w)/CELL), gy1 = Math.floor((b.y+b.h)/CELL);
+      let touchingFire=false, touchingAcid=false, touchingWater=false;
+      for(let gy=gy0; gy<=gy1; gy++){
+        for(let gx=gx0; gx<=gx1; gx++){
+          const t = getCell(gx,gy);
+          if (t===G_FIRE) touchingFire=true;
+          if (t===G_ACID) touchingAcid=true;
+          if (t===G_WATER) touchingWater=true;
+          // wood ignition by heat
+          if (b.mat==='wood' && heat[gi(gx,gy)]>200 && Math.random()<0.02) b.burning=true;
+        }
+      }
+      if (touchingAcid){
+        b.hp -= (b.mat==='metal'? 6: 12);
+      }
+      if (b.burning){
+        b.hp -= 2;
+        // add fire cells inside the box randomly
+        if (Math.random()<0.2){
+          setCell(b.x + rnd(0,b.w), b.y + rnd(0,b.h), G_FIRE);
+        }
+        if (touchingWater) b.burning=false; // quenched
+      } else if (touchingFire && b.mat==='wood' && Math.random()<0.1){
+        b.burning=true;
+      }
+
+      // Oil tanks leak oil when damaged
+      if (b.oilTank && b.hp<70 && Math.random()<0.3){
+        setCell(b.x + rnd(0,b.w), b.y + b.h+2, G_OIL);
+      }
+
+      if (b.hp<=0){
+        // explode into debris (tiny boxes) and, if oil tank, spill oil
+        const n = 4 + (b.oilTank?6:0);
+        for(let i=0;i<n;i++){
+          if (b.oilTank) setCell(b.x + rnd(0,b.w), b.y + rnd(0,b.h), (Math.random()<0.8)?G_OIL:G_FIRE);
+          else setCell(b.x + rnd(0,b.w), b.y + rnd(0,b.h), G_FIRE);
+        }
+        b.removed=true;
+      }
+    }
+    // purge removed
+    for (let i=bodies.length-1;i>=0;i--) if (bodies[i].removed) bodies.splice(i,1);
+  }
+  function nbrHas(x,y,type){
+    return grid[gi(x-1,y)]===type || grid[gi(x+1,y)]===type || grid[gi(x,y-1)]===type || grid[gi(x,y+1)]===type;
+  }
+  function swap(i,j){ const t=grid[i]; grid[i]=grid[j]; grid[j]=t; }
+
+  // ---------- Render ----------
+  function draw(){
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.clearRect(0,0,W,H);
+    // world transform
+    ctx.save();
+    ctx.translate(-camX*scale, -camY*scale);
+    ctx.scale(scale, scale);
+
+    // draw particles
+    const vis = CELL;
+    for(let y=0; y<gh; y++){
+      for(let x=0; x<gw; x++){
+        const t = grid[gi(x,y)];
+        if (!t) continue;
+        if (t===G_WATER) ctx.fillStyle = 'rgba(96,165,250,0.9)';
+        else if (t===G_OIL) ctx.fillStyle = 'rgba(120,89,61,0.9)';
+        else if (t===G_ACID) ctx.fillStyle = 'rgba(34,197,94,0.9)';
+        else if (t===G_FIRE) ctx.fillStyle = 'rgba(252,165,3,0.9)';
+        ctx.fillRect(x*CELL, y*CELL, vis, vis);
+      }
+    }
+
+    // draw bodies
+    for(const b of bodies){
+      ctx.lineWidth = 2;
+      if (b.static){ ctx.fillStyle='#1f2937'; ctx.strokeStyle='#475569'; }
+      else if (b.mat==='wood'){ ctx.fillStyle = '#9a6e4c'; ctx.strokeStyle = '#e9d5b5'; }
+      else { ctx.fillStyle='#5b6775'; ctx.strokeStyle='#cbd5e1'; }
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.strokeRect(b.x, b.y, b.w, b.h);
+      // HP bar
+      if (!b.static){
+        ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(b.x, b.y-8, b.w, 4);
+        const hpPct = clamp(b.hp / (b.mat==='wood'?100:220), 0, 1);
+        ctx.fillStyle = b.mat==='wood' ? '#84cc16' : '#22d3ee';
+        ctx.fillRect(b.x, b.y-8, b.w*hpPct, 4);
+      }
+      if (b.oilTank){
+        ctx.fillStyle='rgba(255,255,255,0.35)';
+        ctx.fillRect(b.x+b.w-14, b.y+6, 8, 12);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // ---------- Main loop ----------
+  let last=0, tick=0;
+  function frame(t){
+    requestAnimationFrame(frame);
+    const dt = Math.min(1/30, (t-last)/1000 || 0.016);
+    last=t;
+    if (!state.paused){
+      stepPhysics(dt);
+      stepGrid();
+      tick++;
+    }
+    draw();
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
