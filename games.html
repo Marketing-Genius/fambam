@@ -27,23 +27,16 @@
   aspect-ratio:1/1; cursor:pointer; text-decoration:none; color:inherit;
   background:var(--card); border:1px solid var(--panelBorder); border-radius:16px;
 }
-/* Bigger, consistent game icon box so emoji aren't clipped on iPad */
-.game-card .icon{
-  width: 96px;              /* was ~48–64 */
-  height: 96px;
-  border-radius: 20px;
-  display: grid;
-  place-items: center;
-  background: var(--chipBg);
-  border: 1px solid var(--chipBorder);
-  line-height: 1;           /* stop baseline cropping */
-  font-size: 72px;          /* XO looks comfy now */
+/* BIG emoji icon inside each square tile */
+.game-tile .icon{
+  display:grid; place-items:center;
+  line-height:1;
+  /* scale nicely on iPad/desktop */
+  font-size:clamp(56px, 12vw, 112px);
+  /* no inner box — let the emoji breathe */
+  background:transparent;
+  border:0;
 }
-.game-card{ padding:18px; } /* tiny breathing room so the icon never touches edges */
-/* pills / chips */
-.pill{padding:6px 10px;border:1px solid var(--chipBorder);border-radius:999px;background:var(--chipBg);cursor:pointer}
-.pill[aria-pressed="true"]{background:var(--accent);color:#001018;border-color:transparent;font-weight:800}
-.pill-wrap{display:flex;gap:8px;flex-wrap:wrap}
 
 /* leaderboards */
 .table{width:100%;border-collapse:separate;border-spacing:0 6px}
@@ -211,20 +204,31 @@ function paintGrid(){
 
 /* players modal */
 function openPlayers(gameId){
-  state.gameId=gameId; state.players=[];
+  state.gameId = gameId;
+  state.players = [];
+
   const game = GAMES.find(g=>g.id===gameId);
-  $('#pickTitle').textContent = `Who’s playing? (${game.minPlayers===game.maxPlayers?game.minPlayers:`${game.minPlayers}-${game.maxPlayers}`} player${game.maxPlayers>1?'s':''})`;
-  const wrap=$('#playerPills'); wrap.innerHTML='';
-  Family.getKids().filter(k=>k.enabled!==false).forEach(k=>{
-    const btn=document.createElement('button'); btn.className='pill'; btn.type='button'; btn.textContent=k.name;
-    btn.onclick=()=>{
-      const i=state.players.indexOf(k.id);
-      if(i>-1) state.players.splice(i,1);
-      else if(state.players.length<game.maxPlayers) state.players.push(k.id);
-      btn.setAttribute('aria-pressed', String(i===-1));
-    };
-    wrap.appendChild(btn);
-  });
+  $('#pickTitle').textContent =
+    `Who’s playing? (${game.minPlayers===game.maxPlayers?game.minPlayers:`${game.minPlayers}-${game.maxPlayers}`} player${game.maxPlayers>1?'s':''})`;
+
+  function paintPills(){
+    const wrap = $('#playerPills'); wrap.innerHTML = '';
+    Family.getKids().filter(k=>k.enabled!==false).forEach(k=>{
+      const on = state.players.includes(k.id);
+      const btn = document.createElement('button');
+      btn.className = 'pill'; btn.type='button'; btn.textContent = k.name;
+      btn.setAttribute('aria-pressed', String(on));
+      btn.onclick = ()=>{
+        const i = state.players.indexOf(k.id);
+        if(i>-1){ state.players.splice(i,1); }
+        else if(state.players.length < game.maxPlayers){ state.players.push(k.id); }
+        paintPills(); // re-render to keep aria/state perfect
+      };
+      wrap.appendChild(btn);
+    });
+  }
+
+  paintPills();
   $('#playerHint').textContent = 'Tap names to select players.';
   show($('#playersModal'), true);
 }
@@ -247,6 +251,7 @@ function openPlay(){
   }
   $('#playTitle').textContent = game.name;
   const frame = $('#gameFrame');
+  frame.removeAttribute('srcdoc');
   frame.src = 'about:blank';              // ← always clear first (iOS fix)
   if(game.src.startsWith('inline:')){
     frame.srcdoc = (game.src==='inline:tictactoe') ? DEMO_TTT : DEMO_FLAPPY;
@@ -254,7 +259,7 @@ function openPlay(){
     frame.removeAttribute('srcdoc');
     frame.src = game.src;
   }
-  showSel('#playModal', true);
+  show($('#playModal'), true);
 }
 function closePlay(){ $('#gameFrame').src='about:blank'; show($('#playModal'), false); }
 $('#btnExit').onclick=closePlay;
