@@ -27,16 +27,19 @@
   aspect-ratio:1/1; cursor:pointer; text-decoration:none; color:inherit;
   background:var(--card); border:1px solid var(--panelBorder); border-radius:16px;
 }
-/* Bigger, consistent icon box so emojis like XO aren't clipped */
-.game-tile .icon{
-  font-size:56px;              /* was ~40 */
-  display:grid; place-items:center;
-  width:80px; height:80px;     /* was 64x64 */
-  border-radius:18px;
-  background:var(--chipBg);
-  border:1px solid var(--chipBorder);
-  line-height:1;               /* avoid clipping on iOS */
+/* Bigger, consistent game icon box so emoji aren't clipped on iPad */
+.game-card .icon{
+  width: 96px;              /* was ~48–64 */
+  height: 96px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background: var(--chipBg);
+  border: 1px solid var(--chipBorder);
+  line-height: 1;           /* stop baseline cropping */
+  font-size: 72px;          /* XO looks comfy now */
 }
+.game-card{ padding:18px; } /* tiny breathing room so the icon never touches edges */
 /* pills / chips */
 .pill{padding:6px 10px;border:1px solid var(--chipBorder);border-radius:999px;background:var(--chipBg);cursor:pointer}
 .pill[aria-pressed="true"]{background:var(--accent);color:#001018;border-color:transparent;font-weight:800}
@@ -184,8 +187,10 @@ const LS = { scores:g=>`gm:scores:${g}` };
    - If /games/tic-tac-toe.html exists, set src to '/games/tic-tac-toe.html'.
    - If it doesn’t (or while testing), leave it as 'inline:tictactoe' so it always works. */
 const GAMES = [
-  {id:'tictactoe', name:'Tic-Tac-Toe', icon:'❌⭕', minPlayers:2, maxPlayers:2, src:'inline:tictactoe'},
-  {id:'flappy',    name:'Flappy (demo)', icon:'🐦',  minPlayers:1, maxPlayers:1, src:'inline:flappy'}
+  { id:'tictactoe', name:'Tic-Tac-Toe', icon:'❌⭕', minPlayers:2, maxPlayers:2,
+    src:'/games/tic-tac-toe.html' },   // ← external page
+  { id:'flappy',    name:'Flappy (demo)', icon:'🐦', minPlayers:1, maxPlayers:1,
+    src:'inline:flappy' }
 ];
 
 const state = { gameId:null, players:[] };
@@ -234,16 +239,22 @@ $('#playersGo').onclick=()=>{
 /* play modal */
 function selectedPlayers(){ return state.players.map(id=>({id, name: Family.getKids().find(k=>k.id===id)?.name || 'Player'})); }
 function openPlay(){
-  const game=GAMES.find(g=>g.id===state.gameId); if(!game) return;
+  const game = GAMES.find(g=>g.id===state.gameId); if(!game) return;
+  const players = selectedPlayers();
+  if(players.length < game.minPlayers || players.length > game.maxPlayers){
+    alert(`Select ${game.minPlayers===game.maxPlayers?game.minPlayers:`${game.minPlayers}-${game.maxPlayers}`} player(s).`);
+    return;
+  }
   $('#playTitle').textContent = game.name;
-  const frame=$('#gameFrame');
+  const frame = $('#gameFrame');
+  frame.src = 'about:blank';              // ← always clear first (iOS fix)
   if(game.src.startsWith('inline:')){
-    frame.src='about:blank';
     frame.srcdoc = (game.src==='inline:tictactoe') ? DEMO_TTT : DEMO_FLAPPY;
   }else{
-    frame.src = game.src;   // must be same-origin for messaging on GH Pages
+    frame.removeAttribute('srcdoc');
+    frame.src = game.src;
   }
-  show($('#playModal'), true);
+  showSel('#playModal', true);
 }
 function closePlay(){ $('#gameFrame').src='about:blank'; show($('#playModal'), false); }
 $('#btnExit').onclick=closePlay;
