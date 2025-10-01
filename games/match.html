@@ -2,486 +2,392 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Fambam — Match</title>
 <style>
   :root{
-    --bg:#0b1220; --panel:#0f172a; --card:#0b1220; --ink:#e5e7eb;
-    --chip:#1f2937; --chipBorder:#334155; --acc:#22d3ee;
+    --bg:#0b1220; --panel:#0f172a; --ink:#e5e7eb; --muted:#9ca3af;
+    --accent:#22d3ee; --ok:#22c55e; --warn:#f59e0b;
+    --card:#0b1326; --cardEdge:#2b3549; --flip:#111b33;
   }
   *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-  .wrap{min-height:100svh;display:flex;flex-direction:column;gap:12px;padding:12px}
-  .bar{
-    display:flex;flex-wrap:wrap;align-items:center;gap:8px;
-    background:rgba(15,23,42,.85);border:1px solid #243244;border-radius:12px;padding:8px;backdrop-filter:blur(6px)
-  }
-  .btn,.seg{appearance:none;font:inherit;color:var(--ink);background:var(--chip);border:1px solid var(--chipBorder);
-    border-radius:10px;padding:8px 10px;cursor:pointer}
-  .seg[data-on="1"], .btn.pri{outline:2px solid var(--acc)}
-  .field{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--chipBorder);border-radius:10px;padding:6px 8px}
-  .field input{background:transparent;border:none;color:var(--ink);outline:none;min-width:120px}
-  .grow{flex:1}
-  .grid-outer{display:grid;gap:12px}
-  .solo{grid-template-columns:1fr}
-  .versus{grid-template-columns:1fr 1fr}
-  @media(max-width:900px){ .versus{grid-template-columns:1fr} }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+    font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;}
+  a{color:inherit;text-decoration:none}
 
-  /* Board */
+  /* Top controls bar */
+  .topbar{
+    position:sticky; top:0; z-index:20; padding:10px 12px;
+    background:rgba(10,16,30,.9); backdrop-filter: blur(8px);
+    border-bottom:1px solid #1e2a3f;
+  }
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn{
+    appearance:none;border:1px solid #2a3954;background:#111a2e;color:var(--ink);
+    padding:8px 12px;border-radius:10px;cursor:pointer;font:inherit;
+  }
+  .btn[data-on="1"]{outline:2px solid var(--accent)}
+  .pill{border-radius:999px;padding:6px 10px}
+  .timer{min-width:74px;text-align:center;font-variant-numeric:tabular-nums}
+
+  /* Player select bar */
+  .pbar{padding:10px 12px;border-bottom:1px solid #142039;background:#0b1326}
+  .pwrap{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .pcard{
+    display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #26344e;
+    background:#0e162b;border-radius:12px;cursor:pointer;min-width:140px;
+  }
+  .pcard[data-on="1"]{outline:2px solid var(--accent)}
+  .avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+    background:#14223e;border:1px solid #243a62;font-size:18px}
+  .name{font-weight:600}
+
+  /* Boards */
+  .wrap{max-width:1200px;margin:18px auto;padding:0 12px}
+  .boards{display:grid;gap:16px}
+  @media (min-width:1000px){ .boards{grid-template-columns:1fr 1fr;} }
   .board{
-    background:linear-gradient(180deg,#0e1525,#0b1220);
-    border:1px solid #1e293b;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:50svh
+    background:linear-gradient(180deg,#0c1429,#0a1326);border:1px solid #22314b;
+    border-radius:14px;padding:14px 14px 18px;
   }
-  .hdr{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .who{display:flex;align-items:center;gap:10px}
-  .pf{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#223047;border:2px solid #2c3a50;overflow:hidden}
-  .pf img{width:100%;height:100%;object-fit:cover}
-  .pf span{font-weight:800}
-  .stats{opacity:.85}
-
-  /* Responsive grid sizing — JS sets --cols, --rows, --cell(px) */
-  .cards{
-    --gap:10px;
-    --cell: 90px;                 /* updated by JS */
-    display:grid;
-    grid-template-columns:repeat(var(--cols), var(--cell));
-    grid-auto-rows: var(--cell);
-    gap:var(--gap);
-    place-content:center;
-    touch-action:manipulation;
+  .bhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .bmeta{color:var(--muted);font-size:14px}
+  .grid{
+    display:grid;gap:min(1.8vw,12px);
   }
-
-  /* Card */
-  .card{position:relative;width:var(--cell);height:var(--cell);border-radius:12px;perspective:800px}
+  /* breakpoints: we compute columns in JS, but keep min max sizing nice */
+  .cell{
+    aspect-ratio:1/1;border-radius:14px;position:relative;perspective:900px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card{
+    position:absolute;inset:0;border-radius:14px;border:1px solid var(--cardEdge);
+    transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.7,.2,1);
+    box-shadow: 0 6px 18px rgba(0,0,0,.25);
+    background:linear-gradient(180deg,#0e1933,#0b162e);
+  }
+  .card.revealed{ transform:rotateY(180deg) }
+  .face, .back{
+    position:absolute;inset:0;border-radius:13px;display:grid;place-items:center;
+    font-size:clamp(22px,6vw,40px);
+    backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  }
+  .back{
+    background: radial-gradient(60% 80% at 50% 10%, #152547, #0f1a34);
+    color:#9fb4ff;
+  }
   .face{
-    position:absolute;inset:0;border-radius:12px;border:1px solid #1f2937;background:var(--card);
-    display:grid;place-items:center;font-size:clamp(20px, 5.2vmin, 42px);
-    transform-style:preserve-3d;transition:transform .32s cubic-bezier(.2,.75,.25,1.2), box-shadow .2s;
-    box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 6px 20px rgba(0,0,0,.25)
+    transform:rotateY(180deg); background:var(--card); color:#fff;
   }
-  .card:hover .face{box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 10px 26px rgba(0,0,0,.35)}
-  .back{background:linear-gradient(180deg,#0c1528,#0a111e)}
-  .front{transform:rotateY(180deg)}
-  .flipped .front{transform:rotateY(0)}
-  .flipped .back{transform:rotateY(180deg)}
-  .matched .face{outline:2px solid var(--acc); box-shadow:0 0 0 3px color-mix(in oklab,var(--acc) 45%, transparent), 0 12px 30px rgba(0,0,0,.35)}
-  .muted{opacity:.5;filter:grayscale(.2)}
+  .match .face{ box-shadow:inset 0 0 0 3px rgba(34,197,94,.35) }
+  .glow{box-shadow:0 0 0 2px rgba(34,211,238,.7), 0 8px 26px rgba(34,211,238,.25)}
 
-  /* Footer & nav */
-  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
-  .back{position:fixed;left:12px;bottom:12px;background:rgba(17,24,39,.85);border:1px solid #243244;border-radius:10px;padding:8px 12px;text-decoration:none;color:var(--ink)}
-
-  /* Timer pill */
-  .pill{background:#0d1627;border:1px solid #1f2736;border-radius:10px;padding:6px 10px;min-width:72px;text-align:center;font-variant-numeric:tabular-nums}
+  .footerlink{
+    position:fixed;left:12px;bottom:12px;padding:8px 12px;border-radius:10px;
+    background:#101a30;border:1px solid #243554;
+  }
 
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <!-- Top bar -->
-    <div class="bar" id="topbar">
-      <div class="seg" id="modeSolo" data-on="1">Solo</div>
-      <div class="seg" id="modeVersus">Versus</div>
 
-      <div class="seg" id="diffEasy"  data-on="1">Easy</div>
-      <div class="seg" id="diffMed">Medium</div>
-      <div class="seg" id="diffHard">Hard</div>
-
-      <div class="pill" id="clock">0.0 s</div>
-      <button class="btn pri" id="btnPlay">▶︎ Play</button>
+  <!-- TOP CONTROLS -->
+  <div class="topbar">
+    <div class="row" id="controls">
+      <div class="row" role="group" aria-label="Mode">
+        <button class="btn pill" data-mode="solo" data-on="1">Solo</button>
+        <button class="btn pill" data-mode="versus">Versus</button>
+      </div>
+      <div class="row" role="group" aria-label="Difficulty">
+        <button class="btn pill" data-diff="easy"  data-on="1">Easy</button>
+        <button class="btn pill" data-diff="medium">Medium</button>
+        <button class="btn pill" data-diff="hard">Hard</button>
+      </div>
+      <span class="timer" id="timer">0.0 s</span>
+      <button class="btn" id="btnPlay">► Play</button>
       <button class="btn" id="btnPause">⏸︎ Pause</button>
       <button class="btn" id="btnReset">↺ Reset</button>
-
-      <div class="grow"></div>
-
-      <!-- Player pickers -->
-      <div class="field">
-        <select id="selA" title="Player A"></select>
-        <input id="nameA" placeholder="Add name…" />
-        <button class="btn" id="useA">Use</button>
-      </div>
-      <div class="field" id="versusOnly" style="display:none">
-        <select id="selB" title="Player B"></select>
-        <input id="nameB" placeholder="Add name…" />
-        <button class="btn" id="useB">Use</button>
-      </div>
-    </div>
-
-    <!-- Boards -->
-    <div id="boards" class="grid-outer solo">
-      <!-- Solo or Player A -->
-      <section class="board" id="boardA">
-        <div class="hdr">
-          <div class="who">
-            <div class="pf" id="pfA"><span>P</span></div>
-            <div>
-              <div id="labelA" style="font-weight:800">Player</div>
-              <div class="stats"><span id="pairsA">0</span> pairs · <span id="movesA">0</span> moves</div>
-            </div>
-          </div>
-          <div class="pill" id="localClockA">0.0 s</div>
-        </div>
-        <div class="cards" id="cardsA" aria-label="Cards"></div>
-        <div class="foot"></div>
-      </section>
-
-      <!-- Player B (only visible in Versus) -->
-      <section class="board" id="boardB" style="display:none">
-        <div class="hdr">
-          <div class="who">
-            <div class="pf" id="pfB"><span>P</span></div>
-            <div>
-              <div id="labelB" style="font-weight:800">Player B</div>
-              <div class="stats"><span id="pairsB">0</span> pairs · <span id="movesB">0</span> moves</div>
-            </div>
-          </div>
-          <div class="pill" id="localClockB">0.0 s</div>
-        </div>
-        <div class="cards" id="cardsB" aria-label="Cards"></div>
-        <div class="foot"></div>
-      </section>
     </div>
   </div>
 
-  <a class="back" href="./games.html">← Games</a>
+  <!-- PLAYER SELECT -->
+  <div class="pbar">
+    <div class="pwrap" id="playerSelect"></div>
+  </div>
+
+  <!-- BOARDS -->
+  <div class="wrap">
+    <div class="boards" id="boards"></div>
+  </div>
+
+  <a class="footerlink" href="./games.html">← Games</a>
 
 <script>
-/* ---------- Family store shim (names & avatars) ---------- */
-(function(){
-  if (window.Family) return;
-  try{
-    const uid = ()=>Math.random().toString(36).slice(2,10);
-    const load = (k,f)=>{ try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? f; } catch { return f; } };
-    window.Family = {
-      getParents(){ return load('hub:family:parents', []); },
-      getKids(){ return load('hub:family:kids', []); },
-      getActiveKids(){ return this.getKids().filter(k=>k.enabled!==false); },
-      onChange(){ return ()=>{}; }
-    };
-  }catch{}
-})();
+(()=>{
 
-/* ---------- Helpers ---------- */
-const $ = (s,e=document)=>e.querySelector(s);
-const emojis = [
-  '🐶','🐱','🦊','🐻','🐼','🐨','🐯','🦁','🐷','🐸','🐵','🐔',
-  '🍎','🍋','🍇','🍉','🍌','🍒','🍑','🍓',
-  '⚽️','🏀','🏈','🎾','🎮','🎲','🎯',
-  '🚗','🚚','🚓','🚌','✈️','🚀',
-  '🌙','⭐️','☀️','🌈','❄️','🔥','💧','🍕','🍔','🍟','🍩','🍪','🧩','🧸'
+// ---------- Family roster ----------
+const FAMILY = [
+  { id:'adam',  name:'Adam',  emoji:'🧔' },
+  { id:'mama',  name:'Mom',   emoji:'👩' },
+  { id:'dad',   name:'Dad',   emoji:'👨' },
+  { id:'kid1',  name:'Aiden', emoji:'🧒' },
+  { id:'kid2',  name:'Mia',   emoji:'👧' },
+  { id:'kid3',  name:'Zoe',   emoji:'👶' },
 ];
 
-const DIFF = {
-  easy:  { pairs:8,  cols:4, rows:4 },
-  med:   { pairs:12, cols:6, rows:4 },
-  hard:  { pairs:16, cols:8, rows:4 }
-};
+// ---------- Emojis pool ----------
+const EMOJIS = ("🍎 🍒 🍓 🍉 🥝 🍍 🍌 🍕 🍪 🍩 🍟 🍔 🌮 🧃 🍭 🎈 🪀 🧸 🎮 🕹️ 🏀 ⚽ 🎯 🎲 ✈️ 🚗 🚌 🚀 🐶 🐱 🐻 🐼 🦁 🐯 🐸 🐧 🐤 🐷 🐵 🐔 🐝 🐙 🐞 🐢 🐠 🐬 🌞 🌛 ⭐ 🌈 ☁️ 🍀 🌵 🌷 💎 🧠").split(/\s+/);
 
-function choicePairs(n){
-  const pool = emojis.slice().sort(()=>Math.random()-0.5).slice(0,n);
-  return pool.concat(pool).sort(()=>Math.random()-0.5);
-}
-function initials(name){ const t=(name||'').trim(); return t? t[0].toUpperCase() : 'P'; }
-function setAvatar(node, person){
-  if (!node) return;
-  node.innerHTML = person?.photo ? `<img src="${person.photo}" alt="">` : `<span>${initials(person?.name)}</span>`;
-}
-
-/* ---------- Player pickers ---------- */
-const players = (()=> {
-  const parents = (Family.getParents?.()||[]).map(p=>({id:p.id, name:p.name, photo:p.photo}));
-  const kids    = (Family.getActiveKids?.()||Family.getKids?.()||[]).map(k=>({id:k.id, name:k.name, photo:k.photo}));
-  const everyone= parents.concat(kids);
-  if (!everyone.length) return [{id:'solo', name:'Player'}];
-  return everyone;
-})();
-function fillSelect(sel){
-  sel.innerHTML = players.map((p,i)=> `<option value="${p.id||('id'+i)}">${p.name||('Player '+(i+1))}</option>`).join('');
-}
-
-/* ---------- Game state ---------- */
+// ---------- State ----------
 const state = {
-  mode:'solo',           // 'solo' | 'versus'
-  diff:'easy',           // 'easy' | 'med' | 'hard'
-  globalTimer:0,         // seconds
-  running:false,
-  startTs:0,
-  a: null,               // board A state
-  b: null                // board B state
+  mode:'solo',          // 'solo' | 'versus'
+  diff:'easy',          // 'easy' | 'medium' | 'hard'
+  players: ['adam','mama'], // left (or solo) + right
+  running:false, startTime:0, elapsed:0,
 };
+const boardsEl = document.getElementById('boards');
+const timerEl  = document.getElementById('timer');
+let raf=0;
 
-function makeBoard(labelEl, pfEl, gridEl, pairsCount){
-  return {
-    el:gridEl,
-    labelEl,
-    pfEl,
-    pairsGoal:pairsCount,
-    deck: choicePairs(pairsCount),
-    flipped:[], // indices currently flipped (0/1)
-    matched: new Set(),
-    moves:0,
-    time:0,
-    timerStart:0,
-    finished:false
-  };
-}
-
-/* ---------- Build UI ---------- */
-const selA = $('#selA'), selB = $('#selB'), nameA=$('#nameA'), nameB=$('#nameB');
-fillSelect(selA); fillSelect(selB);
-$('#useA').onclick = ()=>{
-  const person = players[selA.selectedIndex] || {name:(nameA.value||'Player')};
-  $('#labelA').textContent = nameA.value || person.name || 'Player';
-  setAvatar($('#pfA'), person);
-  localStorage.setItem('match:playerA', JSON.stringify({name: $('#labelA').textContent, photo: person.photo || null}));
-};
-$('#useB').onclick = ()=>{
-  const person = players[selB.selectedIndex] || {name:(nameB.value||'Player B')};
-  $('#labelB').textContent = nameB.value || person.name || 'Player B';
-  setAvatar($('#pfB'), person);
-  localStorage.setItem('match:playerB', JSON.stringify({name: $('#labelB').textContent, photo: person.photo || null}));
-};
-// hydrate last names
-try{
-  const pa = JSON.parse(localStorage.getItem('match:playerA')||'null'); if (pa){ $('#labelA').textContent=pa.name; if(pa.photo) $('#pfA').innerHTML=`<img src="${pa.photo}" alt="">`; }
-  const pb = JSON.parse(localStorage.getItem('match:playerB')||'null'); if (pb){ $('#labelB').textContent=pb.name; if(pb.photo) $('#pfB').innerHTML=`<img src="${pb.photo}" alt="">`; }
-}catch{}
-
-/* Mode toggles */
-function setMode(next){
-  state.mode = next;
-  $('#modeSolo').dataset.on = (next==='solo')?'1':'0';
-  $('#modeVersus').dataset.on = (next==='versus')?'1':'0';
-  $('#versusOnly').style.display = (next==='versus')?'inline-flex':'none';
-  $('#boardB').style.display = (next==='versus')?'flex':'none';
-  $('#boards').className = 'grid-outer ' + (next==='versus'?'versus':'solo');
-  resetGame();
-}
-$('#modeSolo').onclick = ()=> setMode('solo');
-$('#modeVersus').onclick = ()=> setMode('versus');
-
-/* Difficulty toggles */
-function setDiff(d){
-  state.diff = d;
-  $('#diffEasy').dataset.on = d==='easy'?'1':'0';
-  $('#diffMed').dataset.on  = d==='med'?'1':'0';
-  $('#diffHard').dataset.on = d==='hard'?'1':'0';
-  resetGame();
-}
-$('#diffEasy').onclick = ()=> setDiff('easy');
-$('#diffMed').onclick  = ()=> setDiff('med');
-$('#diffHard').onclick = ()=> setDiff('hard');
-
-/* Controls */
-$('#btnPlay').onclick  = ()=> startGame();
-$('#btnPause').onclick = ()=> pauseGame();
-$('#btnReset').onclick = ()=> resetGame();
-
-/* ---------- Layout sizing so all cards fit ---------- */
-function fitGrid(boardEl, cols, rows){
-  const cards = boardEl;
-  const pad = 24; // breathing room inside board
-  const w = cards.clientWidth;
-  const h = Math.max(220, boardEl.parentElement.clientHeight - 78); // header height approx
-  // available minus gaps
-  const gapsW = (cols-1)*10, gapsH=(rows-1)*10;
-  const cellW = Math.floor((w - gapsW - pad) / cols);
-  const cellH = Math.floor((h - gapsH - pad) / rows);
-  const cell  = Math.max(40, Math.min(cellW, cellH));
-  cards.style.setProperty('--cols', cols);
-  cards.style.setProperty('--rows', rows);
-  cards.style.setProperty('--cell', cell+'px');
-}
-const roA = new ResizeObserver(()=> {
-  const d = DIFF[state.diff];
-  fitGrid($('#cardsA'), d.cols, d.rows);
-});
-const roB = new ResizeObserver(()=> {
-  const d = DIFF[state.diff];
-  if (state.mode==='versus') fitGrid($('#cardsB'), d.cols, d.rows);
-});
-roA.observe($('#cardsA'));
-roB.observe($('#cardsB'));
-
-/* ---------- Render a board ---------- */
-function renderBoard(b, idsPrefix){
-  const grid = b.el;
-  grid.innerHTML = '';
-  const d = DIFF[state.diff];
-  fitGrid(grid, d.cols, d.rows);
-
-  b.deck.forEach((emoji, idx)=>{
-    const card = document.createElement('button');
-    card.className = 'card';
-    card.setAttribute('aria-label','card');
-    card.dataset.i = idx;
-    card.innerHTML = `
-      <div class="face back"></div>
-      <div class="face front">${emoji}</div>
-    `;
-    card.onclick = ()=> onCardClick(b, idx, card, idsPrefix);
-    grid.appendChild(card);
+// ---------- Helpers ----------
+const $ = sel => document.querySelector(sel);
+function setButtons(groupAttr, value){
+  document.querySelectorAll(`[data-${groupAttr}]`).forEach(b=>{
+    b.dataset.on = (b.dataset[groupAttr]===value)?'1':'0';
   });
-  updateStats(b, idsPrefix);
 }
-function updateStats(b, ids){
-  $('#pairs'+ids).textContent = b.matched.size;
-  $('#moves'+ids).textContent = b.moves;
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a; }
+function now(){ return performance.now() }
+
+// ---------- Timer ----------
+function updateTimer(){
+  if(state.running){
+    const t = state.elapsed + (now()-state.startTime);
+    timerEl.textContent = (t/1000).toFixed(1) + ' s';
+  }
+  raf = requestAnimationFrame(updateTimer);
+}
+function startTimer(){
+  if(state.running) return;
+  state.running = true;
+  state.startTime = now();
+}
+function pauseTimer(){
+  if(!state.running) return;
+  state.elapsed += now()-state.startTime;
+  state.running = false;
+}
+function resetTimer(){
+  state.running=false; state.elapsed=0; state.startTime=0;
+  timerEl.textContent='0.0 s';
 }
 
-/* ---------- Card logic ---------- */
-let lockClicks = false;
-function onCardClick(b, idx, node, ids){
-  if (!state.running || lockClicks || b.finished) return;
-  if (b.matched.has(idx)) return;
+// ---------- Build player select ----------
+function renderPlayerSelect(){
+  const wrap = document.getElementById('playerSelect');
+  wrap.innerHTML='';
+  const who = state.mode==='solo' ? [state.players[0]] : state.players;
+  const selectedSet = new Set(who);
+  FAMILY.forEach(p=>{
+    const el = document.createElement('div');
+    el.className='pcard';
+    el.dataset.id=p.id;
+    el.dataset.on = selectedSet.has(p.id)?'1':'0';
+    el.innerHTML = `
+      <div class="avatar">${p.emoji}</div>
+      <div>
+        <div class="name">${p.name}</div>
+        <div style="font-size:12px;color:var(--muted)">${p.id}</div>
+      </div>`;
+    el.addEventListener('click', ()=>{
+      if(state.mode==='solo'){
+        state.players[0]=p.id;
+      }else{
+        // toggle into the less-recent slot
+        if(el.dataset.on==='1'){ return; }
+        // choose side based on whichever was changed last; here: left first, then right
+        if(!state._lastSide || state._lastSide==='right'){ state.players[0]=p.id; state._lastSide='left'; }
+        else { state.players[1]=p.id; state._lastSide='right'; }
+      }
+      renderPlayerSelect();
+      buildBoards(); // update labels
+    });
+    wrap.appendChild(el);
+  });
 
-  // prevent clicking same card twice
-  if (b.flipped.includes(idx)) return;
+  // Highlight center when solo
+  wrap.style.justifyContent = state.mode==='solo' ? 'center' : 'center';
+}
 
-  node.classList.add('flipped');
-  b.flipped.push(idx);
+// ---------- Game board factory ----------
+function makeDeck(nPairs){
+  const pick = shuffle([...EMOJIS]).slice(0,nPairs);
+  const pairs = shuffle([...pick, ...pick]).map((emoji, idx)=>({
+    id:'c'+idx, emoji, up:false, matched:false
+  }));
+  return pairs;
+}
+function boardSpecByDiff(diff){
+  if(diff==='easy')   return {cols:4, rows:4, pairs:8};
+  if(diff==='medium') return {cols:6, rows:4, pairs:12};
+  return {cols:8, rows:4, pairs:16}; // hard
+}
 
-  if (b.flipped.length === 2){
-    lockClicks = true;
-    b.moves++;
-    const [i1,i2] = b.flipped;
-    const match = b.deck[i1] === b.deck[i2];
-    if (match){
-      // Mark as matched (by value: set both indices)
-      b.matched.add(i1); b.matched.add(i2);
-      setTimeout(()=>{
-        // style as matched
-        const cards = b.el.querySelectorAll('.card');
-        cards[i1]?.classList.add('matched'); cards[i2]?.classList.add('matched');
-        b.flipped = [];
-        lockClicks = false;
-        updateStats(b, ids);
+// Board object handles its own interactions
+function buildBoard(side){ // 'left' | 'right' (or 'solo' uses 'left')
+  const spec = boardSpecByDiff(state.diff);
+  const deck = makeDeck(spec.pairs);
+  const board = {
+    el: document.createElement('section'),
+    deck,
+    first:null, lock:false, pairs:0, moves:0,
+    owner: side==='right' ? state.players[1] : state.players[0],
+  };
+  board.el.className='board';
+  board.el.innerHTML = `
+    <div class="bhead">
+      <div>
+        <div style="font-weight:700">${side==='right'?'Player B':'Player' + (state.mode==='versus'?' A':'')}</div>
+        <div class="bmeta"><span class="pairs">0</span> pairs · <span class="moves">0</span> moves</div>
+      </div>
+      <div class="bmeta"><span class="btimer">0.0</span> s</div>
+    </div>
+    <div class="grid"></div>
+  `;
+  const grid = board.el.querySelector('.grid');
 
-        // done?
-        if (b.matched.size === b.pairsGoal*2){
-          b.finished = true;
-          if (state.mode==='versus'){
-            endVersusIfNeeded();
-          }else{
-            finishAndPersist('solo', b);
+  // responsive columns
+  grid.style.gridTemplateColumns = `repeat(${spec.cols}, 1fr)`;
+  grid.style.gap = 'min(1.6vw,12px)';
+
+  // build cells
+  deck.forEach(card=>{
+    const cell = document.createElement('div');
+    cell.className='cell';
+    cell.innerHTML = `
+      <div class="card" data-id="${card.id}">
+        <div class="back">🂠</div>
+        <div class="face">${card.emoji}</div>
+      </div>
+    `;
+    grid.appendChild(cell);
+  });
+
+  // click handling with event delegation
+  grid.addEventListener('click', (e)=>{
+    const cEl = e.target.closest('.card');
+    if(!cEl || board.lock) return;
+    const id = cEl.dataset.id;
+    const c = deck.find(x=>x.id===id);
+    if(!c || c.matched || c.up) return;
+
+    c.up=true; cEl.classList.add('revealed','glow');
+    if(!state.running) startTimer();
+
+    if(!board.first){
+      board.first = {c, el:cEl};
+    }else{
+      board.moves++; board.el.querySelector('.moves').textContent=board.moves;
+      board.lock=true;
+      if(board.first.c.emoji===c.emoji){
+        // match
+        c.matched = board.first.c.matched = true;
+        cEl.classList.add('match'); board.first.el.classList.add('match');
+        setTimeout(()=>{ cEl.classList.remove('glow'); board.first.el.classList.remove('glow'); }, 300);
+        board.first=null; board.lock=false; board.pairs++;
+        board.el.querySelector('.pairs').textContent=board.pairs;
+        if(board.pairs===spec.pairs){
+          // board finished
+          if(state.mode==='solo'){ pauseTimer(); saveScore('solo'); }
+          else{
+            // if both boards done → stop
+            const otherDone = [...boardsEl.children].every(b=>b.querySelector('.pairs').textContent==spec.pairs);
+            if(otherDone){ pauseTimer(); saveScore('versus'); }
           }
         }
-      }, 220);
-    } else {
-      setTimeout(()=>{
-        const cards = b.el.querySelectorAll('.card');
-        cards[i1]?.classList.remove('flipped');
-        cards[i2]?.classList.remove('flipped');
-        b.flipped = [];
-        lockClicks = false;
-        updateStats(b, ids);
-      }, 640);
+      }else{
+        // flip both back
+        setTimeout(()=>{
+          c.up=false; board.first.c.up=false;
+          cEl.classList.remove('revealed','glow');
+          board.first.el.classList.remove('revealed','glow');
+          board.first=null; board.lock=false;
+        }, 600);
+      }
     }
-  } else {
-    updateStats(b, ids);
-  }
-}
-
-/* ---------- Game flow ---------- */
-const clock = $('#clock');
-let raf = 0;
-function tick(){
-  if (!state.running){ raf = requestAnimationFrame(tick); return; }
-  const now = performance.now();
-  state.globalTimer = (now - state.startTs)/1000;
-  clock.textContent = state.globalTimer.toFixed(1)+' s';
-  // per-board clocks (stop when finished)
-  ['A','B'].forEach(k=>{
-    const b = k==='A'?state.a:state.b;
-    const pill = $('#localClock'+k);
-    if (!b) return;
-    if (!b.finished && b.timerStart) b.time = (now - b.timerStart)/1000;
-    pill.textContent = (b.time||0).toFixed(1)+' s';
   });
-  raf = requestAnimationFrame(tick);
+
+  // update local per-board timer readout from global timer
+  board._tick = () => {
+    const total = state.elapsed + (state.running?(now()-state.startTime):0);
+    board.el.querySelector('.btimer').textContent = (total/1000).toFixed(1);
+  };
+
+  return board;
 }
 
-function startGame(){
-  if (state.running) return;
-  state.running = true;
-  state.startTs = performance.now() - (state.globalTimer*1000||0);
-  if (!state.a.timerStart) state.a.timerStart = performance.now();
-  if (state.mode==='versus' && !state.b.timerStart) state.b.timerStart = performance.now();
-  $('#btnPlay').classList.add('pri');
-  $('#btnPause').classList.remove('pri');
-}
-function pauseGame(){
-  state.running = false;
-  $('#btnPlay').classList.remove('pri');
-  $('#btnPause').classList.add('pri');
-}
-function resetGame(){
-  pauseGame();
-  state.globalTimer = 0; clock.textContent = '0.0 s';
-  const meta = DIFF[state.diff];
+let boards=[];
 
-  state.a = makeBoard($('#labelA'), $('#pfA'), $('#cardsA'), meta.pairs);
-  renderBoard(state.a, 'A');
-
-  if (state.mode==='versus'){
-    state.b = makeBoard($('#labelB'), $('#pfB'), $('#cardsB'), meta.pairs);
-    renderBoard(state.b, 'B');
-  } else {
-    state.b = null;
+function buildBoards(){
+  boardsEl.innerHTML='';
+  boards = [];
+  if(state.mode==='solo'){
+    boardsEl.style.gridTemplateColumns='1fr';
+    const B = buildBoard('left');
+    boards.push(B); boardsEl.appendChild(B.el);
+  }else{
+    boardsEl.style.gridTemplateColumns='1fr 1fr';
+    const L = buildBoard('left');
+    const R = buildBoard('right');
+    boards.push(L,R);
+    boardsEl.appendChild(L.el); boardsEl.appendChild(R.el);
   }
-  // zero local clocks
-  $('#localClockA').textContent='0.0 s';
-  $('#localClockB').textContent='0.0 s';
-  cancelAnimationFrame(raf);
-  raf = requestAnimationFrame(tick);
+  // ensure everything fits vertically by letting cells shrink; grid gaps already responsive
 }
 
-/* Versus winner check */
-function endVersusIfNeeded(){
-  if (!(state.a?.finished || state.b?.finished)) return;
-  pauseGame(); // stop timer
-
-  let winner = null, loser = null;
-  if (state.a.finished && !state.b.finished) { winner = state.a; loser = state.b; }
-  else if (state.b.finished && !state.a.finished) { winner = state.b; loser = state.a; }
-  else {
-    // both finished: pick faster
-    winner = (state.a.time <= state.b.time) ? state.a : state.b;
-    loser  = (winner===state.a) ? state.b : state.a;
-  }
-  const who = (winner===state.a) ? $('#labelA').textContent : $('#labelB').textContent;
-  setTimeout(()=> alert(`🏆 ${who} wins!`), 50);
-
-  // Save both runs for history/leaderboard
-  finishAndPersist('versus', state.a);
-  finishAndPersist('versus', state.b);
-}
-
-/* Persist to the “games” ledger (your Games page reads these) */
-function finishAndPersist(mode, board){
-  pauseGame();
+// ---------- Leaderboard (localStorage minimal) ----------
+function saveScore(mode){
   try{
-    const key = 'gm:scores:match';
-    const arr = JSON.parse(localStorage.getItem(key) || '[]');
-    const playerId = (mode==='solo' ? 'solo' : (board===state.a?'A':'B'));
-    const name = (board===state.a ? $('#labelA').textContent : $('#labelB').textContent) || 'Player';
-    arr.push({
-      ts: Date.now(),
-      mode,
-      difficulty: state.diff,
-      name,
-      id: playerId,
-      pairs: board.pairsGoal,
-      moves: board.moves,
-      time: Number(board.time||0)
-    });
-    localStorage.setItem(key, JSON.stringify(arr.slice(-200)));
-  }catch{}
+    const key = `match_${mode}_${state.diff}`;
+    const rec = JSON.parse(localStorage.getItem(key)||'[]');
+    const who = state.mode==='solo' ? state.players[0] : `${state.players[0]} vs ${state.players[1]}`;
+    rec.push({ t: +(timerEl.textContent.replace(' s','')), who, at: Date.now() });
+    rec.sort((a,b)=>a.t-b.t);
+    localStorage.setItem(key, JSON.stringify(rec.slice(0,10)));
+  }catch(e){}
 }
 
-/* ---------- Boot ---------- */
-resetGame();
-requestAnimationFrame(tick);
+// ---------- Wire controls ----------
+document.getElementById('btnPlay').onclick = ()=> startTimer();
+document.getElementById('btnPause').onclick = ()=> pauseTimer();
+document.getElementById('btnReset').onclick = ()=>{
+  pauseTimer(); resetTimer(); buildBoards();
+};
+
+document.querySelectorAll('[data-mode]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    state.mode = b.dataset.mode;
+    setButtons('mode', state.mode);
+    renderPlayerSelect();
+    pauseTimer(); resetTimer();
+    buildBoards();
+  });
+});
+document.querySelectorAll('[data-diff]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    state.diff = b.dataset.diff;
+    setButtons('diff', state.diff);
+    pauseTimer(); resetTimer();
+    buildBoards();
+  });
+});
+
+// ---------- Init ----------
+renderPlayerSelect();
+buildBoards();
+updateTimer();
+
+})();
 </script>
 </body>
 </html>
