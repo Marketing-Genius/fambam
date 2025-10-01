@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover"/>
+<title>Fambam — Match</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#111827; --text:#e5e7eb; --muted:#94a3b8;
+    --accent:#22d3ee; --win:#86efac; --lose:#fca5a5; --btn:#1f2937; --btnB:#334155;
+    --card:#0f172a; --cardB:#233147; --cardHi:#1a2640;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial; overscroll-behavior:none}
+  a.back{position:fixed;left:12px;bottom:12px;z-index:30;background:rgba(17,24,39,.85);
+    border:1px solid #243244;padding:8px 12px;border-radius:10px;text-decoration:none;color:var(--text)}
+  .hud{
+    position:fixed; left:12px; right:12px; top:12px; z-index:20;
+    background:rgba(17,24,39,.85); border:1px solid #243244; backdrop-filter:blur(6px);
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:8px 10px; border-radius:12px;
+  }
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .grow{flex:1}
+  .btn{appearance:none; font:inherit; color:var(--text); background:var(--btn); border:1px solid var(--btnB);
+    border-radius:10px; padding:8px 12px; cursor:pointer}
+  .btn[data-on="1"]{outline:2px solid var(--accent)}
+  select, input[type="text"]{background:var(--btn); border:1px solid var(--btnB); color:var(--text);
+    border-radius:10px; padding:8px 10px; font:inherit}
+  .stage{position:fixed; inset:70px 12px 12px 12px; display:grid; gap:12px}
+  .solo{grid-template-columns:1fr}
+  .versus{grid-template-columns:1fr 1fr}
+  @media(max-width:900px){ .versus{grid-template-columns:1fr} }
+  .board{
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.03)), var(--panel);
+    border:1px solid #243244; border-radius:16px; padding:14px; display:grid; grid-template-rows:auto 1fr; gap:10px;
+  }
+  .head{display:flex; align-items:center; gap:10px}
+  .face{width:40px;height:40px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
+    background:#334155;color:#e5e7eb;border:2px solid #475569;font-weight:800}
+  .face img{width:100%;height:100%;object-fit:cover}
+  .meter{margin-left:auto; opacity:.9}
+  .grid{--cols:4; display:grid; gap:10px; grid-template-columns:repeat(var(--cols), minmax(0,1fr)); align-content:start}
+  .card{
+    position:relative; height:0; padding-bottom:100%; perspective:800px; border-radius:12px;
+  }
+  .flip{
+    position:absolute; inset:0; border-radius:12px; transform-style:preserve-3d; transition:transform .34s cubic-bezier(.2,.8,.2,1);
+  }
+  .flip.revealed{ transform: rotateY(180deg); }
+  .side{
+    position:absolute; inset:0; backface-visibility:hidden; border-radius:12px; display:grid; place-items:center;
+    font-size:1.8rem; user-select:none;
+  }
+  .front{
+    background:linear-gradient(180deg,var(--cardHi),var(--card)); border:1px solid var(--cardB);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.03), 0 8px 18px rgba(0,0,0,.24);
+  }
+  .back{ transform:rotateY(180deg); background:#0c1527; border:1px solid #1f2b46; }
+  .back .emo{ filter:drop-shadow(0 6px 10px rgba(0,0,0,.25)); font-size:2.2rem }
+  .win{outline:3px solid var(--win)}
+  .lose{outline:3px solid var(--lose)}
+  .muted{color:var(--muted)}
+  .pill{padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid #243244}
+</style>
+</head>
+<body>
+  <div class="hud">
+    <div class="row">
+      <span class="pill">Mode</span>
+      <button class="btn" id="mSolo" data-on="1">Solo</button>
+      <button class="btn" id="mVs">Versus</button>
+    </div>
+    <div class="row">
+      <span class="pill">Difficulty</span>
+      <button class="btn" data-diff="easy"   data-on="1">Easy</button>
+      <button class="btn" data-diff="medium">Medium</button>
+      <button class="btn" data-diff="hard">Hard</button>
+    </div>
+    <div class="grow"></div>
+    <div class="row" id="pickerSolo"></div>
+    <div class="row" id="pickerA" style="display:none"></div>
+    <div class="row" id="pickerB" style="display:none"></div>
+    <button class="btn" id="btnReset">↺ Reset</button>
+  </div>
+
+  <a class="back" href="../games.html">← Games</a>
+
+  <main id="stage" class="stage solo">
+    <section class="board" id="boardA">
+      <div class="head">
+        <div class="face" id="faceA"></div>
+        <div><div id="nameA" style="font-weight:800">Player</div><div id="infoA" class="muted">0 pairs · 0 moves</div></div>
+        <div class="meter pill" id="timeA">0.0 s</div>
+      </div>
+      <div class="grid" id="gridA"></div>
+    </section>
+
+    <section class="board" id="boardB" style="display:none">
+      <div class="head">
+        <div class="face" id="faceB"></div>
+        <div><div id="nameB" style="font-weight:800">Player 2</div><div id="infoB" class="muted">0 pairs · 0 moves</div></div>
+        <div class="meter pill" id="timeB">0.0 s</div>
+      </div>
+      <div class="grid" id="gridB"></div>
+    </section>
+  </main>
+
+<script>
+/* ---------- Player store (uses Family if present) ---------- */
+function getKids(){
+  try{ return (window.Family?.getActiveKids?.() || []).slice(); }catch{ return []; }
+}
+function faceHTML(p){
+  const name=(p?.name||'?').trim(); const initial=name?name[0].toUpperCase():'?';
+  return p?.photo ? `<img src="${p.photo}" alt="">` : `<span>${initial}</span>`;
+}
+function uid(){ return Math.random().toString(36).slice(2,10); }
+
+/* ---------- Score persistence (matches your gm:scores:* shape) ---------- */
+function pushScore(gameId, scores){
+  try{
+    const key = `gm:scores:${gameId}`;
+    const arr = JSON.parse(localStorage.getItem(key)||'[]');
+    arr.push({ ts: Date.now(), scores });  // scores: [{id,name,points}]
+    localStorage.setItem(key, JSON.stringify(arr));
+  }catch(_){}
+}
+
+/* ---------- UI: player pickers ---------- */
+function buildPicker(whereEl, onPick, label){
+  const wrap = whereEl;
+  wrap.innerHTML='';
+  const kids = getKids();
+  const select = document.createElement('select');
+  const manual = document.createElement('input');
+  manual.type='text'; manual.placeholder='Add name…';
+  select.innerHTML = `<option value="">${label||'Pick player'}</option>` + kids.map(k=>`<option value="${k.id}">${k.name||'Kid'}</option>`).join('');
+  const btn = document.createElement('button'); btn.className='btn'; btn.textContent='Use';
+  wrap.append(select, manual, btn);
+  btn.onclick = ()=>{
+    let id = select.value || '';
+    let name = '';
+    let photo = '';
+    if (id){
+      const kid = kids.find(k=>k.id===id); name = kid?.name || 'Player'; photo = kid?.photo || '';
+    } else {
+      name = (manual.value||'Player').trim(); id = 'user:'+uid();
+    }
+    onPick({id,name,photo});
+  };
+}
+
+/* ---------- Game data ---------- */
+const EMOJIS = ['🐶','🐱','🦊','🐼','🐵','🐧','🐸','🦄','🐙','🐝','🦖','🐢','🐳','🦋','🌵','🍓','🍔','🍕','🍩','🍪','🍒','🍉','⚽','🏀','🏈','🎲','🎯','🎹','🚗','🚕','🚑','✈️','🚀','🌙','⭐','☂️','❄️','🔥','💧','🌈','💎','🎁','🧸','📦','🕹️','📱'];
+const DIFF = { easy:16, medium:24, hard:32 };
+const DIFF_MULT = { easy:1.0, medium:1.25, hard:1.5 }; // scoring multipliers
+
+/* make deck of N cards (N even). returns [{id,emo,open,done}] */
+function makeDeck(n){
+  const pairs = n/2;
+  const pool = EMOJIS.slice().sort(()=>Math.random()-0.5).slice(0,pairs);
+  const cards = [];
+  pool.forEach((e,i)=>{ cards.push({emo:e,id:`${i}a`},{emo:e,id:`${i}b`}); });
+  // shuffle
+  for(let i=cards.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [cards[i],cards[j]]=[cards[j],cards[i]]; }
+  return cards.map(c=>({ ...c, open:false, done:false }));
+}
+
+/* ---------- Board controller ---------- */
+function Board(rootId, faceId, nameId, infoId, timeId){
+  this.root = document.getElementById(rootId);
+  this.grid = this.root.querySelector('.grid');
+  this.face = document.getElementById(faceId);
+  this.nameEl = document.getElementById(nameId);
+  this.infoEl = document.getElementById(infoId);
+  this.timeEl = document.getElementById(timeId);
+  this.player = { id:'', name:'Player', photo:'' };
+  this.deck = [];
+  this.first = null;
+  this.moves = 0;
+  this.pairs = 0;
+  this.startTs = 0;
+  this.elapsed = 0;
+  this.done = false;
+  this.diff = 'easy';
+}
+Board.prototype.setPlayer = function(p){
+  this.player = p || {id:'',name:'Player',photo:''};
+  this.face.innerHTML = faceHTML(this.player);
+  this.nameEl.textContent = this.player.name || 'Player';
+};
+Board.prototype.build = function(diff){
+  this.diff = diff || this.diff;
+  const N = DIFF[this.diff] || 16;
+  this.grid.style.setProperty('--cols', Math.max(4, Math.min(8, Math.sqrt(N))));
+  this.deck = makeDeck(N);
+  this.grid.innerHTML='';
+  this.deck.forEach(card=>{
+    const cell = document.createElement('div'); cell.className='card'; cell.dataset.id = card.id;
+    cell.innerHTML = `
+      <div class="flip">
+        <div class="side front"></div>
+        <div class="side back"><div class="emo">${card.emo}</div></div>
+      </div>`;
+    cell.addEventListener('click', ()=> this.tap(card, cell));
+    this.grid.appendChild(cell);
+  });
+  this.first=null; this.moves=0; this.pairs=0; this.done=false; this.elapsed=0;
+  this.startTs = performance.now();
+  this.updateHead();
+};
+Board.prototype.tap = function(card, cell){
+  if (this.done || card.open || card.done) return;
+  // reveal
+  card.open = true;
+  cell.querySelector('.flip').classList.add('revealed');
+  if (!this.first){
+    this.first = {card, cell};
+  } else {
+    this.moves++;
+    if (this.first.card.emo === card.emo){
+      // match
+      card.done = this.first.card.done = true;
+      this.pairs++;
+      setTimeout(()=>{
+        cell.classList.add('win');
+        this.first.cell.classList.add('win');
+      }, 90);
+      this.first = null;
+      if (this.pairs * 2 === this.deck.length){
+        this.finish();
+      }
+    } else {
+      // miss → flip back after a beat
+      const a = this.first; this.first = null;
+      setTimeout(()=>{
+        card.open=false; a.card.open=false;
+        cell.querySelector('.flip').classList.remove('revealed');
+        a.cell.querySelector('.flip').classList.remove('revealed');
+      }, 650);
+    }
+  }
+  this.updateHead();
+};
+Board.prototype.tick = function(now){
+  if (this.done) return;
+  this.elapsed = (now - this.startTs) / 1000;
+  this.timeEl.textContent = this.elapsed.toFixed(1) + ' s';
+};
+Board.prototype.scorePoints = function(){
+  const pairs = this.deck.length/2;
+  // higher is better: scale by pairs and difficulty, penalize time + small move cost
+  const raw = (pairs * 1200) / (this.elapsed + Math.max(1, this.moves*0.35));
+  return Math.round(raw * (DIFF_MULT[this.diff]||1));
+};
+Board.prototype.finish = function(){
+  this.done = true;
+  this.elapsed = (performance.now() - this.startTs) / 1000;
+  this.timeEl.textContent = this.elapsed.toFixed(1) + ' s';
+  this.updateHead();
+};
+Board.prototype.updateHead = function(){
+  this.infoEl.textContent = `${this.pairs} pairs · ${this.moves} moves`;
+};
+
+/* ---------- App controller ---------- */
+const app = {
+  mode:'solo', diff:'easy',
+  A: new Board('boardA','faceA','nameA','infoA','timeA'),
+  B: new Board('boardB','faceB','nameB','infoB','timeB')
+};
+
+function startGame(){
+  const stage = document.getElementById('stage');
+  if (app.mode==='solo'){
+    stage.className='stage solo';
+    document.getElementById('boardB').style.display='none';
+    app.A.build(app.diff);
+  }else{
+    stage.className='stage versus';
+    document.getElementById('boardB').style.display='';
+    app.A.build(app.diff);
+    app.B.build(app.diff);
+  }
+}
+
+function finishIfDone(){
+  if (app.mode==='solo'){
+    if (app.A.done){
+      // save one score
+      pushScore('match', [{ id:app.A.player.id, name:app.A.player.name, points: app.A.scorePoints() }]);
+    }
+  }else{
+    if (app.A.done || app.B.done){
+      // winner = who finished first; save both scores (winner has higher pts anyway)
+      const sA = app.A.done ? app.A.scorePoints() : 0;
+      const sB = app.B.done ? app.B.scorePoints() : 0;
+      pushScore('match', [
+        { id:app.A.player.id, name:app.A.player.name, points:sA },
+        { id:app.B.player.id, name:app.B.player.name, points:sB }
+      ]);
+      // outline winner/loser
+      const a = document.getElementById('boardA');
+      const b = document.getElementById('boardB');
+      a.classList.toggle('win', sA>=sB && (app.A.done||app.B.done));
+      b.classList.toggle('win', sB>=sA && (app.A.done||app.B.done));
+      a.classList.toggle('lose', sA<sB && app.B.done);
+      b.classList.toggle('lose', sB<sA && app.A.done);
+    }
+  }
+}
+
+/* ---------- HUD wiring ---------- */
+const btnSolo = document.getElementById('mSolo');
+const btnVs   = document.getElementById('mVs');
+btnSolo.onclick = ()=>{ app.mode='solo'; btnSolo.dataset.on='1'; btnVs.dataset.on='0';
+  document.getElementById('pickerSolo').style.display=''; 
+  document.getElementById('pickerA').style.display='none';
+  document.getElementById('pickerB').style.display='none';
+  document.getElementById('boardB').style.display='none';
+  startGame();
+};
+btnVs.onclick = ()=>{ app.mode='vs'; btnSolo.dataset.on='0'; btnVs.dataset.on='1';
+  document.getElementById('pickerSolo').style.display='none';
+  document.getElementById('pickerA').style.display='';
+  document.getElementById('pickerB').style.display='';
+  document.getElementById('boardB').style.display='';
+  startGame();
+};
+
+document.querySelectorAll('[data-diff]').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('[data-diff]').forEach(x=>x.dataset.on='0');
+    b.dataset.on='1';
+    app.diff = b.dataset.diff;
+    startGame();
+  };
+});
+
+document.getElementById('btnReset').onclick = ()=>{
+  // clear highlights
+  document.getElementById('boardA').classList.remove('win','lose');
+  document.getElementById('boardB').classList.remove('win','lose');
+  startGame();
+};
+
+/* Player pickers */
+buildPicker(document.getElementById('pickerSolo'), (p)=>{ app.A.setPlayer(p); startGame(); }, 'Solo player');
+buildPicker(document.getElementById('pickerA'), (p)=>{ app.A.setPlayer(p); startGame(); }, 'Player A');
+buildPicker(document.getElementById('pickerB'), (p)=>{ app.B.setPlayer(p); startGame(); }, 'Player B');
+
+/* Seed default players if none picked yet */
+const kids = getKids();
+app.A.setPlayer(kids[0] ? {id:kids[0].id,name:kids[0].name,photo:kids[0].photo} : {id:'pA',name:'Player A'});
+app.B.setPlayer(kids[1] ? {id:kids[1].id,name:kids[1].name,photo:kids[1].photo} : {id:'pB',name:'Player B'});
+
+/* ---------- Loop ---------- */
+let last=0;
+function frame(t){
+  requestAnimationFrame(frame);
+  const now=t||performance.now();
+  if (!app.A.done) app.A.tick(now);
+  if (app.mode==='vs' && !app.B.done) app.B.tick(now);
+  // Complete check
+  if (app.A.done || (app.mode==='vs' && app.B.done)) finishIfDone();
+}
+startGame();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
